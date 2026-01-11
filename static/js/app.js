@@ -1,9 +1,10 @@
-// [2026-01-11] 既存の「自動検索機能」を復元し、最新ソースに適合
+// [2026-01-11] 最新版ソースを元に、自動検索を確実に実行し、デバッグ機能も残して修正
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("APP: 起動しました。自動検索の監視を開始します。");
     updateStatus();
     setInterval(updateStatus, 3000);
 
-    // 入力時に自動検索を実行するイベントリスナーを追加
+    // 入力欄を特定し、入力があるたびに searchHorses を実行するように紐付け
     const fInput = document.getElementById('s_father');
     const mInput = document.getElementById('s_mother');
     
@@ -26,16 +27,13 @@ async function updateStatus() {
         if (!res.ok) return;
         const data = await res.json();
 
+        // 既存の表示更新ロジック
         const roundDisp = document.getElementById('round_display');
         if (roundDisp) roundDisp.innerText = data.round;
 
         const phaseDisp = document.getElementById('phase_label');
         if (phaseDisp) {
-            const phaseMap = {
-                'nomination': '指名受付中',
-                'reveal': '指名公開中',
-                'lottery': '抽選・結果確定'
-            };
+            const phaseMap = {'nomination': '指名受付中', 'reveal': '指名公開中', 'lottery': '抽選・結果確定'};
             phaseDisp.innerText = phaseMap[data.phase] || data.phase;
         }
 
@@ -55,26 +53,21 @@ async function updateStatus() {
                 let horseTxt = '-';
                 if (nom) {
                     const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
-                    if (data.phase !== 'nomination' || isMe) {
-                        horseTxt = nom.horse_name;
-                    } else {
-                        horseTxt = '???';
-                    }
+                    if (data.phase !== 'nomination' || isMe) horseTxt = nom.horse_name;
+                    else horseTxt = '???';
                 }
-                html += `<tr><td>${playerName}</td><td>${horseTxt}</td></tr>`;
+                html += `<tr><td>${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
             });
             html += '</table>';
             allStatusDiv.innerHTML = html;
         }
 
-        if (lastPhase !== "" && lastPhase !== data.phase) {
-            location.reload();
-        }
+        if (lastPhase !== "" && lastPhase !== data.phase) location.reload();
         lastPhase = data.phase;
     } catch (e) { console.error("Update error:", e); }
 }
 
-// --- 馬の検索関数 (自動検索に対応) ---
+// --- 馬の検索関数 (自動検索 + デバッグログ) ---
 async function searchHorses() {
     const fInput = document.getElementById('s_father');
     const mInput = document.getElementById('s_mother');
@@ -85,21 +78,30 @@ async function searchHorses() {
     const f = fInput.value;
     const m = mInput.value;
 
-    // 以前の仕様通り、2文字未満なら結果をクリアして終了
+    // デバッグ: 実行されたことを確認
+    console.log(`DEBUG: 自動検索実行中... 父[${f}] 母[${m}]`);
+
+    // 2文字未満なら結果をクリアして終了
     if (f.length < 2 && m.length < 2) {
         resultsEl.innerHTML = "";
         return;
     }
 
+    // 検索中表示
+    resultsEl.innerHTML = "<div style='font-size:0.8rem; color:#3b82f6;'>[DEBUG] 検索中...</div>";
+
     try {
         const url = `/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`;
         const res = await fetch(url);
-        if (!res.ok) return;
+        if (!res.ok) {
+            resultsEl.innerHTML = `<div style="color:red;">[DEBUG] 通信失敗: ${res.status}</div>`;
+            return;
+        }
 
         const horses = await res.json();
 
-        let html = '';
         if (horses && horses.length > 0) {
+            let html = `<div style="color:green; font-size:0.7rem; margin-bottom:5px;">[DEBUG] ${horses.length}件ヒット</div>`;
             horses.forEach(h => {
                 html += `
                 <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
@@ -107,16 +109,16 @@ async function searchHorses() {
                     <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
                     <button onclick="doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
                             style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        この馬を指名する
+                        指名する
                     </button>
                 </div>`;
             });
             resultsEl.innerHTML = html;
         } else {
-            resultsEl.innerHTML = "<div style='padding:10px; color:#64748b; text-align:center;'>該当する馬が見つかりません</div>";
+            resultsEl.innerHTML = "<div style='padding:10px; color:#64748b; text-align:center;'>[DEBUG] 該当なし</div>";
         }
     } catch (e) {
-        console.error("Search error:", e);
+        resultsEl.innerHTML = `<div style="color:red;">[DEBUG] エラー: ${e.message}</div>`;
     }
 }
 
@@ -134,7 +136,7 @@ window.doNominate = async function(name, mother) {
             updateStatus();
             if (typeof switchTab === 'function') switchTab('tab-my');
         }
-    } catch (e) { alert("通信エラーが発生しました"); }
+    } catch (e) { alert("通信エラー"); }
 }
 
 // --- MC操作 ---
