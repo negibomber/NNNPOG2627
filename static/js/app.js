@@ -1,4 +1,4 @@
-// [2026-01-11] 最新版ソースを元に修正。既存機能の削除・変更なし。ログ出力を最大化。
+// [2026-01-11] 提示された最新ソースをベースに、自動検索（監視）を確実に有効化
 (function() {
     console.log("--- POG DEBUG START ---");
     console.log("1. スクリプトの読み込みを確認しました。");
@@ -20,6 +20,12 @@
 
         if (fInput && mInput) {
             console.log("4. 監視(addEventListener)を登録します。");
+            
+            // 既存のイベントを一度クリア（重複防止）
+            fInput.oninput = null;
+            mInput.oninput = null;
+
+            // 入力があったら即座に searchHorses() を実行
             fInput.addEventListener('input', (e) => {
                 console.log(`-> 父入力検知: "${e.target.value}"`);
                 searchHorses();
@@ -30,10 +36,11 @@
             });
             console.log("5. 監視の登録が完了しました。入力待ちです。");
         } else {
-            console.error("CRITICAL: 入力欄が見つからないため、自動検索が開始できません。");
+            console.error("CRITICAL: 入力欄が見つかりません。HTMLのIDが正しいか確認してください。");
         }
     };
 
+    // DOMの読み込み状況に合わせて初期化を実行
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
@@ -43,14 +50,13 @@
     setInterval(updateStatus, 3000);
 })();
 
-// --- ステータス更新 (既存機能) ---
+// --- ステータス更新 (既存機能維持) ---
 async function updateStatus() {
     try {
         const res = await fetch('/status');
         if (!res.ok) return;
         const data = await res.json();
 
-        // 画面表示更新 (IDが存在する場合のみ)
         const updateText = (id, text) => {
             const el = document.getElementById(id);
             if (el) el.innerText = text;
@@ -90,36 +96,42 @@ async function updateStatus() {
     } catch (e) { console.error("Status update error:", e); }
 }
 
-// --- 馬の検索 (ここが自動で呼ばれる) ---
+// --- 馬の検索 (自動で呼ばれる本体) ---
 async function searchHorses() {
-    const f = document.getElementById('s_father').value;
-    const m = document.getElementById('s_mother').value;
+    const fInput = document.getElementById('s_father');
+    const mInput = document.getElementById('s_mother');
     const resultsEl = document.getElementById('search_results');
 
-    console.log(`SEARCH: 検索実行判定中... (父:${f.length}文字, 母:${m.length}文字)`);
+    if (!fInput || !mInput || !resultsEl) return;
 
+    const f = fInput.value;
+    const m = mInput.value;
+
+    console.log(`SEARCH: 検索判定中... (父:${f.length}文字, 母:${m.length}文字)`);
+
+    // 2文字未満ならクリア
     if (f.length < 2 && m.length < 2) {
-        if (resultsEl) resultsEl.innerHTML = "";
+        resultsEl.innerHTML = "";
         return;
     }
 
     console.log(`SEARCH: サーバーへリクエスト送信: /search_horses?f=${f}&m=${m}`);
-    if (resultsEl) resultsEl.innerHTML = "<div style='color:blue;'>[DEBUG] サーバー通信中...</div>";
+    resultsEl.innerHTML = "<div style='color:blue; font-size:0.8rem;'>[DEBUG] サーバー通信中...</div>";
 
     try {
         const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`);
         const horses = await res.json();
-        console.log("SEARCH: サーバーから受信した件数:", horses ? horses.length : 0);
+        console.log("SEARCH: サーバー回答受信", horses ? horses.length : 0, "件");
 
         if (horses && horses.length > 0) {
-            let html = `<div style="color:green; font-size:0.7rem;">[DEBUG] ${horses.length}件ヒット</div>`;
+            let html = `<div style="color:green; font-size:0.7rem; margin-bottom:5px;">[DEBUG] ${horses.length}件表示</div>`;
             horses.forEach(h => {
                 html += `
-                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white;">
-                    <div style="font-weight:bold;">${h.horse_name}</div>
-                    <div style="font-size:0.8rem; color:#64748b;">父: ${h.father_name} / 母: ${h.mother_name}</div>
+                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
+                    <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
                     <button onclick="doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
-                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; margin-top:5px;">
+                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                         指名する
                     </button>
                 </div>`;
@@ -127,15 +139,15 @@ async function searchHorses() {
             resultsEl.innerHTML = html;
         } else {
             console.log("SEARCH: ヒットなし");
-            resultsEl.innerHTML = "<div style='color:#94a3b8; text-align:center;'>[DEBUG] 該当なし</div>";
+            resultsEl.innerHTML = "<div style='color:#94a3b8; text-align:center; padding:10px;'>[DEBUG] 該当なし</div>";
         }
     } catch (e) {
         console.error("SEARCH ERROR:", e);
-        if (resultsEl) resultsEl.innerHTML = `<div style="color:red;">通信エラー: ${e.message}</div>`;
+        resultsEl.innerHTML = `<div style="color:red; font-size:0.8rem;">通信エラー: ${e.message}</div>`;
     }
 }
 
-// --- 以下、既存の操作関数 ---
+// --- 指名実行 ---
 window.doNominate = async function(name, mother) {
     if (!confirm(`${name} を指名しますか？`)) return;
     try {
@@ -144,14 +156,21 @@ window.doNominate = async function(name, mother) {
         formData.append('mother_name', mother);
         const res = await fetch('/nominate', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.status === 'success') { alert("指名完了"); updateStatus(); if (typeof switchTab === 'function') switchTab('tab-my'); }
-    } catch (e) { console.error(e); }
+        if (data.status === 'success') {
+            alert("指名完了");
+            updateStatus();
+            if (typeof switchTab === 'function') switchTab('tab-my');
+        } else {
+            alert("エラー: " + (data.message || "指名に失敗しました"));
+        }
+    } catch (e) { console.error("Nominate error:", e); }
 }
 
+// --- MC操作 ---
 window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
 window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
-window.runLottery = async function() { if(confirm("抽選？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
-window.nextRound = async function() { if(confirm("次巡？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
+window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
+window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
