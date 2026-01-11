@@ -1,0 +1,27 @@
+/* ヘッダーの調整 */
+header {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 退出ボタンをはっきりさせる */
+header a[href="/logout"] {
+    display: inline-block;
+    background: #ef4444; /* 赤色にして目立たせる */
+    color: white !important;
+    border: none !important;
+    font-weight: bold;
+}
+
+/* タブボタンのスタイル */
+.tab-btn {
+    transition: all 0.2s;
+    outline: none;
+}
+.tab-btn.active {
+    color: #2563eb;
+}
+
+/* 検索結果エリア */
+#search_results {
+    min-height: 50px;
+}
