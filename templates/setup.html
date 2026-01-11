@@ -2,23 +2,47 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>セットアップ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初期設定 - NNNPOG</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .setup-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 400px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        :root { --primary: #2563eb; --bg: #f1f5f9; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); margin: 0; padding: 1rem;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+        }
+        .container { width: 100%; max-width: 400px; background: white; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        h2 { margin-top: 0; color: #1e293b; text-align: center; font-size: 1.25rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #475569; font-size: 0.9rem; }
+        textarea, input { 
+            width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; 
+            font-size: 1rem; box-sizing: border-box; -webkit-appearance: none;
+        }
+        textarea { height: 120px; line-height: 1.5; }
+        .hint { font-size: 0.8rem; color: #64748b; margin-top: 0.4rem; }
+        button { 
+            width: 100%; padding: 1rem; background: var(--primary); color: white; 
+            border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: bold; 
+            cursor: pointer; margin-top: 0.5rem;
+        }
+        button:active { opacity: 0.8; transform: scale(0.98); }
     </style>
 </head>
 <body>
-    <div class="setup-card">
-        <h2 style="text-align:center;">POGドラフト設定</h2>
+    <div class="container">
+        <h2>POGドラフト初期設定</h2>
         <form action="/do_setup" method="post">
-            <label>参加者名（カンマ区切り）</label>
-            <input type="text" name="players" placeholder="佐藤, 田中, 鈴木" required>
-            <label>MC（司会）の名前</label>
-            <input type="text" name="mc" placeholder="佐藤" required>
-            <button type="submit">ドラフトを開始する</button>
+            <div class="form-group">
+                <label>参加者リスト</label>
+                <textarea name="players" placeholder="例: 太郎, 次郎, 花子" required></textarea>
+                <div class="hint">※名前をカンマ(,)で区切って入力</div>
+            </div>
+            <div class="form-group">
+                <label>進行役(MC)の名前</label>
+                <input type="text" name="mc" placeholder="参加者リスト内の名前を入力" required>
+            </div>
+            <button type="submit">設定を保存して開始</button>
         </form>
     </div>
 </body>

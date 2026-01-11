@@ -2,26 +2,36 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>入室 - POGドラフト</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - NNNPOG</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f4; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 350px; }
-        select { width: 100%; padding: 12px; margin: 20px 0; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
-        button { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 18px; cursor: pointer; }
+        :root { --primary: #059669; --bg: #f0fdf4; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); margin: 0; padding: 2rem 1rem;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        h2 { color: #064e3b; margin-bottom: 1.5rem; font-size: 1.25rem; text-align: center; }
+        .user-list { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 0.75rem; }
+        .user-form { margin: 0; }
+        .user-btn { 
+            width: 100%; padding: 1.1rem; background: white; border: 1px solid #d1fae5; 
+            border-radius: 0.75rem; font-size: 1.1rem; font-weight: 600; color: #065f46; 
+            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+        }
+        .user-btn:active { background: #d1fae5; transform: scale(0.97); }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <h2>POGドラフト入室</h2>
-        <p>あなたの名前を選択してください</p>
-        <form action="/login" method="post">
-            <select name="user">
-                {% for p in participants %}
-                <option value="{{ p.name }}">{{ p.name }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit">入室する</button>
+    <h2>参加者を選択してください</h2>
+    <div class="user-list">
+        {% for p in participants %}
+        <form action="/login" method="post" class="user-form">
+            <input type="hidden" name="user" value="{{ p.name }}">
+            <button type="submit" class="user-btn">{{ p.name }}</button>
         </form>
+        {% endfor %}
     </div>
 </body>
 </html>
