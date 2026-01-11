@@ -38,6 +38,15 @@ async def setup_page(request: Request):
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
     player_list = [p.strip() for p in players.split(",") if p.strip()]
     
+    # 【追加・変更点】MCが参加者リストに含まれているかチェック
+    if mc not in player_list:
+        return HTMLResponse(content=f"""
+            <script>
+                alert("エラー: MCの名前『{mc}』が参加者リストに含まれていません。");
+                history.back();
+            </script>
+        """, status_code=400)
+    
     # 既存データの全削除
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
@@ -63,7 +72,6 @@ async def index(request: Request):
     
     if not user:
         pts = supabase.table("participants").select("name").order("name").execute()
-        # ブラウザにHTMLであることを明示(media_type)
         return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data}, media_type="text/html")
     
     round_now = int(get_setting("current_round") or 1)
@@ -73,7 +81,6 @@ async def index(request: Request):
     role_row = supabase.table("participants").select("role").eq("name", user).execute()
     confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("round").order("player_name").execute()
 
-    # ブラウザにHTMLであることを明示(media_type)
     return templates.TemplateResponse("index.html", {
         "request": request, "user": user, "phase": phase, "current_round": round_now, 
         "won_horse": won_horse.data[0]['horse_name'] if won_horse.data else None, 
@@ -185,7 +192,6 @@ async def next_round():
 
 @app.post("/login")
 async def login(user: str = Form(...)):
-    # 303リダイレクトで確実に画面遷移
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
     return response
