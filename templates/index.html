@@ -1,316 +1,213 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>POGドラフト</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f4f7f6; display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
-        
-        .mc-sidebar { width: 220px; background: #2c3e50; color: white; padding: 20px; display: none; flex-direction: column; flex-shrink: 0; overflow-y: auto; z-index: 2000; }
-        .mc-btn { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; background: #34495e; color: white; }
-        .mc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        
-        .mc-btn-active { background: #e74c3c !important; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-        
-        .main-content { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
-        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
-        
-        #ui-reveal { 
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: radial-gradient(circle, #2c3e50 0%, #000000 100%); 
-            color: white; z-index: 3000; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-            cursor: pointer;
-        }
-        #rev-player { font-size: 2.2em; color: #28a745; margin-bottom: 20px; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
-        #rev-horse { font-size: 7em; font-weight: 900; margin: 30px 0; letter-spacing: 8px; text-shadow: 0 0 30px rgba(40,167,69,0.9); }
-        #rev-info { font-size: 2em; border-top: 2px solid rgba(255,255,255,0.2); padding-top: 25px; color: #ccc; }
+from fastapi import FastAPI, Request, Form, Response
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from supabase import create_client
+import urllib.parse
+import random
+import os
 
-        .draft-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 15px; }
-        .result-card { background: #fafafa; border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center; }
-        .status-win { border: 3px solid #28a745; background-color: #e8f5e9; font-weight: bold; }
-        .status-duplicate { border: 3px solid #e67e22; background: #fff4e5; }
-        .status-lose { border: 3px solid #dc3545; background: #ffebee; }
+app = FastAPI()
 
-        .table-container { width: 100%; overflow-x: auto; margin-top: 30px; border: 1px solid #ddd; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 0.85em; table-layout: fixed; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: center; vertical-align: top; }
-        th { background-color: #f8f9fa; position: sticky; top: 0; }
-        .horse-name { display: block; font-weight: bold; color: #28a745; }
-        .parent-info { display: block; font-size: 0.8em; color: #666; }
-        .cell-win { background-color: #e8f5e9; }
+# staticフォルダのマウント
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #28a745; margin-bottom: 20px; }
-        .user-panel { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 10px; }
-        .logout-btn { color: #dc3545; text-decoration: none; padding: 2px 8px; border: 1px solid #dc3545; border-radius: 4px; }
-        
-        #nomination-count { background: #f8f9fa; border: 1px solid #28a745; color: #28a745; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 0.9em; }
-    </style>
-</head>
-<body id="pog-body" data-user="{{ user }}" data-mc="{{ is_mc }}">
+templates = Jinja2Templates(directory="templates")
 
-<div class="mc-sidebar" id="mc-sidebar">
-    <h3>司会進行</h3>
-    <button id="btn-start-reveal" class="mc-btn" onclick="mcAction('/mc/start_reveal', true)">① 発表開始 (自動送り)</button>
-    <button id="btn-run-lottery" class="mc-btn" style="background:#e67e22;" onclick="mcAction('/mc/run_lottery')">② 抽選実行</button>
-    <button id="btn-next-round" class="mc-btn" style="background:#2196f3;" onclick="mcAction('/mc/next_round')">③ 次の指名へ</button>
+# --- Supabase 設定 ---
+SUPABASE_URL = "https://klnehheffymzcrlofdwt.supabase.co"
+SUPABASE_KEY = "sb_publishable_rTGUjz-nIYn50RxuwwoqZg_vV9IoWRX"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --- ヘルパー関数 ---
+def get_setting(key):
+    try:
+        res = supabase.table("draft_settings").select("value").eq("key", key).execute()
+        return res.data[0]['value'] if res.data else None
+    except:
+        return None
+
+def update_setting(key, value):
+    supabase.table("draft_settings").upsert({"key": key, "value": str(value)}).execute()
+
+@app.get("/setup")
+async def setup_page(request: Request):
+    return templates.TemplateResponse("setup.html", {"request": request})
+
+@app.post("/do_setup")
+async def do_setup(players: str = Form(...), mc: str = Form(...)):
+    player_list = [p.strip() for p in players.split(",") if p.strip()]
     
-    <div style="font-size:0.75em; margin-top:20px; color:#bdc3c7; line-height:1.4;">
-        <p><strong>【進行ヒント】</strong><br>
-        重複がない場合は自動で確定します。<br>
-        重複がある場合は「抽選実行」が必要です。</p>
-    </div>
-</div>
+    supabase.table("draft_results").delete().neq("id", -1).execute()
+    supabase.table("draft_settings").delete().neq("key", "empty").execute()
+    supabase.table("participants").delete().neq("name", "empty").execute()
+    
+    pts = [{"name": p, "role": "MC" if p == mc else "Player"} for p in player_list]
+    supabase.table("participants").insert(pts).execute()
+    
+    update_setting("current_round", "1")
+    update_setting("phase", "nomination")
+    update_setting("reveal_index", "-1")
+    
+    return RedirectResponse(url="/", status_code=303)
 
-<div class="main-content">
-    <div class="container">
-        <div class="user-panel">
-            <span>ログイン：<strong>{{ user }}</strong></span>
-            <a href="/logout" class="logout-btn">退出</a>
-        </div>
-        
-        <div class="header">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <h1>POGドラフト</h1>
-                <div id="nomination-count">0/0人指名</div>
-            </div>
-            <div id="round-badge" style="background:#28a745; color:white; padding:5px 15px; border-radius:20px;">第 {{ current_round }} 巡目</div>
-        </div>
+@app.get("/")
+async def index(request: Request):
+    # 元のロジックを忠実に再現
+    raw_user = request.cookies.get("pog_user")
+    user = urllib.parse.unquote(raw_user) if raw_user else None
+    phase = get_setting("phase")
+    
+    if not phase: return RedirectResponse(url="/setup")
+    
+    if not user:
+        pts = supabase.table("participants").select("name").order("name").execute()
+        return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data})
+    
+    round_now = int(get_setting("current_round") or 1)
+    
+    won_horse = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 1).execute()
+    current_nom = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
+    role_row = supabase.table("participants").select("role").eq("name", user).execute()
+    confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("round").order("player_name").execute()
 
-        <div id="personal-status"></div>
+    return templates.TemplateResponse("index.html", {
+        "request": request, "user": user, "phase": phase, "current_round": round_now, 
+        "won_horse": won_horse.data[0]['horse_name'] if won_horse.data else None, 
+        "current_horse": current_nom.data[0]['horse_name'] if current_nom.data else None, 
+        "is_mc": 1 if role_row.data and role_row.data[0]['role'] == 'MC' else 0,
+        "confirmed_horses": confirmed.data
+    })
 
-        <div id="ui-nomination">
-            <div id="nomination-form-container">
-                <p><strong>馬を検索して指名してください：</strong></p>
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="text" id="f-in" style="flex:1; padding:12px; border:1px solid #ddd; border-radius:6px;" placeholder="父名検索">
-                    <input type="text" id="m-in" style="flex:1; padding:12px; border:1px solid #ddd; border-radius:6px;" placeholder="母名検索">
-                </div>
-                <div id="results" style="max-height: 200px; overflow-y: auto;"></div>
-                <div style="margin:15px 0;">選択中： <strong id="sel-txt" style="color:#2196f3;">なし</strong></div>
-                <button id="nominate-btn" disabled style="width:100%; padding:15px; background:#2196f3; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">指名を確定・修正する</button>
-            </div>
-            <div id="nomination-waiting-msg" style="display:none; text-align:center; padding:20px; background:#eee; border-radius:10px;">
-                他の参加者の入力を待っています...
-            </div>
-        </div>
+@app.get("/status")
+async def status():
+    phase = get_setting("phase")
+    round_now = int(get_setting("current_round") or 1)
+    rev_idx = int(get_setting("reveal_index") or -1)
 
-        <div id="ui-lottery" style="display:none; margin-top:20px;">
-            <h4 style="text-align:center; border-bottom:1px solid #eee; padding-bottom:10px;">指名重複状況</h4>
-            <div class="draft-grid" id="result-grid"></div>
-        </div>
+    all_pts = supabase.table("participants").select("name").order("name").execute()
+    all_players_list = [p['name'] for p in all_pts.data]
 
-        <div class="table-container">
-            <h4 style="text-align:center; margin:10px 0;">獲得馬一覧</h4>
-            <table id="draft-table">
-                <thead><tr id="table-head"><th>巡目</th></tr></thead>
-                <tbody id="table-body"></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div id="ui-reveal" onclick="handleRevealNext(event)">
-    <div id="rev-player"></div>
-    <div id="rev-horse"></div>
-    <div id="rev-info"></div>
-</div>
-
-<script>
-    (function() {
-        const body = document.getElementById('pog-body');
-        const loginUser = body.getAttribute('data-user');
-        const isMc = body.getAttribute('data-mc') === '1';
-        let autoTimer = null;
-        let players = []; 
-        let currentPhase = "";
-        let currentRoundNumber = parseInt("{{ current_round }}");
-
-        if (isMc) {
-            document.getElementById('mc-sidebar').style.display = 'flex';
-            window.addEventListener('keydown', (e) => {
-                if (currentPhase === 'reveal' && (e.code === 'Space' || e.code === 'Enter')) {
-                    e.preventDefault();
-                    triggerNextReveal();
-                }
-            });
-        }
-
-        window.handleRevealNext = function(e) {
-            if (isMc && currentPhase === 'reveal') {
-                triggerNextReveal();
+    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
+    winner_names = [w['player_name'] for w in winners.data]
+    active_players = [p for p in all_players_list if p not in winner_names]
+    
+    all_noms = supabase.table("draft_results").select("*").execute()
+    
+    reveal_data = None
+    if phase == "reveal" and 0 <= rev_idx < len(active_players):
+        target = active_players[rev_idx]
+        res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
+        if res.data:
+            h_info = supabase.table("horses").select("father_name").eq("horse_name", res.data[0]['horse_name']).execute()
+            reveal_data = {
+                "player": target, 
+                "horse": res.data[0]['horse_name'], 
+                "mother": res.data[0]['mother_name'], 
+                "father": h_info.data[0]['father_name'] if h_info.data else "データなし"
             }
-        };
+        else:
+            reveal_data = {"player": target, "horse": "（未入力）", "mother": "-", "father": "-"}
 
-        function triggerNextReveal() {
-            if (autoTimer) { 
-                clearInterval(autoTimer); 
-                autoTimer = null; 
-                document.getElementById('btn-start-reveal').classList.remove('mc-btn-active'); 
-            }
-            mcAction('/mc/next_reveal');
-        }
+    return {
+        "phase": phase, "round": round_now, "reveal_index": rev_idx, 
+        "total_players": len(active_players), "all_players": all_players_list, 
+        "reveal_data": reveal_data, "all_nominations": all_noms.data
+    }
 
-        function clearSearchForm() {
-            document.getElementById('f-in').value = "";
-            document.getElementById('m-in').value = "";
-            document.getElementById('results').innerHTML = "";
-            document.getElementById('sel-txt').innerText = "なし";
-            document.getElementById('nominate-btn').disabled = true;
-        }
+@app.post("/nominate")
+async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...)):
+    # ここも元のロジック通りに修正
+    raw_user = request.cookies.get("pog_user")
+    user = urllib.parse.unquote(raw_user) if raw_user else None
+    if not user: return {"status": "error", "message": "no user"}
 
-        function updateView(st) {
-            if (currentRoundNumber !== st.round) {
-                currentRoundNumber = st.round;
-                clearSearchForm();
-            }
-            
-            currentPhase = st.phase;
-            const uiNom = document.getElementById('ui-nomination');
-            const uiRev = document.getElementById('ui-reveal');
-            const uiLot = document.getElementById('ui-lottery');
-            const formCont = document.getElementById('nomination-form-container');
-            const waitMsg = document.getElementById('nomination-waiting-msg');
-            const statusBox = document.getElementById('personal-status');
+    round_now = int(get_setting("current_round") or 1)
+    supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
+    supabase.table("draft_results").insert({
+        "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
+    }).execute()
+    return {"status": "success"}
 
-            if (st.all_players && JSON.stringify(st.all_players) !== JSON.stringify(players)) {
-                players = st.all_players;
-                const head = document.getElementById('table-head');
-                while (head.cells.length > 1) head.deleteCell(1);
-                players.forEach(p => {
-                    const th = document.createElement('th');
-                    th.innerText = p;
-                    head.appendChild(th);
-                });
-            }
+@app.post("/mc/start_reveal")
+async def start_reveal():
+    update_setting("phase", "reveal")
+    update_setting("reveal_index", "0")
+    return {"status": "ok"}
 
-            const currentRoundNoms = st.all_nominations.filter(n => n.round === st.round);
-            const nominatedCount = currentRoundNoms.filter(n => n.is_winner === 0).length;
-            const winnersInThisRound = currentRoundNoms.filter(n => n.is_winner === 1).length;
-            const totalDone = nominatedCount + winnersInThisRound;
-            document.getElementById('nomination-count').innerText = `${totalDone}/${players.length}人指名`;
+@app.post("/mc/next_reveal")
+async def next_reveal():
+    round_now = int(get_setting("current_round"))
+    all_pts = supabase.table("participants").select("name").execute()
+    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
+    active_count = len(all_pts.data) - len(winners.data)
+    
+    current_idx = int(get_setting("reveal_index"))
+    new_idx = current_idx + 1
+    if new_idx >= active_count:
+        update_setting("phase", "lottery")
+    else:
+        update_setting("reveal_index", str(new_idx))
+    return {"status": "ok"}
 
-            const myWin = st.all_nominations.find(n => n.player_name === loginUser && n.round === st.round && n.is_winner === 1);
-            const myNom = st.all_nominations.find(n => n.player_name === loginUser && n.round === st.round && n.is_winner === 0);
+@app.post("/mc/run_lottery")
+async def run_lottery():
+    round_now = int(get_setting("current_round") or 1)
+    noms = supabase.table("draft_results").select("id, horse_name").eq("round", round_now).eq("is_winner", 0).execute()
+    
+    horse_groups = {}
+    for n in noms.data:
+        horse_groups.setdefault(n['horse_name'], []).append(n['id'])
+    
+    for h_name, ids in horse_groups.items():
+        winner_id = random.choice(ids)
+        supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner_id).execute()
+        supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+    
+    update_setting("phase", "lottery")
+    return {"status": "ok"}
 
-            if (myWin) {
-                statusBox.innerHTML = `<div style="background:#e8f5e9; padding:15px; border-left:5px solid #28a745; margin-bottom:20px; font-weight:bold; color:#28a745;">🏆 当選確定：${myWin.horse_name}</div>`;
-                uiNom.style.display = 'block';
-                formCont.style.display = 'none';
-                waitMsg.style.display = 'block';
-                waitMsg.innerText = "当選おめでとうございます！次の巡目まで待機してください。";
-            } else {
-                statusBox.innerHTML = myNom ? `<div style="background:#e3f2fd; padding:15px; border-left:5px solid #2196f3; margin-bottom:20px;">📝 指名完了：${myNom.horse_name}</div>` : "";
-                uiNom.style.display = (st.phase === 'nomination') ? 'block' : 'none';
-                formCont.style.display = (st.phase === 'nomination') ? 'block' : 'none';
-                waitMsg.style.display = 'none';
-            }
+@app.post("/mc/next_round")
+async def next_round():
+    round_now = int(get_setting("current_round") or 1)
+    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
+    
+    if losers.count > 0:
+        supabase.table("draft_results").delete().eq("is_winner", -1).execute()
+    else:
+        supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
+        update_setting("current_round", str(round_now + 1))
+    
+    update_setting("phase", "nomination")
+    return {"status": "ok"}
 
-            if (st.phase === 'reveal' && st.reveal_data) {
-                uiRev.style.display = 'flex';
-                document.getElementById('rev-player').innerText = st.reveal_data.player + " さんの指名は...";
-                document.getElementById('rev-horse').innerText = st.reveal_data.horse;
-                document.getElementById('rev-info').innerHTML = `父: ${st.reveal_data.father} × 母: ${st.reveal_data.mother}`;
-            } else {
-                uiRev.style.display = 'none';
-                if (autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('btn-start-reveal').classList.remove('mc-btn-active'); }
-            }
+@app.post("/login")
+async def login(user: str = Form(...)):
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
+    return response
 
-            // 重複チェック
-            const horseCounts = {};
-            currentRoundNoms.forEach(n => horseCounts[n.horse_name] = (horseCounts[n.horse_name] || 0) + 1);
-            const hasDuplicate = Object.values(horseCounts).some(count => count > 1);
-            const hasLotteryResult = currentRoundNoms.some(n => n.is_winner === 1 || n.is_winner === -1);
+@app.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie("pog_user")
+    return response
 
-            if (st.phase === 'lottery') {
-                uiLot.style.display = 'block';
-                const grid = document.getElementById('result-grid');
-                grid.innerHTML = currentRoundNoms.map(n => {
-                    let cls = ""; let tag = "";
-                    if (n.is_winner === 1) { cls = "status-win"; tag = "当選"; }
-                    else if (n.is_winner === -1) { cls = "status-lose"; tag = "落選"; }
-                    else if (horseCounts[n.horse_name] > 1) { cls = "status-duplicate"; tag = "重複"; }
-                    else { tag = "単独"; }
-                    return `<div class="result-card ${cls}"><div>${n.player_name}</div><strong>${n.horse_name}</strong><br><small>${tag}</small></div>`;
-                }).join('');
-            } else {
-                uiLot.style.display = 'none';
-            }
+@app.get("/search_horses")
+async def search_horses(f: str = "", m: str = ""):
+    if len(f) < 2 and len(m) < 2: return []
+    
+    won = supabase.table("draft_results").select("horse_name").eq("is_winner", 1).execute()
+    won_list = [w['horse_name'] for w in won.data]
+    
+    query = supabase.table("horses").select("horse_name, father_name, mother_name")
+    if f: query = query.ilike("father_name", f"%{f}%")
+    if m: query = query.ilike("mother_name", f"%{m}%")
+    
+    res = query.limit(100).execute()
+    return [h for h in res.data if h['horse_name'] not in won_list]
 
-            const tableBody = document.getElementById('table-body');
-            let tableHtml = "";
-            for (let r = 1; r <= 10; r++) {
-                let row = `<tr><td><strong>${r}</strong></td>`;
-                players.forEach(p => {
-                    const win = st.all_nominations.find(n => n.player_name === p && n.round === r && n.is_winner === 1);
-                    if (win) {
-                        row += `<td class="cell-win"><span class="horse-name">${win.horse_name}</span><span class="parent-info">父:${win.father_name}<br>母:${win.mother_name}</span></td>`;
-                    } else {
-                        row += `<td>-</td>`;
-                    }
-                });
-                tableHtml += row + "</tr>";
-            }
-            tableBody.innerHTML = tableHtml;
-
-            if (isMc) {
-                const isAllDone = (totalDone === players.length && players.length > 0);
-                document.getElementById('btn-start-reveal').disabled = (st.phase !== 'nomination' || !isAllDone);
-                
-                // 重複がある場合のみ「抽選実行」を有効にする
-                document.getElementById('btn-run-lottery').disabled = (st.phase !== 'reveal' && st.phase !== 'lottery') || !hasDuplicate;
-                
-                // 次の巡目へ：
-                // 1. 重複がない場合は、発表が終わった(lotteryフェーズに入った)時点で押せる
-                // 2. 重複がある場合は、抽選結果が出るまで押せない
-                const canGoNext = (st.phase === 'lottery' && (!hasDuplicate || hasLotteryResult));
-                document.getElementById('btn-next-round').disabled = !canGoNext;
-            }
-            document.getElementById('round-badge').innerText = `第 ${st.round} 巡目`;
-        }
-
-        let selectedHorse = ""; let selectedMother = "";
-        const fIn = document.getElementById('f-in'); const mIn = document.getElementById('m-in'); const btnNom = document.getElementById('nominate-btn');
-        const search = async () => {
-            if (!fIn.value.trim() && !mIn.value.trim()) {
-                document.getElementById('results').innerHTML = "";
-                return;
-            }
-            const r = await fetch(`/search_horses?f=${encodeURIComponent(fIn.value)}&m=${encodeURIComponent(mIn.value)}`);
-            const data = await r.json();
-            document.getElementById('results').innerHTML = data.map(h => `
-                <div style="padding:10px; border-bottom:1px solid #eee; cursor:pointer;" onclick="selectH(this,'${h.horse_name}','${h.mother_name}')">
-                    <strong>${h.horse_name}</strong><br><small>父:${h.father_name} 母:${h.mother_name}</small>
-                </div>
-            `).join('');
-        };
-        if(fIn){ fIn.oninput = search; mIn.oninput = search; }
-        window.selectH = (el, h, m) => { 
-            selectedHorse = h; selectedMother = m; document.getElementById('sel-txt').innerText = h; btnNom.disabled = false; 
-            document.querySelectorAll('#results div').forEach(i => i.style.background = 'white'); el.style.background = '#e3f2fd';
-        };
-        if(btnNom) btnNom.onclick = async () => { 
-            const fd = new URLSearchParams(); fd.append('horse_name', selectedHorse); fd.append('mother_name', selectedMother); 
-            await fetch('/nominate', { method: 'POST', body: fd }); 
-            clearSearchForm();
-            document.getElementById('sel-txt').innerText = "送信完了"; 
-        };
-        
-        window.mcAction = (url, startAuto = false) => { 
-            fetch(url, {method:'POST'}); 
-            if (startAuto && !autoTimer) {
-                autoTimer = setInterval(() => fetch('/mc/next_reveal', {method:'POST'}), 5000); 
-                document.getElementById('btn-start-reveal').classList.add('mc-btn-active');
-            }
-        };
-
-        setInterval(async () => {
-            try {
-                const res = await fetch('/status'); const st = await res.json(); updateView(st);
-            } catch(e) {}
-        }, 2000);
-    })();
-</script>
-</body>
-</html>
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
