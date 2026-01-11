@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Form, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles  # 追加
+from fastapi.staticfiles import StaticFiles
 from supabase import create_client
 import urllib.parse
 import random
@@ -9,13 +9,7 @@ import os
 
 app = FastAPI()
 
-# --- 【追加】静的ファイルとフォルダの設定 ---
-# Render等でフォルダが存在しない場合のエラーを防ぐ安全策
-if not os.path.exists("static"):
-    os.makedirs("static/css", exist_ok=True)
-    os.makedirs("static/js", exist_ok=True)
-
-# /static というURLで static フォルダにアクセスできるようにする
+# staticフォルダのマウント設定（これがないとJS/CSSが読み込めません）
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
@@ -25,7 +19,7 @@ SUPABASE_URL = "https://klnehheffymzcrlofdwt.supabase.co"
 SUPABASE_KEY = "sb_publishable_rTGUjz-nIYn50RxuwwoqZg_vV9IoWRX"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- ヘルパー関数 (SQLiteの代わり) ---
+# --- ヘルパー関数 ---
 def get_setting(key):
     try:
         res = supabase.table("draft_settings").select("value").eq("key", key).execute()
@@ -44,7 +38,7 @@ async def setup_page(request: Request):
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
     player_list = [p.strip() for p in players.split(",") if p.strip()]
     
-    # 既存データの全削除 (Supabase)
+    # 既存データの全削除
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
     supabase.table("participants").delete().neq("name", "empty").execute()
@@ -58,6 +52,7 @@ async def do_setup(players: str = Form(...), mc: str = Form(...)):
     update_setting("phase", "nomination")
     update_setting("reveal_index", "-1")
     
+    # 【修正箇所】確実にトップページへ戻るよう303を指定
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/")
@@ -66,7 +61,7 @@ async def index(request: Request):
     user = urllib.parse.unquote(raw_user) if raw_user else None
     phase = get_setting("phase")
     
-    if not phase: return RedirectResponse(url="/setup")
+    if not phase: return RedirectResponse(url="/setup", status_code=303)
     
     if not user:
         pts = supabase.table("participants").select("name").order("name").execute()
@@ -74,7 +69,6 @@ async def index(request: Request):
     
     round_now = int(get_setting("current_round") or 1)
     
-    # 自分の状況取得
     won_horse = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 1).execute()
     current_nom = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
     role_row = supabase.table("participants").select("role").eq("name", user).execute()
@@ -97,12 +91,10 @@ async def status():
     all_pts = supabase.table("participants").select("name").order("name").execute()
     all_players_list = [p['name'] for p in all_pts.data]
 
-    # アクティブプレイヤー
     winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # 全指名リスト
     all_noms = supabase.table("draft_results").select("*").execute()
     
     reveal_data = None
@@ -128,7 +120,10 @@ async def status():
 
 @app.post("/nominate")
 async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...)):
-    user = urllib.parse.unquote(request.cookies.get("pog_user"))
+    raw_user = request.cookies.get("pog_user")
+    user = urllib.parse.unquote(raw_user) if raw_user else None
+    if not user: return {"status": "error"}
+
     round_now = int(get_setting("current_round") or 1)
     supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
     supabase.table("draft_results").insert({
@@ -169,7 +164,6 @@ async def run_lottery():
     for h_name, ids in horse_groups.items():
         winner_id = random.choice(ids)
         supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner_id).execute()
-        # 外れた人を -1 に
         supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
     
     update_setting("phase", "lottery")
@@ -183,7 +177,6 @@ async def next_round():
     if losers.count > 0:
         supabase.table("draft_results").delete().eq("is_winner", -1).execute()
     else:
-        # 全員当選した場合は次のラウンドへ
         supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
         update_setting("current_round", str(round_now + 1))
     
@@ -192,13 +185,13 @@ async def next_round():
 
 @app.post("/login")
 async def login(user: str = Form(...)):
-    response = RedirectResponse(url="/", status_code=302)
+    response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
     return response
 
 @app.get("/logout")
 async def logout():
-    response = RedirectResponse(url="/", status_code=302)
+    response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("pog_user")
     return response
 
@@ -206,7 +199,6 @@ async def logout():
 async def search_horses(f: str = "", m: str = ""):
     if len(f) < 2 and len(m) < 2: return []
     
-    # 獲得済みの馬を除外
     won = supabase.table("draft_results").select("horse_name").eq("is_winner", 1).execute()
     won_list = [w['horse_name'] for w in won.data]
     
