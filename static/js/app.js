@@ -11,6 +11,7 @@ let lastPhase = "";
 async function updateStatus() {
     try {
         const res = await fetch('/status');
+        if (!res.ok) return;
         const data = await res.json();
 
         // 1. 基本情報の表示
@@ -28,15 +29,15 @@ async function updateStatus() {
         }
 
         // 2. 指名済人数のカウント表示
-        const nominatedCount = new Set(data.all_nominations
-            .filter(n => n.round === data.round && (n.is_winner === 0 || n.is_winner === 1))
-            .map(n => n.player_name)).size;
         const counterEl = document.getElementById('status_counter');
-        if (counterEl) {
+        if (counterEl && data.all_nominations) {
+            const nominatedCount = new Set(data.all_nominations
+                .filter(n => n.round === data.round && (n.is_winner === 0 || n.is_winner === 1))
+                .map(n => n.player_name)).size;
             counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
         }
 
-        // 3. 一人ずつ公開(reveal)の表示
+        // 3. 公開(reveal)の表示
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
@@ -50,28 +51,24 @@ async function updateStatus() {
             }
         }
 
-        // 4. 全体状況タブ（all_status_list）の更新
+        // 4. 全体状況の更新
         const allStatusDiv = document.getElementById('all_status_list');
-        if (allStatusDiv) {
+        if (allStatusDiv && data.all_players) {
             let html = '<table style="width:100%; border-collapse:collapse;">';
             data.all_players.forEach(playerName => {
                 const nom = data.all_nominations.find(n => n.player_name === playerName && n.round === data.round);
                 let horseTxt = '<span style="color:#94a3b8;">-</span>';
-                
                 if (nom) {
                     const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
                     if (data.phase !== 'nomination' || isMe) {
                         horseTxt = `<strong>${nom.horse_name}</strong>`;
-                        if (nom.is_winner === 1) horseTxt = `<span style="color:#eab308;">⭐</span> ${horseTxt}`;
-                        if (nom.is_winner === -1) horseTxt = `<del style="color:#94a3b8;">${nom.horse_name}</del> <small>(落選)</small>`;
+                        if (nom.is_winner === 1) horseTxt = `⭐ ${horseTxt}`;
+                        if (nom.is_winner === -1) horseTxt = `<del>${nom.horse_name}</del> (落選)`;
                     } else {
-                        horseTxt = '<span style="color:#3b82f6;">???</span>';
+                        horseTxt = '???';
                     }
                 }
-                html += `<tr style="border-bottom:1px solid #f1f5f9;">
-                            <td style="padding:10px 0;">${playerName}</td>
-                            <td style="padding:10px 0; text-align:right;">${horseTxt}</td>
-                         </tr>`;
+                html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px 0;">${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
             });
             html += '</table>';
             allStatusDiv.innerHTML = html;
@@ -81,80 +78,67 @@ async function updateStatus() {
             location.reload();
         }
         lastPhase = data.phase;
-
-    } catch (e) {
-        console.error("Status update error:", e);
-    }
+    } catch (e) { console.error("Update error:", e); }
 }
 
-// --- 馬の検索関数（既存ロジック厳守・データ処理修正版） ---
+// --- 馬の検索関数（最新 main.py に完全適合） ---
 async function searchHorses() {
     const f = document.getElementById('s_father').value;
     const m = document.getElementById('s_mother').value;
     const resultsEl = document.getElementById('search_results');
 
+    if (!resultsEl) return;
     if (f.length < 2 && m.length < 2) {
-        alert("父名または母名を2文字以上入力してください");
+        alert("2文字以上入力してください");
         return;
     }
 
+    resultsEl.innerHTML = "検索中...";
+
     try {
-        const url = `/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`;
-        const res = await fetch(url);
+        const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`);
         const horses = await res.json();
 
         let html = '';
-        if (horses && Array.isArray(horses) && horses.length > 0) {
+        if (horses && horses.length > 0) {
             horses.forEach(h => {
-                // main.py の戻り値 [h for h in res.data ...] に合わせる
-                const hName = h.horse_name;
-                const mName = h.mother_name;
-                const fName = h.father_name;
-
                 html += `
-                <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
-                    <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${hName}</div>
-                    <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${fName} / 母: ${mName}</div>
-                    <button onclick="doNominate('${hName}', '${mName}')" 
-                            style="width:100%; padding:8px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
-                        この馬を指名する
+                <div style="padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:8px; background:white;">
+                    <strong>${h.horse_name}</strong><br>
+                    <small>父: ${h.father_name} / 母: ${h.mother_name}</small><br>
+                    <button onclick="doNominate('${h.horse_name}', '${h.mother_name}')" 
+                            style="width:100%; margin-top:5px; padding:8px; background:#10b981; color:white; border:none; border-radius:4px;">
+                        指名する
                     </button>
                 </div>`;
             });
         } else {
-            html = '<p style="color:#64748b; text-align:center;">該当する馬が見つかりません</p>';
+            html = "見つかりませんでした。";
         }
         resultsEl.innerHTML = html;
-    } catch (error) {
-        console.error("Search error:", error);
-        resultsEl.innerHTML = '<p style="color:red;">検索エラーが発生しました</p>';
+    } catch (e) {
+        resultsEl.innerHTML = "エラーが発生しました。";
+        console.error(e);
     }
 }
 
-// --- 指名実行関数 ---
+// --- 指名実行 ---
 async function doNominate(name, mother) {
     if (!confirm(`${name} を指名しますか？`)) return;
     const formData = new URLSearchParams();
     formData.append('horse_name', name);
     formData.append('mother_name', mother);
-
-    const res = await fetch('/nominate', {
-        method: 'POST',
-        body: formData
-    });
-    const data = await res.json();
-    if (data.status === 'success') {
-        alert("指名完了");
-        updateStatus();
-        switchTab('tab-my');
-    }
+    await fetch('/nominate', { method: 'POST', body: formData });
+    alert("指名完了");
+    updateStatus();
+    if (typeof switchTab === 'function') switchTab('tab-my');
 }
 
-// --- MC操作用関数 ---
-async function startReveal() { if (confirm("指名公開を開始しますか？")) await fetch('/mc/start_reveal', { method: 'POST' }); updateStatus(); }
-async function nextReveal() { await fetch('/mc/next_reveal', { method: 'POST' }); updateStatus(); }
-async function runLottery() { if (confirm("抽選を実行して結果を確定させますか？")) await fetch('/mc/run_lottery', { method: 'POST' }); updateStatus(); }
-async function nextRound() { if (confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', { method: 'POST' }); updateStatus(); }
+// --- MC操作 ---
+async function startReveal() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
+async function nextReveal() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
+async function runLottery() { await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
+async function nextRound() { await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
 setInterval(updateStatus, 3000);
 updateStatus();
