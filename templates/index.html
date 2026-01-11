@@ -9,7 +9,7 @@ import os
 
 app = FastAPI()
 
-# staticフォルダのマウント
+# 【追加箇所】staticフォルダをマウントする設定
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
@@ -38,6 +38,7 @@ async def setup_page(request: Request):
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
     player_list = [p.strip() for p in players.split(",") if p.strip()]
     
+    # 【復元】あなたの元のテーブル名とロジックに完全準拠
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
     supabase.table("participants").delete().neq("name", "empty").execute()
@@ -53,7 +54,6 @@ async def do_setup(players: str = Form(...), mc: str = Form(...)):
 
 @app.get("/")
 async def index(request: Request):
-    # 元のロジックを忠実に再現
     raw_user = request.cookies.get("pog_user")
     user = urllib.parse.unquote(raw_user) if raw_user else None
     phase = get_setting("phase")
@@ -117,10 +117,9 @@ async def status():
 
 @app.post("/nominate")
 async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...)):
-    # ここも元のロジック通りに修正
     raw_user = request.cookies.get("pog_user")
     user = urllib.parse.unquote(raw_user) if raw_user else None
-    if not user: return {"status": "error", "message": "no user"}
+    if not user: return {"status": "error"}
 
     round_now = int(get_setting("current_round") or 1)
     supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
