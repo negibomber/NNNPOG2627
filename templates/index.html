@@ -41,9 +41,10 @@
     <div id="tab-search" class="tab-content">
         <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <h3 style="margin-top:0;">馬を探す</h3>
+            <p style="font-size:0.8rem; color:#64748b; margin-bottom:10px;">父名または母名を2文字以上入力してください</p>
             <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
             <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-            <button onclick="window.searchHorses()" style="width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">検索実行</button>
+            
             <div id="search_results" style="margin-top:20px;"></div>
         </div>
     </div>
@@ -100,9 +101,11 @@
         });
         document.getElementById(tabId).style.display = 'block';
         const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
-        activeBtn.style.borderBottom = '3px solid #2563eb';
-        activeBtn.style.color = '#2563eb';
-        activeBtn.classList.add('active');
+        if (activeBtn) {
+            activeBtn.style.borderBottom = '3px solid #2563eb';
+            activeBtn.style.color = '#2563eb';
+            activeBtn.classList.add('active');
+        }
     }
 </script>
 </body>
