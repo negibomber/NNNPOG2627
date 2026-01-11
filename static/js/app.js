@@ -87,35 +87,48 @@ async function updateStatus() {
     }
 }
 
-// --- 馬の検索関数（修正版） ---
+// --- 馬の検索関数（既存ロジック厳守・データ処理修正版） ---
 async function searchHorses() {
     const f = document.getElementById('s_father').value;
     const m = document.getElementById('s_mother').value;
+    const resultsEl = document.getElementById('search_results');
+
     if (f.length < 2 && m.length < 2) {
         alert("父名または母名を2文字以上入力してください");
         return;
     }
 
-    const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`);
-    const horses = await res.json();
+    try {
+        const url = `/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`;
+        const res = await fetch(url);
+        const horses = await res.json();
 
-    let html = '';
-    if (horses && horses.length > 0) {
-        horses.forEach(h => {
-            html += `
-            <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
-                <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${h.horse_name || '（馬名未定）'}</div>
-                <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                <button onclick="doNominate('${h.horse_name}', '${h.mother_name}')" 
-                        style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
-                    この馬を指名する
-                </button>
-            </div>`;
-        });
-    } else {
-        html = '<p style="color:#64748b; text-align:center;">該当する馬が見つかりません</p>';
+        let html = '';
+        if (horses && Array.isArray(horses) && horses.length > 0) {
+            horses.forEach(h => {
+                // main.py の戻り値 [h for h in res.data ...] に合わせる
+                const hName = h.horse_name;
+                const mName = h.mother_name;
+                const fName = h.father_name;
+
+                html += `
+                <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
+                    <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${hName}</div>
+                    <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${fName} / 母: ${mName}</div>
+                    <button onclick="doNominate('${hName}', '${mName}')" 
+                            style="width:100%; padding:8px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+                        この馬を指名する
+                    </button>
+                </div>`;
+            });
+        } else {
+            html = '<p style="color:#64748b; text-align:center;">該当する馬が見つかりません</p>';
+        }
+        resultsEl.innerHTML = html;
+    } catch (error) {
+        console.error("Search error:", error);
+        resultsEl.innerHTML = '<p style="color:red;">検索エラーが発生しました</p>';
     }
-    document.getElementById('search_results').innerHTML = html;
 }
 
 // --- 指名実行関数 ---
