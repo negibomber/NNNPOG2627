@@ -1,8 +1,14 @@
-// [2026-01-11] 最新版ソースを元に、実行状況を可視化するデバッグ処理を追加
+// [2026-01-11] 既存の「自動検索機能」を復元し、最新ソースに適合
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("APP: DOMContentLoaded - 初期化開始");
     updateStatus();
     setInterval(updateStatus, 3000);
+
+    // 入力時に自動検索を実行するイベントリスナーを追加
+    const fInput = document.getElementById('s_father');
+    const mInput = document.getElementById('s_mother');
+    
+    if (fInput) fInput.addEventListener('input', searchHorses);
+    if (mInput) mInput.addEventListener('input', searchHorses);
 });
 
 function getCookie(name) {
@@ -57,6 +63,7 @@ async function updateStatus() {
                 }
                 html += `<tr><td>${playerName}</td><td>${horseTxt}</td></tr>`;
             });
+            html += '</table>';
             allStatusDiv.innerHTML = html;
         }
 
@@ -67,67 +74,49 @@ async function updateStatus() {
     } catch (e) { console.error("Update error:", e); }
 }
 
-// --- 馬の検索関数 (デバッグ出力強化版) ---
-window.searchHorses = async function() {
-    const resultsEl = document.getElementById('search_results');
+// --- 馬の検索関数 (自動検索に対応) ---
+async function searchHorses() {
     const fInput = document.getElementById('s_father');
     const mInput = document.getElementById('s_mother');
+    const resultsEl = document.getElementById('search_results');
 
-    if (!resultsEl) {
-        alert("エラー: ID 'search_results' が見つかりません");
-        return;
-    }
+    if (!resultsEl || !fInput || !mInput) return;
 
     const f = fInput.value;
     const m = mInput.value;
 
-    // デバッグ開始表示
-    resultsEl.innerHTML = `
-        <div style="background:#f1f5f9; padding:10px; border-radius:5px; font-size:0.8rem; border-left:4px solid #3b82f6;">
-            [DEBUG] 検索を開始します...<br>
-            入力: 父[${f}] 母[${m}]
-        </div>
-    `;
-
+    // 以前の仕様通り、2文字未満なら結果をクリアして終了
     if (f.length < 2 && m.length < 2) {
-        alert("2文字以上入力してください");
+        resultsEl.innerHTML = "";
         return;
     }
 
     try {
         const url = `/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`;
-        console.log("DEBUG: Fetch URL:", url);
-        
         const res = await fetch(url);
-        
-        if (!res.ok) {
-            resultsEl.innerHTML += `<div style="color:red;">[DEBUG] 通信失敗: ステータス ${res.status}</div>`;
-            return;
-        }
+        if (!res.ok) return;
 
         const horses = await res.json();
-        console.log("DEBUG: Received data:", horses);
 
+        let html = '';
         if (horses && horses.length > 0) {
-            let html = `<div style="color:green; font-size:0.8rem; margin-bottom:10px;">[DEBUG] ${horses.length}件のデータを取得しました</div>`;
             horses.forEach(h => {
                 html += `
-                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white;">
-                    <div style="font-weight:bold;">${h.horse_name}</div>
+                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
                     <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                    <button onclick="window.doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
-                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold;">
-                        指名する
+                    <button onclick="doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
+                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                        この馬を指名する
                     </button>
                 </div>`;
             });
             resultsEl.innerHTML = html;
         } else {
-            resultsEl.innerHTML += `<div style="color:#64748b; padding:10px;">[DEBUG] データは空でした。検索条件に合う馬がいないか、既に当選済みです。</div>`;
+            resultsEl.innerHTML = "<div style='padding:10px; color:#64748b; text-align:center;'>該当する馬が見つかりません</div>";
         }
     } catch (e) {
-        console.error("DEBUG: Exception:", e);
-        resultsEl.innerHTML += `<div style="color:red; padding:10px;">[DEBUG] JS例外発生: ${e.message}</div>`;
+        console.error("Search error:", e);
     }
 }
 
@@ -144,8 +133,6 @@ window.doNominate = async function(name, mother) {
             alert("指名完了");
             updateStatus();
             if (typeof switchTab === 'function') switchTab('tab-my');
-        } else {
-            alert("エラー: " + data.message);
         }
     } catch (e) { alert("通信エラーが発生しました"); }
 }
