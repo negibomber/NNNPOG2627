@@ -1,212 +1,104 @@
-from fastapi import FastAPI, Request, Form, Response
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from supabase import create_client
-import urllib.parse
-import random
-import os
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NNNPOG 2026-27</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
 
-app = FastAPI()
+<header>
+    <div style="display:flex; justify-content:space-between; padding: 10px; background: #1e293b; color: white;">
+        <strong>第 <span id="round_display">{{ current_round }}</span> 巡</strong>
+        <span id="phase_display">読み込み中...</span>
+    </div>
+    <div style="padding: 5px 10px; font-size: 0.8rem; background: #334155; color: #cbd5e1;">User: {{ user }}</div>
+</header>
 
-# 【追加箇所】staticフォルダをマウントする設定
-app.mount("/static", StaticFiles(directory="static"), name="static")
+<div class="tabs" style="display: flex; border-bottom: 1px solid #ddd; background: white;">
+    <button class="tab-btn active" onclick="switchTab('tab-search')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">指名</button>
+    <button class="tab-btn" onclick="switchTab('tab-my')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">マイリスト</button>
+    <button class="tab-btn" onclick="switchTab('tab-all')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">全体</button>
+</div>
 
-templates = Jinja2Templates(directory="templates")
+<div class="container" style="padding: 15px;">
+    <div id="reveal_area" style="display:none; background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+        <div style="font-weight:bold; color:#b45309;">公開中...</div>
+        <div id="reveal_player" style="font-size:1.2rem; margin:10px 0;"></div>
+        <div id="reveal_horse" style="font-size:1.5rem; font-weight:bold;"></div>
+        <div style="font-size:0.9rem; margin-top:5px;">
+            父: <span id="reveal_father"></span> / 母: <span id="reveal_mother"></span>
+        </div>
+    </div>
 
-# --- Supabase 設定 ---
-SUPABASE_URL = "https://klnehheffymzcrlofdwt.supabase.co"
-SUPABASE_KEY = "sb_publishable_rTGUjz-nIYn50RxuwwoqZg_vV9IoWRX"
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    <div class="content-grid">
+        <div id="tab-search" class="tab-content active">
+            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <h3>馬を探す</h3>
+                <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+                <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
+                <button onclick="searchHorses()" style="width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:5px; font-weight:bold;">検索</button>
+                <div id="search_results" style="margin-top:20px;"></div>
+            </div>
+        </div>
 
-# --- ヘルパー関数 ---
-def get_setting(key):
-    try:
-        res = supabase.table("draft_settings").select("value").eq("key", key).execute()
-        return res.data[0]['value'] if res.data else None
-    except:
-        return None
+        <div id="tab-my" class="tab-content" style="display:none;">
+            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); margin-bottom:15px;">
+                <h3>エントリー中の馬</h3>
+                <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb;">
+                    {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
+                </div>
+                {% if won_horse %}
+                <div style="margin-top:10px; color:green; font-weight:bold;">🎉 当選確定: {{ won_horse }}</div>
+                {% endif %}
+            </div>
+            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <h3>獲得済みリスト</h3>
+                <div id="my_list">
+                    {% for h in confirmed_horses %}
+                        {% if h.player_name == user %}
+                        <div style="padding:5px 0; border-bottom:1px solid #eee;">第{{ h.round }}巡: {{ h.horse_name }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
-def update_setting(key, value):
-    supabase.table("draft_settings").upsert({"key": key, "value": str(value)}).execute()
+        <div id="tab-all" class="tab-content" style="display:none;">
+            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+                <h3>指名状況一覧</h3>
+                <div id="all_status"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
-@app.get("/setup")
-async def setup_page(request: Request):
-    return templates.TemplateResponse("setup.html", {"request": request})
+{% if is_mc %}
+<div class="mc-panel" style="position:fixed; bottom:0; width:100%; background:#1e293b; color:white; padding:10px; box-sizing:border-box;">
+    <div style="font-size:0.7rem; text-align:center; margin-bottom:5px;">MC CONTROL</div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+        <button onclick="startReveal()" style="padding:10px; background:#3b82f6; color:white; border:none; border-radius:4px;">公開開始</button>
+        <button onclick="nextReveal()" style="padding:10px; background:#f59e0b; color:white; border:none; border-radius:4px;">次の人へ</button>
+        <button onclick="runLottery()" style="padding:10px; background:#ef4444; color:white; border:none; border-radius:4px;">抽選実行</button>
+        <button onclick="nextRound()" style="padding:10px; background:#10b981; color:white; border:none; border-radius:4px;">次ラウンド</button>
+    </div>
+</div>
+{% endif %}
 
-@app.post("/do_setup")
-async def do_setup(players: str = Form(...), mc: str = Form(...)):
-    player_list = [p.strip() for p in players.split(",") if p.strip()]
-    
-    # 【復元】あなたの元のテーブル名とロジックに完全準拠
-    supabase.table("draft_results").delete().neq("id", -1).execute()
-    supabase.table("draft_settings").delete().neq("key", "empty").execute()
-    supabase.table("participants").delete().neq("name", "empty").execute()
-    
-    pts = [{"name": p, "role": "MC" if p == mc else "Player"} for p in player_list]
-    supabase.table("participants").insert(pts).execute()
-    
-    update_setting("current_round", "1")
-    update_setting("phase", "nomination")
-    update_setting("reveal_index", "-1")
-    
-    return RedirectResponse(url="/", status_code=303)
+<script src="/static/js/app.js"></script>
 
-@app.get("/")
-async def index(request: Request):
-    raw_user = request.cookies.get("pog_user")
-    user = urllib.parse.unquote(raw_user) if raw_user else None
-    phase = get_setting("phase")
-    
-    if not phase: return RedirectResponse(url="/setup")
-    
-    if not user:
-        pts = supabase.table("participants").select("name").order("name").execute()
-        return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data})
-    
-    round_now = int(get_setting("current_round") or 1)
-    
-    won_horse = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 1).execute()
-    current_nom = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
-    role_row = supabase.table("participants").select("role").eq("name", user).execute()
-    confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("round").order("player_name").execute()
-
-    return templates.TemplateResponse("index.html", {
-        "request": request, "user": user, "phase": phase, "current_round": round_now, 
-        "won_horse": won_horse.data[0]['horse_name'] if won_horse.data else None, 
-        "current_horse": current_nom.data[0]['horse_name'] if current_nom.data else None, 
-        "is_mc": 1 if role_row.data and role_row.data[0]['role'] == 'MC' else 0,
-        "confirmed_horses": confirmed.data
-    })
-
-@app.get("/status")
-async def status():
-    phase = get_setting("phase")
-    round_now = int(get_setting("current_round") or 1)
-    rev_idx = int(get_setting("reveal_index") or -1)
-
-    all_pts = supabase.table("participants").select("name").order("name").execute()
-    all_players_list = [p['name'] for p in all_pts.data]
-
-    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
-    winner_names = [w['player_name'] for w in winners.data]
-    active_players = [p for p in all_players_list if p not in winner_names]
-    
-    all_noms = supabase.table("draft_results").select("*").execute()
-    
-    reveal_data = None
-    if phase == "reveal" and 0 <= rev_idx < len(active_players):
-        target = active_players[rev_idx]
-        res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
-        if res.data:
-            h_info = supabase.table("horses").select("father_name").eq("horse_name", res.data[0]['horse_name']).execute()
-            reveal_data = {
-                "player": target, 
-                "horse": res.data[0]['horse_name'], 
-                "mother": res.data[0]['mother_name'], 
-                "father": h_info.data[0]['father_name'] if h_info.data else "データなし"
-            }
-        else:
-            reveal_data = {"player": target, "horse": "（未入力）", "mother": "-", "father": "-"}
-
-    return {
-        "phase": phase, "round": round_now, "reveal_index": rev_idx, 
-        "total_players": len(active_players), "all_players": all_players_list, 
-        "reveal_data": reveal_data, "all_nominations": all_noms.data
+<script>
+    // タブ切り替えだけはHTML側に簡易的に残すか、app.jsに含めます
+    // 今回はapp.jsに含まれている前提ですが、念のためここにインラインで動作を保証します
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.style.borderBottom = 'none');
+        
+        document.getElementById(tabId).style.display = 'block';
+        event.currentTarget.style.borderBottom = '3px solid #2563eb';
     }
+</script>
 
-@app.post("/nominate")
-async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...)):
-    raw_user = request.cookies.get("pog_user")
-    user = urllib.parse.unquote(raw_user) if raw_user else None
-    if not user: return {"status": "error"}
-
-    round_now = int(get_setting("current_round") or 1)
-    supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
-    supabase.table("draft_results").insert({
-        "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
-    }).execute()
-    return {"status": "success"}
-
-@app.post("/mc/start_reveal")
-async def start_reveal():
-    update_setting("phase", "reveal")
-    update_setting("reveal_index", "0")
-    return {"status": "ok"}
-
-@app.post("/mc/next_reveal")
-async def next_reveal():
-    round_now = int(get_setting("current_round"))
-    all_pts = supabase.table("participants").select("name").execute()
-    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
-    active_count = len(all_pts.data) - len(winners.data)
-    
-    current_idx = int(get_setting("reveal_index"))
-    new_idx = current_idx + 1
-    if new_idx >= active_count:
-        update_setting("phase", "lottery")
-    else:
-        update_setting("reveal_index", str(new_idx))
-    return {"status": "ok"}
-
-@app.post("/mc/run_lottery")
-async def run_lottery():
-    round_now = int(get_setting("current_round") or 1)
-    noms = supabase.table("draft_results").select("id, horse_name").eq("round", round_now).eq("is_winner", 0).execute()
-    
-    horse_groups = {}
-    for n in noms.data:
-        horse_groups.setdefault(n['horse_name'], []).append(n['id'])
-    
-    for h_name, ids in horse_groups.items():
-        winner_id = random.choice(ids)
-        supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner_id).execute()
-        supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-    
-    update_setting("phase", "lottery")
-    return {"status": "ok"}
-
-@app.post("/mc/next_round")
-async def next_round():
-    round_now = int(get_setting("current_round") or 1)
-    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
-    
-    if losers.count > 0:
-        supabase.table("draft_results").delete().eq("is_winner", -1).execute()
-    else:
-        supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
-        update_setting("current_round", str(round_now + 1))
-    
-    update_setting("phase", "nomination")
-    return {"status": "ok"}
-
-@app.post("/login")
-async def login(user: str = Form(...)):
-    response = RedirectResponse(url="/", status_code=302)
-    response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
-    return response
-
-@app.get("/logout")
-async def logout():
-    response = RedirectResponse(url="/", status_code=302)
-    response.delete_cookie("pog_user")
-    return response
-
-@app.get("/search_horses")
-async def search_horses(f: str = "", m: str = ""):
-    if len(f) < 2 and len(m) < 2: return []
-    
-    won = supabase.table("draft_results").select("horse_name").eq("is_winner", 1).execute()
-    won_list = [w['horse_name'] for w in won.data]
-    
-    query = supabase.table("horses").select("horse_name, father_name, mother_name")
-    if f: query = query.ilike("father_name", f"%{f}%")
-    if m: query = query.ilike("mother_name", f"%{m}%")
-    
-    res = query.limit(100).execute()
-    return [h for h in res.data if h['horse_name'] not in won_list]
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+</body>
+</html>
