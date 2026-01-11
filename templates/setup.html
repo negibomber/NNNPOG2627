@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>セットアップ</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .setup-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 400px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="setup-card">
+        <h2 style="text-align:center;">POGドラフト設定</h2>
+        <form action="/do_setup" method="post">
+            <label>参加者名（カンマ区切り）</label>
+            <input type="text" name="players" placeholder="佐藤, 田中, 鈴木" required>
+            <label>MC（司会）の名前</label>
+            <input type="text" name="mc" placeholder="佐藤" required>
+            <button type="submit">ドラフトを開始する</button>
+        </form>
+    </div>
+</body>
+</html>
