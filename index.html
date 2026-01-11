@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NNNPOG 2026-27</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* CSSが空の状態でも最低限動くための暫定レイアウト（後ほどstyle.cssへ移行） */
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding-bottom: 100px; }
+        header { background: #1e293b; color: white; padding: 15px; position: sticky; top: 0; z-index: 100; }
+        .tabs { display: flex; background: white; border-bottom: 1px solid #ddd; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: none; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { border-bottom: 3px solid var(--primary); color: var(--primary); }
+        .container { padding: 15px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 5px; font-weight: bold; }
+        .mc-panel { position: fixed; bottom: 0; width: 100%; background: #1e293b; color: white; padding: 15px; box-sizing: border-box; }
+        .mc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        #reveal_area { background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; display: none; text-align: center; }
+        @media (min-width: 768px) {
+            .tabs { display: none; }
+            .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .tab-content { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="display:flex; justify-content:space-between;">
+        <strong>第 <span id="round_display">{{ current_round }}</span> 巡</strong>
+        <span id="phase_display">読み込み中...</span>
+    </div>
+    <div style="font-size: 0.8rem; margin-top: 5px;">User: {{ user }}</div>
+</header>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-search')">指名</button>
+    <button class="tab-btn" onclick="switchTab('tab-my')">マイリスト</button>
+    <button class="tab-btn" onclick="switchTab('tab-all')">全体</button>
+</div>
+
+<div class="container">
+    <div id="reveal_area">
+        <div style="font-weight:bold; color:#b45309;">公開中...</div>
+        <div id="reveal_player" style="font-size:1.2rem; margin:10px 0;"></div>
+        <div id="reveal_horse" style="font-size:1.5rem; font-weight:bold;"></div>
+        <div style="font-size:0.9rem; margin-top:5px;">
+            父: <span id="reveal_father"></span> / 母: <span id="reveal_mother"></span>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div id="tab-search" class="tab-content active">
+            <div class="card">
+                <h3>馬を探す</h3>
+                <input type="text" id="s_father" placeholder="父名 (2文字以上)">
+                <input type="text" id="s_mother" placeholder="母名 (2文字以上)">
+                <button class="main-btn" onclick="searchHorses()">検索</button>
+                <div id="search_results" style="margin-top:20px;"></div>
+            </div>
+        </div>
+
+        <div id="tab-my" class="tab-content">
+            <div class="card">
+                <h3>エントリー中の馬</h3>
+                <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:var(--primary);">
+                    {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
+                </div>
+                {% if won_horse %}
+                <div style="margin-top:10px; color:green;">🎉 当選確定: {{ won_horse }}</div>
+                {% endif %}
+            </div>
+            <div class="card">
+                <h3>獲得済み</h3>
+                <div id="my_list">
+                    {% for h in confirmed_horses %}
+                        {% if h.player_name == user %}
+                        <div>第{{ h.round }}巡: {{ h.horse_name }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-all" class="tab-content">
+            <div class="card">
+                <h3>指名状況</h3>
+                <div id="all_status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if is_mc %}
+<div class="mc-panel">
+    <div style="font-size:0.7rem; text-align:center; margin-bottom:10px;">MC CONTROL</div>
+    <div class="mc-grid">
+        <button onclick="startReveal()" style="background:#3b82f6; color:white; border:none; padding:10px; border-radius:5px;">公開開始</button>
+        <button onclick="nextReveal()" style="background:#f59e0b; color:white; border:none; padding:10px; border-radius:5px;">次の人へ</button>
+        <button onclick="runLottery()" style="background:#ef4444; color:white; border:none; padding:10px; border-radius:5px;">抽選実行</button>
+        <button onclick="nextRound()" style="background:#10b981; color:white; border:none; padding:10px; border-radius:5px;">次ラウンド</button>
+    </div>
+</div>
+{% endif %}
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
