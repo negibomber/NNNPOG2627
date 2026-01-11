@@ -1,14 +1,23 @@
-// 状態更新関数
+// --- ヘルパー関数 ---
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+let lastPhase = "";
+
+// --- 状態更新関数 ---
 async function updateStatus() {
     try {
         const res = await fetch('/status');
         const data = await res.json();
 
-        // 基本情報の表示
+        // 1. 基本情報の表示
         const roundDisp = document.getElementById('round_display');
         if (roundDisp) roundDisp.innerText = data.round;
 
-        const phaseDisp = document.getElementById('phase_display');
+        const phaseDisp = document.getElementById('phase_label');
         if (phaseDisp) {
             const phaseMap = {
                 'nomination': '指名受付中',
@@ -18,12 +27,21 @@ async function updateStatus() {
             phaseDisp.innerText = phaseMap[data.phase] || data.phase;
         }
 
-        // 一人ずつ公開(reveal)の表示ロジック
+        // 2. 指名済人数のカウント表示
+        const nominatedCount = new Set(data.all_nominations
+            .filter(n => n.round === data.round && (n.is_winner === 0 || n.is_winner === 1))
+            .map(n => n.player_name)).size;
+        const counterEl = document.getElementById('status_counter');
+        if (counterEl) {
+            counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
+        }
+
+        // 3. 一人ずつ公開(reveal)の表示
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
                 revealArea.style.display = 'block';
-                document.getElementById('reveal_player').innerText = data.reveal_data.player;
+                document.getElementById('reveal_player').innerText = `${data.reveal_data.player} の指名`;
                 document.getElementById('reveal_horse').innerText = data.reveal_data.horse;
                 document.getElementById('reveal_father').innerText = data.reveal_data.father;
                 document.getElementById('reveal_mother').innerText = data.reveal_data.mother;
@@ -32,35 +50,46 @@ async function updateStatus() {
             }
         }
 
-        // 指名状況一覧の更新
-        const allStatusDiv = document.getElementById('all_status');
+        // 4. 全体状況タブ（all_status_list）の更新
+        const allStatusDiv = document.getElementById('all_status_list');
         if (allStatusDiv) {
-            let html = '<table class="status-table">';
+            let html = '<table style="width:100%; border-collapse:collapse;">';
             data.all_players.forEach(playerName => {
                 const nom = data.all_nominations.find(n => n.player_name === playerName && n.round === data.round);
-                let horseTxt = "-";
+                let horseTxt = '<span style="color:#94a3b8;">-</span>';
+                
                 if (nom) {
+                    const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
                     // revealフェーズ以降、または自分の指名なら表示
-                    const isMe = (playerName === decodeURIComponent(getCookie('pog_user')));
                     if (data.phase !== 'nomination' || isMe) {
-                        horseTxt = nom.horse_name;
-                        if (nom.is_winner === 1) horseTxt = `⭐ ${horseTxt}`;
-                        if (nom.is_winner === -1) horseTxt = `<del>${horseTxt}</del> (落選)`;
+                        horseTxt = `<strong>${nom.horse_name}</strong>`;
+                        if (nom.is_winner === 1) horseTxt = `<span style="color:#eab308;">⭐</span> ${horseTxt}`;
+                        if (nom.is_winner === -1) horseTxt = `<del style="color:#94a3b8;">${nom.horse_name}</del> <small>(落選)</small>`;
                     } else {
-                        horseTxt = "???";
+                        horseTxt = '<span style="color:#3b82f6;">???</span>';
                     }
                 }
-                html += `<tr><td>${playerName}</td><td>${horseTxt}</td></tr>`;
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:10px 0;">${playerName}</td>
+                            <td style="padding:10px 0; text-align:right;">${horseTxt}</td>
+                         </tr>`;
             });
             html += '</table>';
             allStatusDiv.innerHTML = html;
         }
+
+        // フェーズ変更時にリロードしてJinja2側の表示を最新にする
+        if (lastPhase !== "" && lastPhase !== data.phase) {
+            location.reload();
+        }
+        lastPhase = data.phase;
+
     } catch (e) {
         console.error("Status update error:", e);
     }
 }
 
-// 馬の検索関数
+// --- 馬の検索関数 ---
 async function searchHorses() {
     const f = document.getElementById('s_father').value;
     const m = document.getElementById('s_mother').value;
@@ -75,33 +104,38 @@ async function searchHorses() {
     let html = '';
     horses.forEach(h => {
         html += `
-        <div class="horse-item">
-            <div class="horse-info">
-                <strong>${h.horse_name || '（馬名未定）'}</strong><br>
-                <small>父: ${h.father_name} / 母: ${h.mother_name}</small>
-            </div>
-            <button class="nominate-btn" onclick="nominate('${h.horse_name}', '${h.mother_name}')">指名</button>
+        <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
+            <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${h.horse_name || '（馬名未定）'}</div>
+            <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
+            <button onclick="doNominate('${h.horse_name}', '${h.mother_name}')" 
+                    style="width:100%; padding:8px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold;">
+                この馬を指名する
+            </button>
         </div>`;
     });
     document.getElementById('search_results').innerHTML = html || '該当する馬が見つかりません';
 }
 
-// 指名実行関数
-async function nominate(name, mother) {
+// --- 指名実行関数 ---
+async function doNominate(name, mother) {
     if (!confirm(`${name} を指名しますか？`)) return;
     const formData = new URLSearchParams();
     formData.append('horse_name', name);
     formData.append('mother_name', mother);
 
-    await fetch('/nominate', {
+    const res = await fetch('/nominate', {
         method: 'POST',
         body: formData
     });
-    alert("指名完了");
-    updateStatus();
+    const data = await res.json();
+    if (data.status === 'success') {
+        alert("指名完了");
+        updateStatus();
+        switchTab('tab-my');
+    }
 }
 
-// MC操作用関数
+// --- MC操作用関数 ---
 async function startReveal() {
     if (!confirm("指名公開を開始しますか？")) return;
     await fetch('/mc/start_reveal', { method: 'POST' });
@@ -123,21 +157,6 @@ async function nextRound() {
     if (!confirm("次のラウンドへ進みますか？（落選者がいる場合は再指名になります）")) return;
     await fetch('/mc/next_round', { method: 'POST' });
     updateStatus();
-}
-
-// クッキー取得用ヘルパー
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
-// タブ切り替えロジック
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
 }
 
 // 初期化
