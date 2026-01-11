@@ -9,7 +9,7 @@ import os
 
 app = FastAPI()
 
-# staticフォルダのマウント設定（これがないとJS/CSSが読み込めません）
+# 【追加箇所】staticフォルダをマウントする設定
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
@@ -38,21 +38,18 @@ async def setup_page(request: Request):
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
     player_list = [p.strip() for p in players.split(",") if p.strip()]
     
-    # 既存データの全削除
+    # 【復元】あなたの元のテーブル名とロジックに完全準拠
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
     supabase.table("participants").delete().neq("name", "empty").execute()
     
-    # 参加者登録
     pts = [{"name": p, "role": "MC" if p == mc else "Player"} for p in player_list]
     supabase.table("participants").insert(pts).execute()
     
-    # 初期設定
     update_setting("current_round", "1")
     update_setting("phase", "nomination")
     update_setting("reveal_index", "-1")
     
-    # 【修正箇所】確実にトップページへ戻るよう303を指定
     return RedirectResponse(url="/", status_code=303)
 
 @app.get("/")
@@ -61,7 +58,8 @@ async def index(request: Request):
     user = urllib.parse.unquote(raw_user) if raw_user else None
     phase = get_setting("phase")
     
-    if not phase: return RedirectResponse(url="/setup", status_code=303)
+    if not phase: 
+        return RedirectResponse(url="/setup", status_code=303)
     
     if not user:
         pts = supabase.table("participants").select("name").order("name").execute()
@@ -185,6 +183,7 @@ async def next_round():
 
 @app.post("/login")
 async def login(user: str = Form(...)):
+    # 【修正箇所】リダイレクトを303に変更して、確実に画面を切り替えさせる
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
     return response
