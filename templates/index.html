@@ -8,17 +8,17 @@
 </head>
 <body style="margin:0; background:#f1f5f9; font-family:sans-serif; padding-bottom:100px;">
 
-<header style="position:sticky; top:0; z-index:100; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<header style="position:sticky; top:0; z-index:100;">
     <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 15px; background: #1e293b; color: white;">
         <div style="font-weight:bold;">
             第 <span id="round_display">{{ current_round }}</span> 巡 
             <span id="phase_label" style="margin-left:10px; font-size:0.9rem; background:#3b82f6; padding:2px 8px; border-radius:4px;">{{ phase }}</span>
         </div>
-        <a href="/logout" style="color:white; text-decoration:none; font-size:0.85rem; background:#ef4444; padding:6px 12px; border-radius:4px; font-weight:bold;">退出</a>
+        <a href="/logout" style="color:white; text-decoration:none; font-size:0.8rem; background:#ef4444; padding:6px 12px; border-radius:4px; font-weight:bold;">退出</a>
     </div>
-    <div style="padding: 6px 15px; font-size: 0.8rem; background: #334155; color: #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
-        <span>User: <strong>{{ user }}</strong></span>
-        <span id="status_counter" style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:3px;">読み込み中...</span>
+    <div style="padding: 5px 15px; font-size: 0.8rem; background: #334155; color: #cbd5e1; display:flex; justify-content:space-between;">
+        <span>User: {{ user }}</span>
+        <span id="status_counter">読み込み中...</span>
     </div>
 </header>
 
@@ -29,7 +29,6 @@
 </div>
 
 <div class="container" style="padding: 15px;">
-    
     <div id="reveal_area" style="display:none; background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
         <div style="font-weight:bold; color:#b45309;">公開中...</div>
         <div id="reveal_player" style="font-size:1.2rem; margin:10px 0; font-weight:bold;"></div>
@@ -41,36 +40,30 @@
 
     <div id="tab-search" class="tab-content">
         <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; font-size:1.1rem; color:#1e293b;">馬を探す</h3>
-            <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:1rem;">
-            <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box; font-size:1rem;">
-            <button onclick="searchHorses()" style="width:100%; padding:14px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold; font-size:1rem; cursor:pointer;">検索実行</button>
-            
-            <div id="search_results" style="margin-top:20px; min-height:20px;"></div>
+            <h3 style="margin-top:0;">馬を探す</h3>
+            <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            <button onclick="window.searchHorses()" style="width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">検索実行</button>
+            <div id="search_results" style="margin-top:20px;"></div>
         </div>
     </div>
 
     <div id="tab-my" class="tab-content" style="display:none;">
         <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:15px;">
-            <h3 style="margin-top:0; font-size:1.1rem;">現在の指名馬</h3>
-            <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb; padding:12px; background:#eff6ff; border-radius:6px; border:1px inset #dbeafe;">
+            <h3 style="margin-top:0;">現在の指名馬</h3>
+            <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb; padding:10px; background:#eff6ff; border-radius:6px;">
                 {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
             </div>
             {% if won_horse %}
-            <div style="margin-top:12px; color:#059669; font-weight:bold; font-size:0.95rem; display:flex; align-items:center;">
-                <span style="font-size:1.2rem; margin-right:5px;">🎉</span> 当選確定済み: {{ won_horse }}
-            </div>
+            <div style="margin-top:10px; color:#059669; font-weight:bold; font-size:0.9rem;">🎉 当選確定済み: {{ won_horse }}</div>
             {% endif %}
         </div>
         <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; font-size:1.1rem;">これまでの獲得馬</h3>
+            <h3 style="margin-top:0;">これまでの獲得馬</h3>
             <div id="my_list">
                 {% for h in confirmed_horses %}
                     {% if h.player_name == user %}
-                    <div style="padding:10px 0; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between;">
-                        <span>第{{ h.round }}巡</span>
-                        <strong>{{ h.horse_name }}</strong>
-                    </div>
+                    <div style="padding:8px 0; border-bottom:1px solid #f1f5f9;">第{{ h.round }}巡: <strong>{{ h.horse_name }}</strong></div>
                     {% endif %}
                 {% endfor %}
             </div>
@@ -79,20 +72,19 @@
 
     <div id="tab-all" class="tab-content" style="display:none;">
         <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; font-size:1.1rem;">参加者の指名状況</h3>
+            <h3 style="margin-top:0;">参加者の指名状況</h3>
             <div id="all_status_list"></div>
         </div>
     </div>
-
 </div>
 
 {% if is_mc %}
-<div id="mc_panel" style="position:fixed; bottom:0; width:100%; background:#1e293b; color:white; padding:12px; box-sizing:border-box; box-shadow:0 -4px 15px rgba(0,0,0,0.3); z-index:200;">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <button onclick="startReveal()" style="padding:12px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:bold;">1. 公開開始</button>
-        <button onclick="nextReveal()" style="padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold;">2. 次へ進む</button>
-        <button onclick="runLottery()" style="padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold;">3. 抽選実行</button>
-        <button onclick="nextRound()" style="padding:12px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold;">4. 次の巡へ</button>
+<div id="mc_panel" style="position:fixed; bottom:0; width:100%; background:#1e293b; color:white; padding:10px; box-sizing:border-box; box-shadow:0 -2px 10px rgba(0,0,0,0.2); z-index:200;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <button onclick="window.startReveal()" style="padding:12px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:bold;">1. 公開開始</button>
+        <button onclick="window.nextReveal()" style="padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold;">2. 次へ進む</button>
+        <button onclick="window.runLottery()" style="padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold;">3. 抽選実行</button>
+        <button onclick="window.nextRound()" style="padding:12px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold;">4. 次の巡へ</button>
     </div>
 </div>
 {% endif %}
@@ -106,7 +98,6 @@
             el.style.color = '#64748b';
             el.classList.remove('active');
         });
-        
         document.getElementById(tabId).style.display = 'block';
         const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
         activeBtn.style.borderBottom = '3px solid #2563eb';
