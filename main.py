@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, Form, Response
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from supabase import create_client
 import urllib.parse
@@ -9,7 +9,7 @@ import os
 
 app = FastAPI()
 
-# 【追加箇所】staticフォルダをマウントする設定
+# 【重要】staticフォルダをマウントする設定
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
@@ -38,7 +38,7 @@ async def setup_page(request: Request):
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
     player_list = [p.strip() for p in players.split(",") if p.strip()]
     
-    # 【復元】あなたの元のテーブル名とロジックに完全準拠
+    # 既存データの全削除
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
     supabase.table("participants").delete().neq("name", "empty").execute()
@@ -63,7 +63,8 @@ async def index(request: Request):
     
     if not user:
         pts = supabase.table("participants").select("name").order("name").execute()
-        return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data})
+        # ブラウザにHTMLであることを明示(media_type)
+        return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data}, media_type="text/html")
     
     round_now = int(get_setting("current_round") or 1)
     
@@ -72,13 +73,14 @@ async def index(request: Request):
     role_row = supabase.table("participants").select("role").eq("name", user).execute()
     confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("round").order("player_name").execute()
 
+    # ブラウザにHTMLであることを明示(media_type)
     return templates.TemplateResponse("index.html", {
         "request": request, "user": user, "phase": phase, "current_round": round_now, 
         "won_horse": won_horse.data[0]['horse_name'] if won_horse.data else None, 
         "current_horse": current_nom.data[0]['horse_name'] if current_nom.data else None, 
         "is_mc": 1 if role_row.data and role_row.data[0]['role'] == 'MC' else 0,
         "confirmed_horses": confirmed.data
-    })
+    }, media_type="text/html")
 
 @app.get("/status")
 async def status():
@@ -183,7 +185,7 @@ async def next_round():
 
 @app.post("/login")
 async def login(user: str = Form(...)):
-    # 【修正箇所】リダイレクトを303に変更して、確実に画面を切り替えさせる
+    # 303リダイレクトで確実に画面遷移
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
     return response
