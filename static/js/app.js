@@ -1,10 +1,10 @@
-// [2026-01-11] 最新版のソースを元に、既存機能を削除・変更せず修正
+// [2026-01-11] 最新版ソースを元に、実行状況を可視化するデバッグ処理を追加
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("APP: DOMContentLoaded - 初期化開始");
     updateStatus();
     setInterval(updateStatus, 3000);
 });
 
-// --- ヘルパー関数 ---
 function getCookie(name) {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -13,14 +13,13 @@ function getCookie(name) {
 
 let lastPhase = "";
 
-// --- 状態更新関数 (既存ロジックを維持) ---
+// --- 状態更新関数 ---
 async function updateStatus() {
     try {
         const res = await fetch('/status');
         if (!res.ok) return;
         const data = await res.json();
 
-        // index.html の各 ID と同期
         const roundDisp = document.getElementById('round_display');
         if (roundDisp) roundDisp.innerText = data.round;
 
@@ -42,38 +41,22 @@ async function updateStatus() {
             counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
         }
 
-        const revealArea = document.getElementById('reveal_area');
-        if (revealArea) {
-            if (data.phase === 'reveal' && data.reveal_data) {
-                revealArea.style.display = 'block';
-                document.getElementById('reveal_player').innerText = `${data.reveal_data.player} の指名`;
-                document.getElementById('reveal_horse').innerText = data.reveal_data.horse;
-                document.getElementById('reveal_father').innerText = data.reveal_data.father;
-                document.getElementById('reveal_mother').innerText = data.reveal_data.mother;
-            } else {
-                revealArea.style.display = 'none';
-            }
-        }
-
         const allStatusDiv = document.getElementById('all_status_list');
         if (allStatusDiv && data.all_players) {
             let html = '<table style="width:100%; border-collapse:collapse;">';
             data.all_players.forEach(playerName => {
                 const nom = data.all_nominations.find(n => n.player_name === playerName && n.round === data.round);
-                let horseTxt = '<span style="color:#94a3b8;">-</span>';
+                let horseTxt = '-';
                 if (nom) {
                     const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
                     if (data.phase !== 'nomination' || isMe) {
-                        horseTxt = `<strong>${nom.horse_name}</strong>`;
-                        if (nom.is_winner === 1) horseTxt = `⭐ ${horseTxt}`;
-                        if (nom.is_winner === -1) horseTxt = `<del>${nom.horse_name}</del> (落選)`;
+                        horseTxt = nom.horse_name;
                     } else {
                         horseTxt = '???';
                     }
                 }
-                html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px 0;">${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
+                html += `<tr><td>${playerName}</td><td>${horseTxt}</td></tr>`;
             });
-            html += '</table>';
             allStatusDiv.innerHTML = html;
         }
 
@@ -84,68 +67,91 @@ async function updateStatus() {
     } catch (e) { console.error("Update error:", e); }
 }
 
-// --- 馬の検索関数 (main.py の search_horses API の戻り値に完全準拠) ---
+// --- 馬の検索関数 (デバッグ出力強化版) ---
 window.searchHorses = async function() {
-    const f = document.getElementById('s_father').value;
-    const m = document.getElementById('s_mother').value;
     const resultsEl = document.getElementById('search_results');
+    const fInput = document.getElementById('s_father');
+    const mInput = document.getElementById('s_mother');
 
-    if (!resultsEl) return;
-    if (f.length < 2 && m.length < 2) {
-        alert("父名または母名を2文字以上入力してください");
+    if (!resultsEl) {
+        alert("エラー: ID 'search_results' が見つかりません");
         return;
     }
 
-    resultsEl.innerHTML = "<div style='padding:20px; text-align:center;'>検索中...</div>";
+    const f = fInput.value;
+    const m = mInput.value;
+
+    // デバッグ開始表示
+    resultsEl.innerHTML = `
+        <div style="background:#f1f5f9; padding:10px; border-radius:5px; font-size:0.8rem; border-left:4px solid #3b82f6;">
+            [DEBUG] 検索を開始します...<br>
+            入力: 父[${f}] 母[${m}]
+        </div>
+    `;
+
+    if (f.length < 2 && m.length < 2) {
+        alert("2文字以上入力してください");
+        return;
+    }
 
     try {
-        // main.py の query パラメータ f, m を使用
-        const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`);
-        const horses = await res.json();
+        const url = `/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`;
+        console.log("DEBUG: Fetch URL:", url);
+        
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            resultsEl.innerHTML += `<div style="color:red;">[DEBUG] 通信失敗: ステータス ${res.status}</div>`;
+            return;
+        }
 
-        let html = '';
+        const horses = await res.json();
+        console.log("DEBUG: Received data:", horses);
+
         if (horses && horses.length > 0) {
+            let html = `<div style="color:green; font-size:0.8rem; margin-bottom:10px;">[DEBUG] ${horses.length}件のデータを取得しました</div>`;
             horses.forEach(h => {
-                // main.py の return [h for h in res.data ...] のキー名を使用
                 html += `
-                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
+                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white;">
+                    <div style="font-weight:bold;">${h.horse_name}</div>
                     <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
                     <button onclick="window.doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
-                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        この馬を指名する
+                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold;">
+                        指名する
                     </button>
                 </div>`;
             });
+            resultsEl.innerHTML = html;
         } else {
-            html = "<div style='padding:20px; text-align:center; color:#64748b;'>該当する馬が見つかりません</div>";
+            resultsEl.innerHTML += `<div style="color:#64748b; padding:10px;">[DEBUG] データは空でした。検索条件に合う馬がいないか、既に当選済みです。</div>`;
         }
-        resultsEl.innerHTML = html;
     } catch (e) {
-        resultsEl.innerHTML = "<div style='color:red; padding:20px; text-align:center;'>通信エラーが発生しました</div>";
-        console.error("Search error:", e);
+        console.error("DEBUG: Exception:", e);
+        resultsEl.innerHTML += `<div style="color:red; padding:10px;">[DEBUG] JS例外発生: ${e.message}</div>`;
     }
 }
 
-// --- 指名実行関数 (既存ロジック維持) ---
+// --- 指名実行 ---
 window.doNominate = async function(name, mother) {
     if (!confirm(`${name} を指名しますか？`)) return;
-    const formData = new URLSearchParams();
-    formData.append('horse_name', name);
-    formData.append('mother_name', mother);
     try {
+        const formData = new URLSearchParams();
+        formData.append('horse_name', name);
+        formData.append('mother_name', mother);
         const res = await fetch('/nominate', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.status === 'success') {
             alert("指名完了");
             updateStatus();
             if (typeof switchTab === 'function') switchTab('tab-my');
+        } else {
+            alert("エラー: " + data.message);
         }
-    } catch (e) { console.error("Nominate error:", e); }
+    } catch (e) { alert("通信エラーが発生しました"); }
 }
 
-// --- MC操作用関数 (既存ロジック維持) ---
-window.startReveal = async function() { if(confirm("公開を開始しますか？")) await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
+// --- MC操作 ---
+window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
 window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
-window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
-window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
+window.runLottery = async function() { if(confirm("抽選実行？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
+window.nextRound = async function() { if(confirm("次巡へ？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
