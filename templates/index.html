@@ -6,99 +6,106 @@
     <title>NNNPOG 2026-27</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
+<body style="margin:0; background:#f1f5f9; font-family:sans-serif; padding-bottom:100px;">
 
-<header>
-    <div style="display:flex; justify-content:space-between; padding: 10px; background: #1e293b; color: white;">
-        <strong>第 <span id="round_display">{{ current_round }}</span> 巡</strong>
-        <span id="phase_display">読み込み中...</span>
+<header style="position:sticky; top:0; z-index:100;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 15px; background: #1e293b; color: white;">
+        <div style="font-weight:bold;">
+            第 <span id="round_display">{{ current_round }}</span> 巡 
+            <span id="phase_label" style="margin-left:10px; font-size:0.9rem; background:#334155; padding:2px 8px; border-radius:4px;">{{ phase }}</span>
+        </div>
+        <a href="/logout" style="color:#cbd5e1; text-decoration:none; font-size:0.8rem; border:1px solid #475569; padding:4px 8px; border-radius:4px;">退出</a>
     </div>
-    <div style="padding: 5px 10px; font-size: 0.8rem; background: #334155; color: #cbd5e1;">User: {{ user }}</div>
+    <div style="padding: 5px 15px; font-size: 0.8rem; background: #334155; color: #cbd5e1; display:flex; justify-content:space-between;">
+        <span>User: {{ user }}</span>
+        <span id="status_counter">読み込み中...</span>
+    </div>
 </header>
 
-<div class="tabs" style="display: flex; border-bottom: 1px solid #ddd; background: white;">
-    <button class="tab-btn active" onclick="switchTab('tab-search')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">指名</button>
-    <button class="tab-btn" onclick="switchTab('tab-my')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">マイリスト</button>
-    <button class="tab-btn" onclick="switchTab('tab-all')" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">全体</button>
+<div class="tabs" style="display: flex; background: white; border-bottom: 1px solid #e2e8f0;">
+    <button class="tab-btn active" onclick="switchTab('tab-search')" id="btn-search" style="flex:1; padding:15px; border:none; background:none; font-weight:bold; border-bottom:3px solid #2563eb;">指名</button>
+    <button class="tab-btn" onclick="switchTab('tab-my')" id="btn-my" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">マイリスト</button>
+    <button class="tab-btn" onclick="switchTab('tab-all')" id="btn-all" style="flex:1; padding:15px; border:none; background:none; font-weight:bold;">全体</button>
 </div>
 
 <div class="container" style="padding: 15px;">
+    
     <div id="reveal_area" style="display:none; background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
         <div style="font-weight:bold; color:#b45309;">公開中...</div>
-        <div id="reveal_player" style="font-size:1.2rem; margin:10px 0;"></div>
-        <div id="reveal_horse" style="font-size:1.5rem; font-weight:bold;"></div>
-        <div style="font-size:0.9rem; margin-top:5px;">
+        <div id="reveal_player" style="font-size:1.2rem; margin:10px 0; font-weight:bold;"></div>
+        <div id="reveal_horse" style="font-size:1.5rem; font-weight:bold; color:#1e293b;"></div>
+        <div style="font-size:0.9rem; margin-top:5px; color:#64748b;">
             父: <span id="reveal_father"></span> / 母: <span id="reveal_mother"></span>
         </div>
     </div>
 
-    <div class="content-grid">
-        <div id="tab-search" class="tab-content active">
-            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                <h3>馬を探す</h3>
-                <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-                <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box;">
-                <button onclick="searchHorses()" style="width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:5px; font-weight:bold;">検索</button>
-                <div id="search_results" style="margin-top:20px;"></div>
-            </div>
+    <div id="tab-search" class="tab-content">
+        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h3 style="margin-top:0;">馬を探す</h3>
+            <input type="text" id="s_father" placeholder="父名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            <input type="text" id="s_mother" placeholder="母名 (2文字以上)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+            <button onclick="searchHorses()" style="width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold;">検索実行</button>
+            <div id="search_results" style="margin-top:20px;"></div>
         </div>
+    </div>
 
-        <div id="tab-my" class="tab-content" style="display:none;">
-            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1); margin-bottom:15px;">
-                <h3>エントリー中の馬</h3>
-                <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb;">
-                    {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
-                </div>
-                {% if won_horse %}
-                <div style="margin-top:10px; color:green; font-weight:bold;">🎉 当選確定: {{ won_horse }}</div>
-                {% endif %}
+    <div id="tab-my" class="tab-content" style="display:none;">
+        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:15px;">
+            <h3 style="margin-top:0;">現在の指名馬</h3>
+            <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb; padding:10px; background:#eff6ff; border-radius:6px;">
+                {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
             </div>
-            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                <h3>獲得済みリスト</h3>
-                <div id="my_list">
-                    {% for h in confirmed_horses %}
-                        {% if h.player_name == user %}
-                        <div style="padding:5px 0; border-bottom:1px solid #eee;">第{{ h.round }}巡: {{ h.horse_name }}</div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
+            {% if won_horse %}
+            <div style="margin-top:10px; color:#059669; font-weight:bold; font-size:0.9rem;">🎉 当選確定済み: {{ won_horse }}</div>
+            {% endif %}
         </div>
-
-        <div id="tab-all" class="tab-content" style="display:none;">
-            <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-                <h3>指名状況一覧</h3>
-                <div id="all_status"></div>
+        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h3 style="margin-top:0;">これまでの獲得馬</h3>
+            <div id="my_list">
+                {% for h in confirmed_horses %}
+                    {% if h.player_name == user %}
+                    <div style="padding:8px 0; border-bottom:1px solid #f1f5f9;">第{{ h.round }}巡: <strong>{{ h.horse_name }}</strong></div>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
     </div>
+
+    <div id="tab-all" class="tab-content" style="display:none;">
+        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h3 style="margin-top:0;">参加者の指名状況</h3>
+            <div id="all_status_list"></div>
+        </div>
+    </div>
+
 </div>
 
 {% if is_mc %}
-<div class="mc-panel" style="position:fixed; bottom:0; width:100%; background:#1e293b; color:white; padding:10px; box-sizing:border-box;">
-    <div style="font-size:0.7rem; text-align:center; margin-bottom:5px;">MC CONTROL</div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-        <button onclick="startReveal()" style="padding:10px; background:#3b82f6; color:white; border:none; border-radius:4px;">公開開始</button>
-        <button onclick="nextReveal()" style="padding:10px; background:#f59e0b; color:white; border:none; border-radius:4px;">次の人へ</button>
-        <button onclick="runLottery()" style="padding:10px; background:#ef4444; color:white; border:none; border-radius:4px;">抽選実行</button>
-        <button onclick="nextRound()" style="padding:10px; background:#10b981; color:white; border:none; border-radius:4px;">次ラウンド</button>
+<div id="mc_panel" style="position:fixed; bottom:0; width:100%; background:#1e293b; color:white; padding:10px; box-sizing:border-box; box-shadow:0 -2px 10px rgba(0,0,0,0.2);">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <button onclick="startReveal()" style="padding:12px; background:#3b82f6; color:white; border:none; border-radius:6px; font-weight:bold;">1. 公開開始</button>
+        <button onclick="nextReveal()" style="padding:12px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold;">2. 次へ進む</button>
+        <button onclick="runLottery()" style="padding:12px; background:#ef4444; color:white; border:none; border-radius:6px; font-weight:bold;">3. 抽選実行</button>
+        <button onclick="nextRound()" style="padding:12px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold;">4. 次の巡へ</button>
     </div>
 </div>
 {% endif %}
 
 <script src="/static/js/app.js"></script>
-
 <script>
-    // タブ切り替えだけはHTML側に簡易的に残すか、app.jsに含めます
-    // 今回はapp.jsに含まれている前提ですが、念のためここにインラインで動作を保証します
+    // タブ切り替えロジック
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(el => el.style.borderBottom = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => {
+            el.style.borderBottom = 'none';
+            el.classList.remove('active');
+        });
         
         document.getElementById(tabId).style.display = 'block';
-        event.currentTarget.style.borderBottom = '3px solid #2563eb';
+        const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+        activeBtn.style.borderBottom = '3px solid #2563eb';
+        activeBtn.classList.add('active');
     }
 </script>
-
 </body>
 </html>
