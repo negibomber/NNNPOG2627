@@ -60,7 +60,6 @@ async function updateStatus() {
                 
                 if (nom) {
                     const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
-                    // revealフェーズ以降、または自分の指名なら表示
                     if (data.phase !== 'nomination' || isMe) {
                         horseTxt = `<strong>${nom.horse_name}</strong>`;
                         if (nom.is_winner === 1) horseTxt = `<span style="color:#eab308;">⭐</span> ${horseTxt}`;
@@ -78,7 +77,6 @@ async function updateStatus() {
             allStatusDiv.innerHTML = html;
         }
 
-        // フェーズ変更時にリロードしてJinja2側の表示を最新にする
         if (lastPhase !== "" && lastPhase !== data.phase) {
             location.reload();
         }
@@ -89,7 +87,7 @@ async function updateStatus() {
     }
 }
 
-// --- 馬の検索関数 ---
+// --- 馬の検索関数（修正版） ---
 async function searchHorses() {
     const f = document.getElementById('s_father').value;
     const m = document.getElementById('s_mother').value;
@@ -102,18 +100,22 @@ async function searchHorses() {
     const horses = await res.json();
 
     let html = '';
-    horses.forEach(h => {
-        html += `
-        <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
-            <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${h.horse_name || '（馬名未定）'}</div>
-            <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-            <button onclick="doNominate('${h.horse_name}', '${h.mother_name}')" 
-                    style="width:100%; padding:8px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold;">
-                この馬を指名する
-            </button>
-        </div>`;
-    });
-    document.getElementById('search_results').innerHTML = html || '該当する馬が見つかりません';
+    if (horses && horses.length > 0) {
+        horses.forEach(h => {
+            html += `
+            <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:8px; background:#f8fafc;">
+                <div style="font-weight:bold; font-size:1.1rem; color:#1e293b;">${h.horse_name || '（馬名未定）'}</div>
+                <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
+                <button onclick="doNominate('${h.horse_name}', '${h.mother_name}')" 
+                        style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">
+                    この馬を指名する
+                </button>
+            </div>`;
+        });
+    } else {
+        html = '<p style="color:#64748b; text-align:center;">該当する馬が見つかりません</p>';
+    }
+    document.getElementById('search_results').innerHTML = html;
 }
 
 // --- 指名実行関数 ---
@@ -136,29 +138,10 @@ async function doNominate(name, mother) {
 }
 
 // --- MC操作用関数 ---
-async function startReveal() {
-    if (!confirm("指名公開を開始しますか？")) return;
-    await fetch('/mc/start_reveal', { method: 'POST' });
-    updateStatus();
-}
+async function startReveal() { if (confirm("指名公開を開始しますか？")) await fetch('/mc/start_reveal', { method: 'POST' }); updateStatus(); }
+async function nextReveal() { await fetch('/mc/next_reveal', { method: 'POST' }); updateStatus(); }
+async function runLottery() { if (confirm("抽選を実行して結果を確定させますか？")) await fetch('/mc/run_lottery', { method: 'POST' }); updateStatus(); }
+async function nextRound() { if (confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', { method: 'POST' }); updateStatus(); }
 
-async function nextReveal() {
-    await fetch('/mc/next_reveal', { method: 'POST' });
-    updateStatus();
-}
-
-async function runLottery() {
-    if (!confirm("抽選を実行して結果を確定させますか？")) return;
-    await fetch('/mc/run_lottery', { method: 'POST' });
-    updateStatus();
-}
-
-async function nextRound() {
-    if (!confirm("次のラウンドへ進みますか？（落選者がいる場合は再指名になります）")) return;
-    await fetch('/mc/next_round', { method: 'POST' });
-    updateStatus();
-}
-
-// 初期化
 setInterval(updateStatus, 3000);
 updateStatus();
