@@ -196,8 +196,9 @@ async function searchHorses() {
                 btn.textContent = "指名する";
                 btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
                 
-                // 文字列のパースを介さない直接的なイベント登録
-                btn.onclick = () => {
+                // 【修正】Firefox対策：onclickからonmousedownに変更し、他イベントを抑止
+                btn.onmousedown = (e) => {
+                    e.preventDefault(); 
                     window.doNominate(h.horse_name, h.mother_name);
                 };
 
