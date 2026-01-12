@@ -1,10 +1,11 @@
-// [2026-01-12] 既存ロジックを完全維持しつつ、DOM操作による生成で Firefox 不具合を根本解決
+// [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    console.log("--- POG DEBUG START ---");
+    const APP_VERSION = "0.0.1";
+    console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
     const init = () => {
-        console.log("2. 初期化関数(init)が実行されました.");
+        console.log(`2. 初期化関数(init) Ver.${APP_VERSION} が実行されました.`);
         updateStatus();
         
         const fInput = document.getElementById('s_father');
@@ -218,8 +219,8 @@ async function searchHorses() {
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
 
-                // 【最終修正】Firefoxが100%信頼する onclick 属性として直接埋め込み
-                btn.setAttribute('onclick', `console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
+                // 【修正】イベントを完全に独立させ、ブラウザの干渉を排除する
+                btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
 
                 // カードにすべて追加
                 card.appendChild(nameDiv);
@@ -249,6 +250,7 @@ window.doNominate = async function(name, mother) {
     if (window.statusTimer) {
         console.log(`[NOMINATE_DEBUG] タイマーを一時停止します`);
         clearInterval(window.statusTimer);
+        window.statusTimer = null; // 確実にクリア
     }
     try {
         console.log(`[NOMINATE_DEBUG] confirm直前`);
@@ -258,7 +260,7 @@ window.doNominate = async function(name, mother) {
         if (!confirmed) {
             window.isProcessingNomination = false; // キャンセル時はフラグ解除
             // タイマーを再開
-            window.statusTimer = setInterval(updateStatus, 3000);
+            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             return;
         }
         const formData = new URLSearchParams();
@@ -273,12 +275,12 @@ window.doNominate = async function(name, mother) {
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
             window.isProcessingNomination = false; // エラー時もフラグ解除
-            window.statusTimer = setInterval(updateStatus, 3000);
+            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
         }
     } catch (e) { 
         console.error("Nominate error:", e); 
         window.isProcessingNomination = false;
-        window.statusTimer = setInterval(updateStatus, 3000);
+        if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
     }
 }
 
