@@ -50,8 +50,10 @@
     setInterval(updateStatus, 3000);
 })();
 
-// グローバルスコープでフェーズを管理
+// グローバルスコープで管理
 window.lastPhase = "";
+window.lastSearchQuery = ""; // 【追加】重複検索・再描画防止用
+window.isSearching = false;  // 【追加】通信中フラグ
 
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus() {
@@ -135,13 +137,26 @@ async function searchHorses() {
 
     const f = fInput.value;
     const m = mInput.value;
+    const currentQuery = `f=${f}&m=${m}`;
+
+    // 【修正】検索語に変化がない、または通信中の場合は処理をスキップ
+    // これにより、Firefoxでボタンクリック時に「ボタンが消えて再描画される」のを防ぎます
+    if (currentQuery === window.lastSearchQuery || window.isSearching) {
+        console.log("SEARCH: スキップ (変化なし または 通信中)");
+        return;
+    }
 
     console.log(`SEARCH: 検索判定中... (父:${f.length}文字, 母:${m.length}文字)`);
 
     if (f.length < 2 && m.length < 2) {
         resultsEl.innerHTML = "";
+        window.lastSearchQuery = currentQuery;
         return;
     }
+
+    // 状態を更新
+    window.lastSearchQuery = currentQuery;
+    window.isSearching = true;
 
     console.log(`SEARCH: サーバーへリクエスト送信: /search_horses?f=${f}&m=${m}`);
     resultsEl.innerHTML = "<div style='color:blue; font-size:0.8rem;'>[DEBUG] サーバー通信中...</div>";
@@ -201,6 +216,9 @@ async function searchHorses() {
     } catch (e) {
         console.error("SEARCH ERROR:", e);
         resultsEl.innerHTML = `<div style="color:red; font-size:0.8rem;">通信エラー: ${e.message}</div>`;
+    } finally {
+        // 通信完了
+        window.isSearching = false;
     }
 }
 
