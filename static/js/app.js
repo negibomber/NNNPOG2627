@@ -27,10 +27,20 @@
 
             // 入力があったら即座に searchHorses() を実行
             fInput.addEventListener('input', (e) => {
+                // 【追加】Firefox対策：通信中やボタン操作確定中は、再検索による画面書き換えを阻止する
+                if (window.isSearching) {
+                    console.log("-> 入力検知しましたが、通信中のため無視します.");
+                    return;
+                }
                 console.log(`-> 父入力検知: "${e.target.value}"`);
                 searchHorses();
             });
             mInput.addEventListener('input', (e) => {
+                // 【追加】Firefox対策
+                if (window.isSearching) {
+                    console.log("-> 入力検知しましたが、通信中のため無視します.");
+                    return;
+                }
                 console.log(`-> 母入力検知: "${e.target.value}"`);
                 searchHorses();
             });
