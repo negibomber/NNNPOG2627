@@ -100,13 +100,22 @@
             el.classList.remove('active');
         });
         document.getElementById(tabId).style.display = 'block';
-        const activeBtn = document.querySelector(`[onclick="switchTab('${tabId}')"]`);
+        // tabIdそのものを使ってボタンを探すように修正（より確実）
+        const activeBtn = document.getElementById('btn-' + tabId.replace('tab-', ''));
         if (activeBtn) {
             activeBtn.style.borderBottom = '3px solid #2563eb';
             activeBtn.style.color = '#2563eb';
             activeBtn.classList.add('active');
         }
     }
+
+    // URLのハッシュ（#tab-my等）に基づいて初期タブを切り替える
+    window.onload = function() {
+        const hash = window.location.hash.replace('#', '');
+        if (hash && document.getElementById(hash)) {
+            switchTab(hash);
+        }
+    };
 </script>
 </body>
 </html>
