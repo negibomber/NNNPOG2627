@@ -130,15 +130,19 @@ async def status():
         target = active_players[rev_idx]
         res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
         if res.data:
-            h_info = supabase.table("horses").select("father_name").eq("horse_name", res.data[0]['horse_name']).execute()
+            # 【修正】DBのカラム名(stable, breeder)に厳密に合わせて取得
+            h_info = supabase.table("horses").select("father_name, stable, breeder").eq("horse_name", res.data[0]['horse_name']).execute()
+            info = h_info.data[0] if h_info.data else {}
             reveal_data = {
                 "player": target, 
                 "horse": res.data[0]['horse_name'], 
                 "mother": res.data[0]['mother_name'], 
-                "father": h_info.data[0]['father_name'] if h_info.data else "データなし"
+                "father": info.get('father_name', "データなし"),
+                "stable": info.get('stable', "不明"),
+                "breeder": info.get('breeder', "不明")
             }
         else:
-            reveal_data = {"player": target, "horse": "（未入力）", "mother": "-", "father": "-"}
+            reveal_data = {"player": target, "horse": "（未入力）", "mother": "-", "father": "-", "stable": "-", "breeder": "-"}
 
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
