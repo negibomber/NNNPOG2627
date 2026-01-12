@@ -1,4 +1,4 @@
-// [2026-01-11] 提示された最新ソースをベースに、自動検索（監視）を確実に有効化
+// [2026-01-12] 既存ロジックを完全維持しつつ、MCボタンの制御を追加
 (function() {
     console.log("--- POG DEBUG START ---");
     console.log("1. スクリプトの読み込みを確認しました。");
@@ -66,6 +66,9 @@ async function updateStatus() {
         
         const phaseMap = {'nomination': '指名受付中', 'reveal': '指名公開中', 'lottery': '抽選・結果確定'};
         updateText('phase_label', phaseMap[data.phase] || data.phase);
+
+        // MCボタンの制御を呼び出し
+        updateMCButtons(data.phase);
 
         const counterEl = document.getElementById('status_counter');
         if (counterEl && data.all_nominations) {
@@ -171,9 +174,30 @@ window.doNominate = async function(name, mother) {
 
 // --- MC操作 ---
 window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
-window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
 window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
 window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
+
+// --- MC用ボタンの活性・非活性制御 ---
+function updateMCButtons(phase) {
+    const btnReveal = document.getElementById('btn_mc_reveal');
+    const btnLottery = document.getElementById('btn_mc_lottery');
+    const btnNext = document.getElementById('btn_mc_next');
+    if (!btnReveal || !btnLottery || !btnNext) return;
+
+    const setBtn = (btn, active) => {
+        btn.disabled = !active;
+        btn.style.opacity = active ? "1.0" : "0.3";
+        btn.style.cursor = active ? "pointer" : "not-allowed";
+    };
+
+    if (phase === 'nomination') {
+        setBtn(btnReveal, true); setBtn(btnLottery, false); setBtn(btnNext, false);
+    } else if (phase === 'reveal') {
+        setBtn(btnReveal, false); setBtn(btnLottery, false); setBtn(btnNext, false);
+    } else if (phase === 'lottery') {
+        setBtn(btnReveal, false); setBtn(btnLottery, true); setBtn(btnNext, true);
+    }
+}
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
