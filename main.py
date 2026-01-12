@@ -117,6 +117,13 @@ async def status():
     active_players = [p for p in all_players_list if p not in winner_names]
     
     all_noms = supabase.table("draft_results").select("*").execute()
+
+    # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
+    current_noms = [n for n in all_noms.data if n['round'] == round_now and n['is_winner'] == 0]
+    is_all_nominated = len(current_noms) >= len(active_players)
+    
+    horse_names = [n['horse_name'] for n in current_noms]
+    has_duplicates = len(horse_names) != len(set(horse_names))
     
     reveal_data = None
     if phase == "reveal" and 0 <= rev_idx < len(active_players):
@@ -136,7 +143,9 @@ async def status():
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
-        "reveal_data": reveal_data, "all_nominations": all_noms.data
+        "reveal_data": reveal_data, "all_nominations": all_noms.data,
+        "is_all_nominated": is_all_nominated,
+        "has_duplicates": has_duplicates
     }
 
 @app.post("/nominate")
