@@ -217,10 +217,8 @@ async function searchHorses() {
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
 
-                btn.onclick = (e) => {
-                    console.log(`[EVENT_LOG] click検知: 馬名="${h.horse_name}"`);
-                    window.doNominate(h.horse_name, h.mother_name);
-                };
+                // 【最終修正】Firefoxが100%信頼する onclick 属性として直接埋め込み
+                btn.setAttribute('onclick', `console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
 
                 // カードにすべて追加
                 card.appendChild(nameDiv);
@@ -245,8 +243,13 @@ async function searchHorses() {
 
 // --- 指名実行 ---
 window.doNominate = async function(name, mother) {
+    console.log(`[NOMINATE_DEBUG] 関数開始: ${name}`);
     try {
-        if (!confirm(`${name} を指名しますか？`)) {
+        console.log(`[NOMINATE_DEBUG] confirm直前`);
+        const confirmed = confirm(`${name} を指名しますか？`);
+        console.log(`[NOMINATE_DEBUG] confirm結果: ${confirmed}`);
+        
+        if (!confirmed) {
             window.isProcessingNomination = false; // キャンセル時はフラグ解除
             return;
         }
