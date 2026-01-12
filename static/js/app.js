@@ -1,6 +1,6 @@
-// [2026-01-12] app.js Version: 0.0.2 - Reveal Content Update
+// [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.2";
+    const APP_VERSION = "0.0.1";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -124,30 +124,15 @@ async function updateStatus() {
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
-                // すでに表示されていて馬名が変わっていないなら更新をスキップ（アニメ再発火防止）
-                const currentHorse = document.getElementById('reveal_horse')?.innerText;
-                if (revealArea.style.display === 'block' && currentHorse === data.reveal_data.horse) {
-                    return;
-                }
-
                 revealArea.style.display = 'block';
                 const updateRev = (id, val) => {
                     const el = document.getElementById(id);
                     if (el) el.innerText = val || "";
                 };
-                updateRev('reveal_round_display', data.round); // 巡数を反映
                 updateRev('reveal_player', data.reveal_data.player);
                 updateRev('reveal_horse', data.reveal_data.horse);
                 updateRev('reveal_father', data.reveal_data.father);
                 updateRev('reveal_mother', data.reveal_data.mother);
-                updateRev('reveal_stable', data.reveal_data.stable || "未設定"); // 厩舎
-                updateRev('reveal_breeder', data.reveal_data.breeder || "未設定"); // 生産者
-
-                // アニメーションを再発火させる（一度クラスを消して付け直す）
-                revealArea.classList.remove('reveal-active');
-                void revealArea.offsetWidth; // 強制リフロー
-                revealArea.classList.add('reveal-active');
-
             } else {
                 revealArea.style.display = 'none';
             }
@@ -234,8 +219,8 @@ async function searchHorses() {
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
 
-                // 【修正】Firefox対策：setAttributeをやめ、addEventListenerで確実にバインド
-                btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); console.log('[EVENT_LOG] click検知'); window.doNominate(h.horse_name, h.mother_name); };
+                // 【修正】イベントを完全に独立させ、ブラウザの干渉を排除する
+                btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
 
                 // カードにすべて追加
                 card.appendChild(nameDiv);
