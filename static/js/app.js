@@ -1,7 +1,7 @@
 // [2026-01-12] 既存ロジックを完全維持しつつ、MCボタンの制御を追加
 (function() {
     console.log("--- POG DEBUG START ---");
-    console.log("1. スクリプトの読み込みを確認しました。");
+    console.log("1. スクリプトの読み込みを確認しました閉。");
 
     const init = () => {
         console.log("2. 初期化関数(init)が実行されました。");
@@ -50,6 +50,9 @@
     setInterval(updateStatus, 3000);
 })();
 
+// ステータス管理変数をグローバルスコープで初期化
+window.lastPhase = "";
+
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus() {
     try {
@@ -73,7 +76,6 @@ async function updateStatus() {
         const counterEl = document.getElementById('status_counter');
         if (counterEl && data.all_nominations) {
             // 修正：is_winner === 0 (抽選待ち・再指名待ち) の人だけを分子としてカウント
-            // main.py の active_players (当選していない人) の数と同期させる
             const nominatedCount = new Set(data.all_nominations
                 .filter(n => n.round === data.round && n.is_winner === 0)
                 .map(n => n.player_name)).size;
@@ -96,8 +98,13 @@ async function updateStatus() {
             allStatusDiv.innerHTML = html;
         }
 
-        if (lastPhase !== "" && lastPhase !== data.phase) location.reload();
-        lastPhase = data.phase;
+        // --- フェーズ変更によるリロード制御 (windowスコープを使用) ---
+        if (window.lastPhase !== "" && window.lastPhase !== data.phase) {
+            window.lastPhase = data.phase;
+            location.reload();
+            return;
+        }
+        window.lastPhase = data.phase;
 
         // --- 公開エリアの表示・更新ロジック ---
         const revealArea = document.getElementById('reveal_area');
@@ -245,4 +252,3 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
-let lastPhase = "";
