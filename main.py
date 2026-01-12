@@ -36,23 +36,26 @@ async def setup_page(request: Request):
 
 @app.post("/do_setup")
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
-    player_list = [p.strip() for p in players.split(",") if p.strip()]
+    # 空白や改行を徹底的に除去してリスト化
+    player_list = [p.strip() for p in players.replace("　", " ").split(",") if p.strip()]
+    mc_name = mc.strip()
     
-    # 【追加・変更点】MCが参加者リストに含まれているかチェック
-    if mc not in player_list:
+    # 【修正】MC存在チェックをより確実に実行
+    if mc_name not in player_list:
         return HTMLResponse(content=f"""
             <script>
-                alert("エラー: MCの名前『{mc}』が参加者リストに含まれていません。");
+                alert("エラー: MCの名前『{mc_name}』が参加者リストに含まれていません。\\n入力内容を確認してください。");
                 history.back();
             </script>
         """, status_code=400)
     
-    # 既存データの全削除
+    # 既存データの全削除 (既存ロジック維持)
     supabase.table("draft_results").delete().neq("id", -1).execute()
     supabase.table("draft_settings").delete().neq("key", "empty").execute()
     supabase.table("participants").delete().neq("name", "empty").execute()
     
-    pts = [{"name": p, "role": "MC" if p == mc else "Player"} for p in player_list]
+    # 役割の割り当て
+    pts = [{"name": p, "role": "MC" if p == mc_name else "Player"} for p in player_list]
     supabase.table("participants").insert(pts).execute()
     
     update_setting("current_round", "1")
