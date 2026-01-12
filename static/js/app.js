@@ -98,6 +98,25 @@ async function updateStatus() {
 
         if (lastPhase !== "" && lastPhase !== data.phase) location.reload();
         lastPhase = data.phase;
+
+        // --- 公開エリアの表示・更新ロジック ---
+        const revealArea = document.getElementById('reveal_area');
+        if (revealArea) {
+            if (data.phase === 'reveal' && data.reveal_data) {
+                revealArea.style.display = 'block';
+                const updateRev = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerText = val || "";
+                };
+                updateRev('reveal_player', data.reveal_data.player);
+                updateRev('reveal_horse', data.reveal_data.horse);
+                updateRev('reveal_father', data.reveal_data.father);
+                updateRev('reveal_mother', data.reveal_data.mother);
+            } else {
+                revealArea.style.display = 'none';
+            }
+        }
+
     } catch (e) { console.error("Status update error:", e); }
 }
 
@@ -174,6 +193,10 @@ window.doNominate = async function(name, mother) {
 
 // --- MC操作 ---
 window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
+
+// 次の公開（Next Reveal）を呼び出す関数を追加
+window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
+
 window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
 window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
@@ -194,14 +217,22 @@ function updateMCButtons(data) {
     };
 
     if (phase === 'nomination') {
+        btnReveal.innerText = "1. 公開開始";
+        btnReveal.onclick = window.startReveal;
         // (1) 指名待ち => 何も押せない, (2) 指名終了 => 公開開始のみ
         setBtn(btnReveal, isAllNominated); 
         setBtn(btnLottery, false); 
         setBtn(btnNext, false);
     } else if (phase === 'reveal') {
-        // (3) 公開中 => 何も押せない
-        setBtn(btnReveal, false); setBtn(btnLottery, false); setBtn(btnNext, false);
+        // (3) 公開中 => 公開ボタンを「次の公開」として再利用
+        btnReveal.innerText = "次の公開へ";
+        btnReveal.onclick = window.nextReveal;
+        setBtn(btnReveal, true); 
+        setBtn(btnLottery, false); 
+        setBtn(btnNext, false);
     } else if (phase === 'lottery') {
+        btnReveal.innerText = "1. 公開開始";
+        btnReveal.onclick = window.startReveal;
         // (4) 抽選必要 => 抽選のみ, (5) 不要 => 次の巡のみ
         setBtn(btnReveal, false);
         setBtn(btnLottery, hasDuplicates);
