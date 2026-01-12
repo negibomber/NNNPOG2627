@@ -27,8 +27,9 @@
 
             // 入力があったら即座に searchHorses() を実行
             fInput.addEventListener('input', (e) => {
-                // 【追加】Firefox対策：通信中、または指名処理(confirm表示中)は検索を完全にブロック
-                if (window.isSearching || window.isProcessingNomination) {
+                // 【修正】Firefox対策：通信中、または指名処理(confirm表示中)は検索を完全にブロック
+                // さらに、現在フォーカスが「指名する」ボタンにある場合（クリックの瞬間）も検索を阻止する
+                if (window.isSearching || window.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
                     console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
@@ -36,8 +37,8 @@
                 searchHorses();
             });
             mInput.addEventListener('input', (e) => {
-                // 【追加】Firefox対策
-                if (window.isSearching || window.isProcessingNomination) {
+                // 【修正】Firefox対策
+                if (window.isSearching || window.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
                     console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
