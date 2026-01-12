@@ -100,7 +100,6 @@
             el.classList.remove('active');
         });
         document.getElementById(tabId).style.display = 'block';
-        // tabIdそのものを使ってボタンを探すように修正（より確実）
         const activeBtn = document.getElementById('btn-' + tabId.replace('tab-', ''));
         if (activeBtn) {
             activeBtn.style.borderBottom = '3px solid #2563eb';
@@ -109,13 +108,14 @@
         }
     }
 
-    // URLのハッシュ（#tab-my等）に基づいて初期タブを切り替える
-    window.onload = function() {
-        const hash = window.location.hash.replace('#', '');
-        if (hash && document.getElementById(hash)) {
-            switchTab(hash);
+    // リロード後のタブ復元処理 (localStorageを使用)
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTab = localStorage.getItem('activeTab');
+        if (savedTab && document.getElementById(savedTab)) {
+            switchTab(savedTab);
+            localStorage.removeItem('activeTab'); // 復元後は削除
         }
-    };
+    });
 </script>
 </body>
 </html>
