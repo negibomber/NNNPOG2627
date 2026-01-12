@@ -1,7 +1,7 @@
-// [2026-01-12] 既存ロジックを完全維持しつつ、MCボタンの制御を追加
+// [2026-01-12] 既存ロジックを完全維持しつつ、Firefoxでの「指名ボタン」不具合を修正
 (function() {
     console.log("--- POG DEBUG START ---");
-    console.log("1. スクリプトの読み込みを確認しました閉。");
+    console.log("1. スクリプトの読み込みを確認しました。");
 
     const init = () => {
         console.log("2. 初期化関数(init)が実行されました。");
@@ -50,7 +50,7 @@
     setInterval(updateStatus, 3000);
 })();
 
-// ステータス管理変数をグローバルスコープで初期化
+// グローバルスコープでフェーズを管理
 window.lastPhase = "";
 
 // --- ステータス更新 (既存機能維持) ---
@@ -98,8 +98,9 @@ async function updateStatus() {
             allStatusDiv.innerHTML = html;
         }
 
-        // --- フェーズ変更によるリロード制御 (windowスコープを使用) ---
-        if (window.lastPhase !== "" && window.lastPhase !== data.phase) {
+        // --- フェーズ変更によるリロード制御 (windowスコープを使用し確実に実行) ---
+        if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
+            console.log(`PHASE CHANGE DETECTED: ${window.lastPhase} -> ${data.phase}`);
             window.lastPhase = data.phase;
             location.reload();
             return;
@@ -157,11 +158,12 @@ async function searchHorses() {
         if (horses && horses.length > 0) {
             let html = `<div style="color:green; font-size:0.7rem; margin-bottom:5px;">[DEBUG] ${horses.length}件表示</div>`;
             horses.forEach(h => {
+                // Firefox対策: onclick内の引数をバッククォートで包み、HTML属性競合を回避
                 html += `
                 <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
                     <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                    <button onclick="doNominate('${h.horse_name.replace(/'/g, "\\'")}', '${h.mother_name.replace(/'/g, "\\'")}')" 
+                    <button onclick="doNominate(\`${h.horse_name.replace(/`/g, "\\`")}\`, \`${h.mother_name.replace(/`/g, "\\`")}\`)" 
                             style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                         指名する
                     </button>
@@ -189,7 +191,6 @@ window.doNominate = async function(name, mother) {
         const data = await res.json();
         if (data.status === 'success') {
             alert("指名完了");
-            // リロード後にマイリストタブを開くようにフラグを保存
             localStorage.setItem('activeTab', 'tab-my');
             location.reload();
         } else {
@@ -200,10 +201,7 @@ window.doNominate = async function(name, mother) {
 
 // --- MC操作 ---
 window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
-
-// 次の公開（Next Reveal）を呼び出す関数を追加
 window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
-
 window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
 window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
@@ -226,12 +224,10 @@ function updateMCButtons(data) {
     if (phase === 'nomination') {
         btnReveal.innerText = "1. 公開開始";
         btnReveal.onclick = window.startReveal;
-        // (1) 指名待ち => 何も押せない, (2) 指名終了 => 公開開始のみ
         setBtn(btnReveal, isAllNominated); 
         setBtn(btnLottery, false); 
         setBtn(btnNext, false);
     } else if (phase === 'reveal') {
-        // (3) 公開中 => 公開ボタンを「次の公開」として再利用
         btnReveal.innerText = "次の公開へ";
         btnReveal.onclick = window.nextReveal;
         setBtn(btnReveal, true); 
@@ -240,7 +236,6 @@ function updateMCButtons(data) {
     } else if (phase === 'lottery') {
         btnReveal.innerText = "1. 公開開始";
         btnReveal.onclick = window.startReveal;
-        // (4) 抽選必要 => 抽選のみ, (5) 不要 => 次の巡のみ
         setBtn(btnReveal, false);
         setBtn(btnLottery, hasDuplicates);
         setBtn(btnNext, !hasDuplicates);
