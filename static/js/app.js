@@ -27,9 +27,9 @@
 
             // 入力があったら即座に searchHorses() を実行
             fInput.addEventListener('input', (e) => {
-                // 【追加】Firefox対策：通信中やボタン操作確定中は、再検索による画面書き換えを阻止する
-                if (window.isSearching) {
-                    console.log("-> 入力検知しましたが、通信中のため無視します.");
+                // 【追加】Firefox対策：通信中、または指名処理(confirm表示中)は検索を完全にブロック
+                if (window.isSearching || window.isProcessingNomination) {
+                    console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
                 console.log(`-> 父入力検知: "${e.target.value}"`);
@@ -37,8 +37,8 @@
             });
             mInput.addEventListener('input', (e) => {
                 // 【追加】Firefox対策
-                if (window.isSearching) {
-                    console.log("-> 入力検知しましたが、通信中のため無視します.");
+                if (window.isSearching || window.isProcessingNomination) {
+                    console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
                 console.log(`-> 母入力検知: "${e.target.value}"`);
@@ -64,6 +64,7 @@
 window.lastPhase = "";
 window.lastSearchQuery = ""; // 【追加】重複検索・再描画防止用
 window.isSearching = false;  // 【追加】通信中フラグ
+window.isProcessingNomination = false; // 【追加】指名処理中(confirm表示中)フラグ
 
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus() {
@@ -149,10 +150,10 @@ async function searchHorses() {
     const m = mInput.value;
     const currentQuery = `f=${f}&m=${m}`;
 
-    // 【修正】検索語に変化がない、または通信中の場合は処理をスキップ
+    // 【修正】検索語に変化がない、または通信中、または指名処理中の場合は処理をスキップ
     // これにより、Firefoxでボタンクリック時に「ボタンが消えて再描画される」のを防ぎます
-    if (currentQuery === window.lastSearchQuery || window.isSearching) {
-        console.log("SEARCH: スキップ (変化なし または 通信中)");
+    if (currentQuery === window.lastSearchQuery || window.isSearching || window.isProcessingNomination) {
+        console.log("SEARCH: スキップ (変化なし または 処理中)");
         return;
     }
 
@@ -209,8 +210,8 @@ async function searchHorses() {
                 // 【デバッグログ追加】イベントの発生順序を詳細に記録
                 btn.onmousedown = (e) => {
                     console.log(`[EVENT_LOG] mousedown検知: 馬名="${h.horse_name}"`);
-                    console.log(`[EVENT_LOG] isSearchingの状態: ${window.isSearching}`);
-                    // Firefoxでの競合を避けるため、一旦ここではログのみ
+                    // ボタンを押した瞬間に「指名処理中」フラグを立てて、inputイベントを封じる
+                    window.isProcessingNomination = true;
                 };
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
@@ -243,8 +244,11 @@ async function searchHorses() {
 
 // --- 指名実行 ---
 window.doNominate = async function(name, mother) {
-    if (!confirm(`${name} を指名しますか？`)) return;
     try {
+        if (!confirm(`${name} を指名しますか？`)) {
+            window.isProcessingNomination = false; // キャンセル時はフラグ解除
+            return;
+        }
         const formData = new URLSearchParams();
         formData.append('horse_name', name);
         formData.append('mother_name', mother);
@@ -256,8 +260,12 @@ window.doNominate = async function(name, mother) {
             location.reload();
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
+            window.isProcessingNomination = false; // エラー時もフラグ解除
         }
-    } catch (e) { console.error("Nominate error:", e); }
+    } catch (e) { 
+        console.error("Nominate error:", e); 
+        window.isProcessingNomination = false;
+    }
 }
 
 // --- MC操作 ---
