@@ -1,4 +1,4 @@
-// [2026-01-12] 既存ロジックを完全維持しつつ、Firefoxでの「指名ボタン」不具合を修正
+// [2026-01-12] 既存ロジックを完全維持しつつ、DOM操作による生成で Firefox 不具合を根本解決
 (function() {
     console.log("--- POG DEBUG START ---");
     console.log("1. スクリプトの読み込みを確認しました.");
@@ -75,7 +75,6 @@ async function updateStatus() {
 
         const counterEl = document.getElementById('status_counter');
         if (counterEl && data.all_nominations) {
-            // 修正：is_winner === 0 (抽選待ち・再指名待ち) の人だけを分子としてカウント
             const nominatedCount = new Set(data.all_nominations
                 .filter(n => n.round === data.round && n.is_winner === 0)
                 .map(n => n.player_name)).size;
@@ -98,7 +97,6 @@ async function updateStatus() {
             allStatusDiv.innerHTML = html;
         }
 
-        // --- フェーズ変更によるリロード制御 (windowスコープを使用し確実に実行) ---
         if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
             console.log(`PHASE CHANGE DETECTED: ${window.lastPhase} -> ${data.phase}`);
             window.lastPhase = data.phase;
@@ -107,7 +105,6 @@ async function updateStatus() {
         }
         window.lastPhase = data.phase;
 
-        // --- 公開エリアの表示・更新ロジック ---
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
@@ -141,7 +138,6 @@ async function searchHorses() {
 
     console.log(`SEARCH: 検索判定中... (父:${f.length}文字, 母:${m.length}文字)`);
 
-    // 2文字未満ならクリア
     if (f.length < 2 && m.length < 2) {
         resultsEl.innerHTML = "";
         return;
@@ -155,21 +151,49 @@ async function searchHorses() {
         const horses = await res.json();
         console.log("SEARCH: サーバー回答受信", horses ? horses.length : 0, "件");
 
+        resultsEl.innerHTML = ""; // 既存の結果をクリア
+
         if (horses && horses.length > 0) {
-            let html = `<div style="color:green; font-size:0.7rem; margin-bottom:5px;">[DEBUG] ${horses.length}件表示</div>`;
+            // デバッグ情報表示
+            const debugInfo = document.createElement('div');
+            debugInfo.style.cssText = "color:green; font-size:0.7rem; margin-bottom:5px;";
+            debugInfo.textContent = `[DEBUG] ${horses.length}件表示`;
+            resultsEl.appendChild(debugInfo);
+
             horses.forEach(h => {
-                // Firefox対策: type="button" を付与し、かつ onclick内の引数をバッククォートで包み、HTML属性競合を回避
-                html += `
-                <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
-                    <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                    <button type="button" onclick="doNominate(\`${h.horse_name.replace(/`/g, "\\`")}\`, \`${h.mother_name.replace(/`/g, "\\`")}\`)" 
-                            style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        指名する
-                    </button>
-                </div>`;
+                // 1. カードコンテナ作成
+                const card = document.createElement('div');
+                card.style.cssText = "padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);";
+
+                // 2. 馬名表示
+                const nameDiv = document.createElement('div');
+                nameDiv.style.cssText = "font-weight:bold; font-size:1.1rem;";
+                nameDiv.textContent = h.horse_name;
+
+                // 3. 父母情報表示
+                const infoDiv = document.createElement('div');
+                infoDiv.style.cssText = "font-size:0.8rem; color:#64748b; margin-bottom:8px;";
+                infoDiv.textContent = `父: ${h.father_name} / 母: ${h.mother_name}`;
+
+                // 4. ボタン作成 (これが王道の方法)
+                const btn = document.createElement('button');
+                btn.type = "button"; // Firefox対策
+                btn.textContent = "指名する";
+                btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
+                
+                // 文字列のパースを介さない直接的なイベント登録
+                btn.onclick = () => {
+                    window.doNominate(h.horse_name, h.mother_name);
+                };
+
+                // カードにすべて追加
+                card.appendChild(nameDiv);
+                card.appendChild(infoDiv);
+                card.appendChild(btn);
+
+                // 結果エリアに追加
+                resultsEl.appendChild(card);
             });
-            resultsEl.innerHTML = html;
         } else {
             console.log("SEARCH: ヒットなし");
             resultsEl.innerHTML = "<div style='color:#94a3b8; text-align:center; padding:10px;'>[DEBUG] 該当なし</div>";
