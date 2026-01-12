@@ -234,8 +234,8 @@ async function searchHorses() {
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
 
-                // 【修正】イベントを完全に独立させ、ブラウザの干渉を排除する
-                btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
+                // 【修正】Firefox対策：setAttributeをやめ、addEventListenerで確実にバインド
+                btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); console.log('[EVENT_LOG] click検知'); window.doNominate(h.horse_name, h.mother_name); };
 
                 // カードにすべて追加
                 card.appendChild(nameDiv);
