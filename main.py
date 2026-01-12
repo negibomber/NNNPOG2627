@@ -36,33 +36,44 @@ async def setup_page(request: Request):
 
 @app.post("/do_setup")
 async def do_setup(players: str = Form(...), mc: str = Form(...)):
-    # 空白や改行を徹底的に除去してリスト化
-    player_list = [p.strip() for p in players.replace("　", " ").split(",") if p.strip()]
+    # 1. 入力値のクリーニング（全角スペース対応・カンマ区切り）
+    clean_players = players.replace("　", " ")
+    player_list = [p.strip() for p in clean_players.split(",") if p.strip()]
     mc_name = mc.strip()
     
-    # 【修正】MC存在チェックをより確実に実行
+    # 2. 【最重要】MC存在チェック
+    # リストにMCの名前がなければ、DB操作を一切行わずに即座にエラーを返す
     if mc_name not in player_list:
+        error_msg = f"エラー: MC『{mc_name}』が参加者リストに存在しません。\\n現在のリスト: {', '.join(player_list)}"
         return HTMLResponse(content=f"""
-            <script>
-                alert("エラー: MCの名前『{mc_name}』が参加者リストに含まれていません。\\n入力内容を確認してください。");
-                history.back();
-            </script>
+            <!DOCTYPE html>
+            <html>
+            <body>
+                <script>
+                    alert("{error_msg}");
+                    window.history.back();
+                </script>
+            </body>
+            </html>
         """, status_code=400)
     
-    # 既存データの全削除 (既存ロジック維持)
-    supabase.table("draft_results").delete().neq("id", -1).execute()
-    supabase.table("draft_settings").delete().neq("key", "empty").execute()
-    supabase.table("participants").delete().neq("name", "empty").execute()
-    
-    # 役割の割り当て
-    pts = [{"name": p, "role": "MC" if p == mc_name else "Player"} for p in player_list]
-    supabase.table("participants").insert(pts).execute()
-    
-    update_setting("current_round", "1")
-    update_setting("phase", "nomination")
-    update_setting("reveal_index", "-1")
-    
-    return RedirectResponse(url="/", status_code=303)
+    # 3. チェックを通った場合のみ、既存データの削除を実行
+    try:
+        supabase.table("draft_results").delete().neq("id", -1).execute()
+        supabase.table("draft_settings").delete().neq("key", "empty").execute()
+        supabase.table("participants").delete().neq("name", "empty").execute()
+        
+        # 4. 新規データの挿入
+        pts = [{"name": p, "role": "MC" if p == mc_name else "Player"} for p in player_list]
+        supabase.table("participants").insert(pts).execute()
+        
+        update_setting("current_round", "1")
+        update_setting("phase", "nomination")
+        update_setting("reveal_index", "-1")
+        
+        return RedirectResponse(url="/", status_code=303)
+    except Exception as e:
+        return HTMLResponse(content=f"DBエラーが発生しました: {str(e)}", status_code=500)
 
 @app.get("/")
 async def index(request: Request):
