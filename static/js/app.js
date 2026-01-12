@@ -1,6 +1,6 @@
-// [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
+// [2026-01-12] app.js Version: 0.0.2 - Reveal Content Update
 (function() {
-    const APP_VERSION = "0.0.1";
+    const APP_VERSION = "0.0.2";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -124,15 +124,30 @@ async function updateStatus() {
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
+                // すでに表示されていて馬名が変わっていないなら更新をスキップ（アニメ再発火防止）
+                const currentHorse = document.getElementById('reveal_horse')?.innerText;
+                if (revealArea.style.display === 'block' && currentHorse === data.reveal_data.horse) {
+                    return;
+                }
+
                 revealArea.style.display = 'block';
                 const updateRev = (id, val) => {
                     const el = document.getElementById(id);
                     if (el) el.innerText = val || "";
                 };
+                updateRev('reveal_round_display', data.round); // 巡数を反映
                 updateRev('reveal_player', data.reveal_data.player);
                 updateRev('reveal_horse', data.reveal_data.horse);
                 updateRev('reveal_father', data.reveal_data.father);
                 updateRev('reveal_mother', data.reveal_data.mother);
+                updateRev('reveal_stable', data.reveal_data.stable || "未設定"); // 厩舎
+                updateRev('reveal_breeder', data.reveal_data.breeder || "未設定"); // 生産者
+
+                // アニメーションを再発火させる（一度クラスを消して付け直す）
+                revealArea.classList.remove('reveal-active');
+                void revealArea.offsetWidth; // 強制リフロー
+                revealArea.classList.add('reveal-active');
+
             } else {
                 revealArea.style.display = 'none';
             }
