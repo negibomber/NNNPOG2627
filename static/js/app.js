@@ -158,8 +158,9 @@ window.doNominate = async function(name, mother) {
         const data = await res.json();
         if (data.status === 'success') {
             alert("指名完了");
-            updateStatus();
-            if (typeof switchTab === 'function') switchTab('tab-my');
+            // マイリストタブにハッシュを切り替えてからリロード
+            window.location.hash = 'tab-my';
+            location.reload();
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
         }
