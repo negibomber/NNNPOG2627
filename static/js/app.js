@@ -88,7 +88,7 @@ async function updateStatus() {
                 html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px;">${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
             });
             html += '</table>';
-            allStatusDiv.innerHTML = html;
+            all_status_list.innerHTML = html;
         }
 
         if (lastPhase !== "" && lastPhase !== data.phase) location.reload();
@@ -158,8 +158,8 @@ window.doNominate = async function(name, mother) {
         const data = await res.json();
         if (data.status === 'success') {
             alert("指名完了");
-            // マイリストタブにハッシュを切り替えてからリロード
-            window.location.hash = 'tab-my';
+            // リロード後にマイリストタブを開くようにフラグを保存
+            localStorage.setItem('activeTab', 'tab-my');
             location.reload();
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
