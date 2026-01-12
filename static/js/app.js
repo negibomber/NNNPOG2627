@@ -196,9 +196,17 @@ async function searchHorses() {
                 btn.textContent = "指名する";
                 btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
                 
-                // 【修正】Firefox対策：onclickからonmousedownに変更し、他イベントを抑止
+                // 【デバッグログ追加】イベントの発生順序を詳細に記録
                 btn.onmousedown = (e) => {
-                    e.preventDefault(); 
+                    console.log(`[EVENT_LOG] mousedown検知: 馬名="${h.horse_name}"`);
+                    console.log(`[EVENT_LOG] isSearchingの状態: ${window.isSearching}`);
+                    // Firefoxでの競合を避けるため、一旦ここではログのみ
+                };
+
+                btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
+
+                btn.onclick = (e) => {
+                    console.log(`[EVENT_LOG] click検知: 馬名="${h.horse_name}"`);
                     window.doNominate(h.horse_name, h.mother_name);
                 };
 
