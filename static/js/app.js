@@ -69,8 +69,10 @@ async function updateStatus() {
 
         const counterEl = document.getElementById('status_counter');
         if (counterEl && data.all_nominations) {
+            // 修正：is_winner === 0 (抽選待ち・再指名待ち) の人だけを分子としてカウント
+            // main.py の active_players (当選していない人) の数と同期させる
             const nominatedCount = new Set(data.all_nominations
-                .filter(n => n.round === data.round && (n.is_winner === 0 || n.is_winner === 1))
+                .filter(n => n.round === data.round && n.is_winner === 0)
                 .map(n => n.player_name)).size;
             counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
         }
@@ -88,7 +90,7 @@ async function updateStatus() {
                 html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px;">${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
             });
             html += '</table>';
-            all_status_list.innerHTML = html;
+            allStatusDiv.innerHTML = html;
         }
 
         if (lastPhase !== "" && lastPhase !== data.phase) location.reload();
