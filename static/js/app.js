@@ -58,7 +58,8 @@
         init();
     }
     
-    setInterval(updateStatus, 3000);
+    // 【修正】タイマーIDを管理し、指名処理中は停止できるようにする
+    window.statusTimer = setInterval(updateStatus, 3000);
 })();
 
 // グローバルスコープで管理
@@ -244,6 +245,11 @@ async function searchHorses() {
 // --- 指名実行 ---
 window.doNominate = async function(name, mother) {
     console.log(`[NOMINATE_DEBUG] 関数開始: ${name}`);
+    // 【重要】ダイアログ表示前にステータス更新タイマーを完全に停止させ、割り込みを防ぐ
+    if (window.statusTimer) {
+        console.log(`[NOMINATE_DEBUG] タイマーを一時停止します`);
+        clearInterval(window.statusTimer);
+    }
     try {
         console.log(`[NOMINATE_DEBUG] confirm直前`);
         const confirmed = confirm(`${name} を指名しますか？`);
@@ -251,6 +257,8 @@ window.doNominate = async function(name, mother) {
         
         if (!confirmed) {
             window.isProcessingNomination = false; // キャンセル時はフラグ解除
+            // タイマーを再開
+            window.statusTimer = setInterval(updateStatus, 3000);
             return;
         }
         const formData = new URLSearchParams();
@@ -265,10 +273,12 @@ window.doNominate = async function(name, mother) {
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
             window.isProcessingNomination = false; // エラー時もフラグ解除
+            window.statusTimer = setInterval(updateStatus, 3000);
         }
     } catch (e) { 
         console.error("Nominate error:", e); 
         window.isProcessingNomination = false;
+        window.statusTimer = setInterval(updateStatus, 3000);
     }
 }
 
