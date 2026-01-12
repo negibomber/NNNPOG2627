@@ -68,7 +68,7 @@ async function updateStatus() {
         updateText('phase_label', phaseMap[data.phase] || data.phase);
 
         // MCボタンの制御を呼び出し
-        updateMCButtons(data.phase);
+        updateMCButtons(data);
 
         const counterEl = document.getElementById('status_counter');
         if (counterEl && data.all_nominations) {
@@ -178,7 +178,10 @@ window.runLottery = async function() { if(confirm("抽選を実行しますか�
 window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
 // --- MC用ボタンの活性・非活性制御 ---
-function updateMCButtons(phase) {
+function updateMCButtons(data) {
+    const phase = data.phase;
+    const isAllNominated = data.is_all_nominated;
+    const hasDuplicates = data.has_duplicates;
     const btnReveal = document.getElementById('btn_mc_reveal');
     const btnLottery = document.getElementById('btn_mc_lottery');
     const btnNext = document.getElementById('btn_mc_next');
@@ -191,11 +194,18 @@ function updateMCButtons(phase) {
     };
 
     if (phase === 'nomination') {
-        setBtn(btnReveal, true); setBtn(btnLottery, false); setBtn(btnNext, false);
+        // (1) 指名待ち => 何も押せない, (2) 指名終了 => 公開開始のみ
+        setBtn(btnReveal, isAllNominated); 
+        setBtn(btnLottery, false); 
+        setBtn(btnNext, false);
     } else if (phase === 'reveal') {
+        // (3) 公開中 => 何も押せない
         setBtn(btnReveal, false); setBtn(btnLottery, false); setBtn(btnNext, false);
     } else if (phase === 'lottery') {
-        setBtn(btnReveal, false); setBtn(btnLottery, true); setBtn(btnNext, true);
+        // (4) 抽選必要 => 抽選のみ, (5) 不要 => 次の巡のみ
+        setBtn(btnReveal, false);
+        setBtn(btnLottery, hasDuplicates);
+        setBtn(btnNext, !hasDuplicates);
     }
 }
 
