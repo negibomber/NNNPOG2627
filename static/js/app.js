@@ -1,10 +1,10 @@
 // [2026-01-12] 既存ロジックを完全維持しつつ、Firefoxでの「指名ボタン」不具合を修正
 (function() {
     console.log("--- POG DEBUG START ---");
-    console.log("1. スクリプトの読み込みを確認しました。");
+    console.log("1. スクリプトの読み込みを確認しました.");
 
     const init = () => {
-        console.log("2. 初期化関数(init)が実行されました。");
+        console.log("2. 初期化関数(init)が実行されました.");
         updateStatus();
         
         const fInput = document.getElementById('s_father');
@@ -19,7 +19,7 @@
         });
 
         if (fInput && mInput) {
-            console.log("4. 監視(addEventListener)を登録します。");
+            console.log("4. 監視(addEventListener)を登録します.");
             
             // 既存のイベントを一度クリア（重複防止）
             fInput.oninput = null;
@@ -34,9 +34,9 @@
                 console.log(`-> 母入力検知: "${e.target.value}"`);
                 searchHorses();
             });
-            console.log("5. 監視の登録が完了しました。入力待ちです。");
+            console.log("5. 監視の登録が完了しました。入力待ちです.");
         } else {
-            console.error("CRITICAL: 入力欄が見つかりません。HTMLのIDが正しいか確認してください。");
+            console.error("CRITICAL: 入力欄が見つかりません。HTMLのIDが正しいか確認してください.");
         }
     };
 
@@ -158,12 +158,12 @@ async function searchHorses() {
         if (horses && horses.length > 0) {
             let html = `<div style="color:green; font-size:0.7rem; margin-bottom:5px;">[DEBUG] ${horses.length}件表示</div>`;
             horses.forEach(h => {
-                // Firefox対策: onclick内の引数をバッククォートで包み、HTML属性競合を回避
+                // Firefox対策: type="button" を付与し、かつ onclick内の引数をバッククォートで包み、HTML属性競合を回避
                 html += `
                 <div style="padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                     <div style="font-weight:bold; font-size:1.1rem;">${h.horse_name}</div>
                     <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                    <button onclick="doNominate(\`${h.horse_name.replace(/`/g, "\\`")}\`, \`${h.mother_name.replace(/`/g, "\\`")}\`)" 
+                    <button type="button" onclick="doNominate(\`${h.horse_name.replace(/`/g, "\\`")}\`, \`${h.mother_name.replace(/`/g, "\\`")}\`)" 
                             style="width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                         指名する
                     </button>
