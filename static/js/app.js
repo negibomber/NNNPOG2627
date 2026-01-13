@@ -303,7 +303,6 @@ window.doNominate = async function(name, mother, horse_id) {
         const formData = new URLSearchParams();
         formData.append('horse_name', name || "");
         formData.append('mother_name', mother || "");
-        formData.append('horse_id', horse_id || "");
         
         console.log("--- DEBUG POST DATA ---");
         for (let [k, v] of formData.entries()) { console.log(`${k}: ${v}`); }
