@@ -309,8 +309,20 @@ window.doNominate = async function(name, mother, horse_id) {
         for (let [k, v] of formData.entries()) { console.log(`${k}: ${v}`); }
 
         const res = await fetch('/nominate', { method: 'POST', body: formData });
-        console.log(`--- HTTP STATUS: ${res.status} ---`);
-        const data = await res.json();
+        const resText = await res.text(); // 生の応答をテキストで取得
+        console.log(`[CLIENT_TRACE] HTTP STATUS: ${res.status}`);
+        console.log(`[CLIENT_TRACE] RAW RESPONSE:`, resText);
+
+        let data;
+        try {
+            data = JSON.parse(resText);
+        } catch(e) {
+            // JSONとして解釈できない（＝サーバーがクラッシュしてHTMLを返した）場合
+            alert(`致命的エラーが発生しました(HTTP ${res.status})\n\n【サーバーの応答内容】\n${resText.substring(0, 300)}`);
+            window.isProcessingNomination = false;
+            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
+            return;
+        }
         if (data.status === 'success') {
             alert("指名完了");
             localStorage.setItem('activeTab', 'tab-my');

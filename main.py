@@ -6,6 +6,7 @@ from supabase import create_client
 import urllib.parse
 import random
 import os
+import traceback
 
 app = FastAPI()
 
@@ -173,8 +174,32 @@ async def status():
 
 @app.post("/nominate")
 async def nominate(request: Request, horse_name: str = Form(None), mother_name: str = Form(None), horse_id: str = Form(None)):
-    print(f"--- DEBUG NOMINATE: name={horse_name}, id={horse_id} ---")
+    import traceback
+    print(f"\n[SERVER_TRACE] === Nominate Process Start ===")
+    print(f"[SERVER_TRACE] Received: horse_name='{horse_name}', mother='{mother_name}', horse_id='{horse_id}'")
     try:
+        raw_user = request.cookies.get("pog_user")
+        user = urllib.parse.unquote(raw_user) if raw_user else None
+        print(f"[SERVER_TRACE] Auth User: {user}")
+        if not user: return {"status": "error", "message": "ログインユーザーが見つかりません"}
+
+        round_now = int(get_setting("current_round") or 1)
+        print(f"[SERVER_TRACE] Current Round: {round_now}")
+
+        print(f"[SERVER_TRACE] Executing DELETE (previous nomination)...")
+        supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
+        
+        print(f"[SERVER_TRACE] Executing INSERT (new nomination)...")
+        res = supabase.table("draft_results").insert({
+            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
+        }).execute()
+        
+        print(f"[SERVER_TRACE] Process Completed Successfully")
+        return {"status": "success"}
+    except Exception as e:
+        err_msg = traceback.format_exc()
+        print(f"[SERVER_TRACE] !!! ERROR OCCURRED !!!\n{err_msg}")
+        return {"status": "error", "message": f"Server Side Error: {str(e)}", "debug_trace": err_msg}
         raw_user = request.cookies.get("pog_user")
         user = urllib.parse.unquote(raw_user) if raw_user else None
         if not user: return {"status": "error", "message": "User not found"}
