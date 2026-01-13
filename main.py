@@ -119,8 +119,9 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # 関連する馬情報を外部結合して取得し、父名を表示可能にする
-    all_noms_res = supabase.table("draft_results").select("*, horses(father_name, mother_name)").execute()
+    # DBの状態に左右されないよう、単独テーブルから取得（外部キー不備による500エラーを回避）
+    # リレーションキー(id)を使用して、horsesテーブルから父名を取得する
+    all_noms_res = supabase.table("draft_results").select("*, horses:horse_id(father_name)").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
@@ -170,15 +171,16 @@ async def status():
     }
 
 @app.post("/nominate")
-async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...)):
+async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...), horse_id: str = Form(...)):
     raw_user = request.cookies.get("pog_user")
     user = urllib.parse.unquote(raw_user) if raw_user else None
     if not user: return {"status": "error"}
 
     round_now = int(get_setting("current_round") or 1)
     supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
+    # 指名時に馬名・母名だけでなく、検索時に特定した「馬のID」も送る必要があります（※JS側の修正も必要になります）
     supabase.table("draft_results").insert({
-        "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
+        "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
     }).execute()
     return {"status": "success"}
 

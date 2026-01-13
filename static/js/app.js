@@ -257,7 +257,7 @@ async function searchHorses() {
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
 
                 // 【修正】イベントを完全に独立させ、ブラウザの干渉を排除する
-                btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
+                btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); console.log('[EVENT_LOG] click検知(attr)'); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}", "${h.id}")`);
 
                 // カードにすべて追加
                 card.appendChild(nameDiv);
@@ -281,7 +281,7 @@ async function searchHorses() {
 }
 
 // --- 指名実行 ---
-window.doNominate = async function(name, mother) {
+window.doNominate = async function(name, mother, horse_id) {
     console.log(`[NOMINATE_DEBUG] 関数開始: ${name}`);
     // 【重要】ダイアログ表示前にステータス更新タイマーを完全に停止させ、割り込みを防ぐ
     if (window.statusTimer) {
