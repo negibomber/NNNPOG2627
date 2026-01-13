@@ -127,7 +127,7 @@ async function updateStatus() {
                 revealArea.style.display = 'block';
                 const updateRev = (id, val) => {
                     const el = document.getElementById(id);
-                    if (el) el.innerText = val || "";
+                    if (el) el.innerText = (val !== undefined && val !== null) ? val : "";
                 };
                 updateRev('reveal_round', data.reveal_data.round);
                 updateRev('reveal_player', data.reveal_data.player);
