@@ -90,15 +90,14 @@ async function updateStatus() {
             updateText('phase_label', phaseMap[currentPhase] || currentPhase);
         }
 
-        // MCボタンの制御を呼び出し
-        updateMCButtons(data);
-
+        // 指名人数の更新を優先（MCボタンのエラーに巻き込まれないようにする）
         const counterEl = document.getElementById('status_counter');
-        if (counterEl && Array.isArray(data.all_nominations)) {
-            const currentRoundInt = parseInt(data.round);
-            const currentPhase = String(data.phase || "").trim();
-            const nominatedCount = new Set(data.all_nominations
-                .filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 0)
+        const currentRoundInt = parseInt(data.round);
+        const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
+
+        if (counterEl) {
+            const nominatedCount = new Set(allNoms
+                .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
                 .map(n => n.player_name)).size;
             counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
         }
@@ -144,6 +143,9 @@ async function updateStatus() {
             });
             allStatusDiv.innerHTML = html;
         }
+
+        // 最後に依存度の低いMCボタン更新を実行
+        updateMCButtons(data);
 
         if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
             console.log(`PHASE CHANGE DETECTED: ${window.lastPhase} -> ${data.phase}`);

@@ -12,7 +12,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 15px; background: #1e293b; color: white;">
         <div style="font-weight:bold;">
             第 <span id="round_display">{{ current_round }}</span> 巡 
-            <span id="phase_label" style="margin-left:10px; font-size:0.9rem; background:#3b82f6; padding:2px 8px; border-radius:4px;">{% if phase == 'nomination' %}指名受付中{% elif phase == 'reveal' %}指名公開中{% elif phase == 'lottery' %}抽選・結果確定{% else %}{{ phase }}{% endif %}</span>
+            <span id="phase_label" style="margin-left:10px; font-size:0.9rem; background:#3b82f6; padding:2px 8px; border-radius:4px;">{% if phase.strip().lower() == 'nomination' %}指名受付中{% elif phase.strip().lower() == 'reveal' %}指名公開中{% elif phase.strip().lower() == 'lottery' %}抽選・結果確定{% else %}{{ phase }}{% endif %}</span>
         </div>
         <a href="/logout" style="color:white; text-decoration:none; font-size:0.8rem; background:#ef4444; padding:6px 12px; border-radius:4px; font-weight:bold;">退出</a>
     </div>

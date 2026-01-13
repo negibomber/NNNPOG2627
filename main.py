@@ -119,11 +119,12 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # 全指名データに、horsesテーブルから父母情報を紐付けて取得
-    all_noms = supabase.table("draft_results").select("*, horses(father_name, mother_name)").execute()
+    # DBの状態に左右されないよう、単独テーブルから取得（外部キー不備による500エラーを回避）
+    all_noms_res = supabase.table("draft_results").select("*").execute()
+    all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
-    current_noms = [n for n in all_noms.data if n['round'] == round_now and n['is_winner'] == 0]
+    current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
     is_all_nominated = len(current_noms) >= len(active_players)
     
     horse_names = [n['horse_name'] for n in current_noms]
@@ -163,7 +164,7 @@ async def status():
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
-        "reveal_data": reveal_data, "all_nominations": all_noms.data,
+        "reveal_data": reveal_data, "all_nominations": all_noms_data,
         "is_all_nominated": is_all_nominated,
         "has_duplicates": has_duplicates
     }
