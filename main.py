@@ -130,16 +130,21 @@ async def status():
         target = active_players[rev_idx]
         res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
         if res.data:
-            h_info = supabase.table("horses").select("*").eq("horse_name", res.data[0]['horse_name']).execute()
+            # 1. 指名された馬名から余計な空白を徹底的に除去
+            h_name = res.data[0]['horse_name'].strip()
+            
+            # 2. ilikeを使用し、かつ前後に % を入れないことで「実質的な完全一致」を空白に強く行う
+            h_info = supabase.table("horses").select("*").ilike("horse_name", f"{h_name}").execute()
             h_d = h_info.data[0] if h_info.data else {}
+            
             reveal_data = {
                 "round": str(round_now),
                 "player": target, 
-                "horse": res.data[0]['horse_name'], 
+                "horse": h_name, 
                 "mother": res.data[0]['mother_name'], 
-                "father": h_d.get('father_name', "データなし"),
-                "stable": h_d.get('stable', "未登録"),
-                "breeder": h_d.get('breeder', "未登録")
+                "father": str(h_d.get('father_name') or "データなし"),
+                "stable": str(h_d.get('stable') or "未登録"),
+                "breeder": str(h_d.get('breeder') or "未登録")
             }
         else:
             reveal_data = {
