@@ -208,7 +208,7 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
         
         res = supabase.table("draft_results").insert({
-            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
+            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
         }).execute()
         print(f"--- DB INSERT SUCCESS ---")
         return {"status": "success"}
