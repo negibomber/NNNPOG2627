@@ -119,10 +119,11 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # DBの状態に左右されないよう、単独テーブルから取得（外部キー不備による500エラーを回避）
-    # リレーションキー(id)を使用して、horsesテーブルから父名を取得する
-    all_noms_res = supabase.table("draft_results").select("*, horses:horse_id(father_name)").execute()
+    # 【修正】500エラーの根本原因である結合(JOIN)を削除し、単独テーブル取得に戻す
+    all_noms_res = supabase.table("draft_results").select("*").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
+    # JS側で n.horses.father_name を参照してもエラーにならないよう、空データを注入
+    for n in all_noms_data: n['horses'] = {"father_name": "-"}
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
     current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
