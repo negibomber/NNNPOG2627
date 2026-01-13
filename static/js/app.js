@@ -98,18 +98,44 @@ async function updateStatus() {
         }
 
         const allStatusDiv = document.getElementById('all_status_list');
-        if (allStatusDiv && data.all_players) {
-            let html = '<table style="width:100%; border-collapse:collapse;">';
+        if (allStatusDiv && data.all_players && data.all_nominations) {
+            const me = decodeURIComponent(getCookie('pog_user') || "");
+            let html = '';
+
             data.all_players.forEach(playerName => {
-                const nom = data.all_nominations.find(n => n.player_name === playerName && n.round === data.round);
-                let horseTxt = '-';
-                if (nom) {
-                    const isMe = (playerName === decodeURIComponent(getCookie('pog_user') || ""));
-                    horseTxt = (data.phase !== 'nomination' || isMe) ? nom.horse_name : '???';
+                html += `<div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:15px;">`;
+                html += `<h3 style="margin:0 0 10px 0; font-size:1rem; border-left:4px solid #2563eb; padding-left:10px;">${playerName}</h3>`;
+                html += `<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">`;
+                html += `<tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;"><th style="padding:5px; text-align:left; width:10%;">巡</th><th style="padding:5px; text-align:left;">馬名 / 血統</th></tr>`;
+
+                const playerNoms = data.all_nominations
+                    .filter(n => n.player_name === playerName)
+                    .sort((a, b) => a.round - b.round);
+
+                if (playerNoms.length === 0) {
+                    html += `<tr><td colspan="2" style="padding:10px; color:#94a3b8; text-align:center;">まだ指名がありません</td></tr>`;
+                } else {
+                    playerNoms.forEach(n => {
+                        let hName = n.horse_name;
+                        if (data.phase === 'nomination' && n.round === data.round && playerName !== me) {
+                            hName = '??? (指名済み)';
+                        }
+                        const father = n.horses?.father_name || '-';
+                        const mother = n.horses?.mother_name || n.mother_name || '-';
+                        const winClass = n.is_winner === 1 ? 'color:#059669; font-weight:bold;' : (n.is_winner === -1 ? 'color:#94a3b8; text-decoration:line-through;' : '');
+
+                        html += `<tr style="border-bottom:1px solid #f1f5f9;">`;
+                        html += `<td style="padding:8px 5px; vertical-align:top;">${n.round}</td>`;
+                        html += `<td style="padding:8px 5px; ${winClass}">`;
+                        html += `<div>${hName}</div>`;
+                        if (hName !== '??? (指名済み)') {
+                            html += `<div style="font-size:0.7rem; color:#64748b;">${father} / ${mother}</div>`;
+                        }
+                        html += `</td></tr>`;
+                    });
                 }
-                html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:5px;">${playerName}</td><td style="text-align:right;">${horseTxt}</td></tr>`;
+                html += '</table></div>';
             });
-            html += '</table>';
             allStatusDiv.innerHTML = html;
         }
 

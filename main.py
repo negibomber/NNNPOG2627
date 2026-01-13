@@ -116,7 +116,9 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    all_noms = supabase.table("draft_results").select("*").execute()
+    # 1. 全指名データに、horsesテーブルから父母情報を紐付けて取得
+    # 変数名を all_noms に統一して既存ロジックとの不整合を解消
+    all_noms = supabase.table("draft_results").select("*, horses(father_name, mother_name)").execute()
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
     current_noms = [n for n in all_noms.data if n['round'] == round_now and n['is_winner'] == 0]

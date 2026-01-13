@@ -24,7 +24,6 @@
 
 <div class="tabs" style="display: flex; background: white; border-bottom: 1px solid #e2e8f0;">
     <button class="tab-btn active" onclick="switchTab('tab-search')" id="btn-search" style="flex:1; padding:15px; border:none; background:none; font-weight:bold; border-bottom:3px solid #2563eb; color:#2563eb;">指名</button>
-    <button class="tab-btn" onclick="switchTab('tab-my')" id="btn-my" style="flex:1; padding:15px; border:none; background:none; font-weight:bold; color:#64748b;">マイリスト</button>
     <button class="tab-btn" onclick="switchTab('tab-all')" id="btn-all" style="flex:1; padding:15px; border:none; background:none; font-weight:bold; color:#64748b;">全体</button>
 </div>
 
@@ -50,33 +49,8 @@
         </div>
     </div>
 
-    <div id="tab-my" class="tab-content" style="display:none;">
-        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:15px;">
-            <h3 style="margin-top:0;">現在の指名馬</h3>
-            <div id="current_nomination_status" style="font-size:1.2rem; font-weight:bold; color:#2563eb; padding:10px; background:#eff6ff; border-radius:6px;">
-                {% if current_horse %}{{ current_horse }}{% else %}未指名{% endif %}
-            </div>
-            {% if won_horse %}
-            <div style="margin-top:10px; color:#059669; font-weight:bold; font-size:0.9rem;">🎉 当選確定済み: {{ won_horse }}</div>
-            {% endif %}
-        </div>
-        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0;">これまでの獲得馬</h3>
-            <div id="my_list">
-                {% for h in confirmed_horses %}
-                    {% if h.player_name == user %}
-                    <div style="padding:8px 0; border-bottom:1px solid #f1f5f9;">第{{ h.round }}巡: <strong>{{ h.horse_name }}</strong></div>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-
     <div id="tab-all" class="tab-content" style="display:none;">
-        <div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0;">参加者の指名状況</h3>
-            <div id="all_status_list"></div>
-        </div>
+        <div id="all_status_list"></div>
     </div>
 </div>
 
