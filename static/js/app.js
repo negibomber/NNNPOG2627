@@ -90,9 +90,10 @@ async function updateStatus() {
         updateMCButtons(data);
 
         const counterEl = document.getElementById('status_counter');
-        if (counterEl && data.all_nominations) {
+        if (counterEl && Array.isArray(data.all_nominations)) {
+            const currentRoundInt = parseInt(data.round);
             const nominatedCount = new Set(data.all_nominations
-                .filter(n => n.round === data.round && n.is_winner === 0)
+                .filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 0)
                 .map(n => n.player_name)).size;
             counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
         }
