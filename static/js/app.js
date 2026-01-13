@@ -122,7 +122,7 @@ async function updateStatus() {
                 } else {
                     playerNoms.forEach(n => {
                         let hName = n.horse_name;
-                        if (data.phase === 'nomination' && n.round === data.round && playerName !== me) {
+                        if (data.phase === 'nomination' && n.round === data.round && playerName !== me && n.is_winner === 0) {
                             hName = '??? (指名済み)';
                         }
                         const father = n.horses?.father_name || '-';
