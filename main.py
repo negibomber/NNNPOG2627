@@ -23,7 +23,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def get_setting(key):
     try:
         res = supabase.table("draft_settings").select("value").eq("key", key).execute()
-        return res.data[0]['value'] if res.data else None
+        return res.data[0]['value'].strip() if res.data else None
     except:
         return None
 

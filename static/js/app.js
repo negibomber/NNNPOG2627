@@ -84,7 +84,8 @@ async function updateStatus() {
         updateText('round_display', data.round);
         
         const phaseMap = {'nomination': '指名受付中', 'reveal': '指名公開中', 'lottery': '抽選・結果確定'};
-        updateText('phase_label', phaseMap[data.phase] || data.phase);
+        const currentPhase = String(data.phase || "").trim();
+        updateText('phase_label', phaseMap[currentPhase] || currentPhase);
 
         // MCボタンの制御を呼び出し
         updateMCButtons(data);
@@ -92,6 +93,7 @@ async function updateStatus() {
         const counterEl = document.getElementById('status_counter');
         if (counterEl && Array.isArray(data.all_nominations)) {
             const currentRoundInt = parseInt(data.round);
+            const currentPhase = String(data.phase || "").trim();
             const nominatedCount = new Set(data.all_nominations
                 .filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 0)
                 .map(n => n.player_name)).size;
