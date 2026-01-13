@@ -172,18 +172,24 @@ async def status():
     }
 
 @app.post("/nominate")
-async def nominate(request: Request, horse_name: str = Form(...), mother_name: str = Form(...), horse_id: str = Form(...)):
-    raw_user = request.cookies.get("pog_user")
-    user = urllib.parse.unquote(raw_user) if raw_user else None
-    if not user: return {"status": "error"}
+async def nominate(request: Request, horse_name: str = Form(None), mother_name: str = Form(None), horse_id: str = Form(None)):
+    print(f"--- DEBUG NOMINATE: name={horse_name}, id={horse_id} ---")
+    try:
+        raw_user = request.cookies.get("pog_user")
+        user = urllib.parse.unquote(raw_user) if raw_user else None
+        if not user: return {"status": "error", "message": "User not found"}
 
-    round_now = int(get_setting("current_round") or 1)
-    supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
-    # 指名時に馬名・母名だけでなく、検索時に特定した「馬のID」も送る必要があります（※JS側の修正も必要になります）
-    supabase.table("draft_results").insert({
-        "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
-    }).execute()
-    return {"status": "success"}
+        round_now = int(get_setting("current_round") or 1)
+        supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
+        
+        res = supabase.table("draft_results").insert({
+            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
+        }).execute()
+        print(f"--- DB INSERT SUCCESS ---")
+        return {"status": "success"}
+    except Exception as e:
+        print(f"--- CRITICAL DB ERROR ---: {str(e)}")
+        return {"status": "error", "message": f"Server Side Error: {str(e)}"}
 
 @app.post("/mc/start_reveal")
 async def start_reveal():

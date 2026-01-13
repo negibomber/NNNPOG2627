@@ -301,10 +301,15 @@ window.doNominate = async function(name, mother, horse_id) {
             return;
         }
         const formData = new URLSearchParams();
-        formData.append('horse_name', name);
-        formData.append('mother_name', mother);
-        formData.append('horse_id', horse_id || ""); // 【修正】必須パラメータのhorse_idを追加
+        formData.append('horse_name', name || "");
+        formData.append('mother_name', mother || "");
+        formData.append('horse_id', horse_id || "");
+        
+        console.log("--- DEBUG POST DATA ---");
+        for (let [k, v] of formData.entries()) { console.log(`${k}: ${v}`); }
+
         const res = await fetch('/nominate', { method: 'POST', body: formData });
+        console.log(`--- HTTP STATUS: ${res.status} ---`);
         const data = await res.json();
         if (data.status === 'success') {
             alert("指名完了");
