@@ -77,6 +77,8 @@ async def do_setup(players: str = Form(...), mc: str = Form(...)):
 
 @app.get("/")
 async def index(request: Request):
+    import datetime
+    ver = datetime.datetime.now().strftime("%m%d%H%M")
     raw_user = request.cookies.get("pog_user")
     user = urllib.parse.unquote(raw_user) if raw_user else None
     phase = get_setting("phase")
@@ -100,7 +102,8 @@ async def index(request: Request):
         "won_horse": won_horse.data[0]['horse_name'] if won_horse.data else None, 
         "current_horse": current_nom.data[0]['horse_name'] if current_nom.data else None, 
         "is_mc": 1 if role_row.data and role_row.data[0]['role'] == 'MC' else 0,
-        "confirmed_horses": confirmed.data
+        "confirmed_horses": confirmed.data,
+        "version": ver
     }, media_type="text/html")
 
 @app.get("/status")

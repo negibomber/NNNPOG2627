@@ -100,7 +100,7 @@ async function updateStatus() {
 
         const allStatusDiv = document.getElementById('all_status_list');
         if (allStatusDiv && data.all_players && data.all_nominations) {
-            const me = decodeURIComponent(getCookie('pog_user') || "");
+            const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
             let html = '';
 
             data.all_players.forEach(playerName => {

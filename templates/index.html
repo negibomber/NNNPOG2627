@@ -17,7 +17,7 @@
         <a href="/logout" style="color:white; text-decoration:none; font-size:0.8rem; background:#ef4444; padding:6px 12px; border-radius:4px; font-weight:bold;">退出</a>
     </div>
     <div style="padding: 5px 15px; font-size: 0.8rem; background: #334155; color: #cbd5e1; display:flex; justify-content:space-between;">
-        <span>User: {{ user }}</span>
+        <span>User: {{ user }} (v{{ version }})</span>
         <span id="status_counter">読み込み中...</span>
     </div>
 </header>
@@ -64,7 +64,7 @@
 </div>
 {% endif %}
 
-<script src="/static/js/app.js"></script>
+<script src="/static/js/app.js?v={{ version }}"></script>
 <script>
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
