@@ -123,8 +123,17 @@ async def status():
     # 【修正】500エラーの根本原因である結合(JOIN)を削除し、単独テーブル取得に戻す
     all_noms_res = supabase.table("draft_results").select("*").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
-    # JS側で n.horses.father_name を参照してもエラーにならないよう、空データを注入
-    for n in all_noms_data: n['horses'] = {"father_name": "-"}
+    # 指名された馬の父名・母名を horses テーブルから取得して紐付け
+    h_names = [n['horse_name'] for n in all_noms_data if n.get('horse_name')]
+    h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name").in_("horse_name", h_names).execute()
+    h_map = {h['horse_name']: h for h in h_info_res.data} if h_info_res.data else {}
+
+    for n in all_noms_data:
+        h_data = h_map.get(n['horse_name'], {})
+        n['horses'] = {
+            "father_name": h_data.get('father_name') or "-",
+            "mother_name": h_data.get('mother_name') or n.get('mother_name') or "-"
+        }
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
     current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
