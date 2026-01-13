@@ -84,8 +84,11 @@ async function updateStatus() {
         updateText('round_display', data.round);
         
         const phaseMap = {'nomination': '指名受付中', 'reveal': '指名公開中', 'lottery': '抽選・結果確定'};
-        const currentPhase = String(data.phase || "").trim();
-        updateText('phase_label', phaseMap[currentPhase] || currentPhase);
+        const currentPhase = String(data.phase || "").trim().toLowerCase(); // 小文字に統一して比較
+        console.log(`[DEBUG] Current Phase from server: "${currentPhase}"`); // 追跡用ログ
+        if (currentPhase) {
+            updateText('phase_label', phaseMap[currentPhase] || currentPhase);
+        }
 
         // MCボタンの制御を呼び出し
         updateMCButtons(data);
