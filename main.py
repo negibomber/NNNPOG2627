@@ -120,19 +120,28 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # 【修正】500エラーの根本原因である結合(JOIN)を削除し、単独テーブル取得に戻す
+    # 指名結果を全取得
     all_noms_res = supabase.table("draft_results").select("*").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
-    # 指名された馬の父名・母名を horses テーブルから取得して紐付け
-    h_names = [n['horse_name'] for n in all_noms_data if n.get('horse_name')]
-    h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name").in_("horse_name", h_names).execute()
-    h_map = {h['horse_name']: h for h in h_info_res.data} if h_info_res.data else {}
+
+    # 馬マスターから父・母情報を取得してマッピング（空白を考慮）
+    raw_h_names = [n['horse_name'] for n in all_noms_data if n.get('horse_name')]
+    h_names = list(set([name.strip() for name in raw_h_names]))
+    
+    h_map = {}
+    if h_names:
+        h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name").in_("horse_name", h_names).execute()
+        if h_info_res.data:
+            # マップ作成時もキーを strip して完全一致を狙う
+            h_map = {h['horse_name'].strip(): h for h in h_info_res.data}
 
     for n in all_noms_data:
-        h_data = h_map.get(n['horse_name'], {})
+        h_key = n.get('horse_name', "").strip()
+        h_data = h_map.get(h_key, {})
+        # app.js の n.horses?.father_name 参照に対応する構造を作成
         n['horses'] = {
-            "father_name": h_data.get('father_name') or "-",
-            "mother_name": h_data.get('mother_name') or n.get('mother_name') or "-"
+            "father_name": str(h_data.get('father_name') or "-"),
+            "mother_name": str(h_data.get('mother_name') or n.get('mother_name') or "-")
         }
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
