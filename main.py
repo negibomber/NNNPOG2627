@@ -190,8 +190,9 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
         
         print(f"[SERVER_TRACE] Executing INSERT (new nomination)...")
+        # 【修正】horse_idを除去し、自動採番のidには干渉しないように挿入
         res = supabase.table("draft_results").insert({
-            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now, "horse_id": horse_id
+            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
         }).execute()
         
         print(f"[SERVER_TRACE] Process Completed Successfully")
@@ -200,21 +201,6 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         err_msg = traceback.format_exc()
         print(f"[SERVER_TRACE] !!! ERROR OCCURRED !!!\n{err_msg}")
         return {"status": "error", "message": f"Server Side Error: {str(e)}", "debug_trace": err_msg}
-        raw_user = request.cookies.get("pog_user")
-        user = urllib.parse.unquote(raw_user) if raw_user else None
-        if not user: return {"status": "error", "message": "User not found"}
-
-        round_now = int(get_setting("current_round") or 1)
-        supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
-        
-        res = supabase.table("draft_results").insert({
-            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
-        }).execute()
-        print(f"--- DB INSERT SUCCESS ---")
-        return {"status": "success"}
-    except Exception as e:
-        print(f"--- CRITICAL DB ERROR ---: {str(e)}")
-        return {"status": "error", "message": f"Server Side Error: {str(e)}"}
 
 @app.post("/mc/start_reveal")
 async def start_reveal():
