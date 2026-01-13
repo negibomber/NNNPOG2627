@@ -129,10 +129,13 @@ async function updateStatus() {
                     const el = document.getElementById(id);
                     if (el) el.innerText = val || "";
                 };
+                updateRev('reveal_round', data.reveal_data.round);
                 updateRev('reveal_player', data.reveal_data.player);
                 updateRev('reveal_horse', data.reveal_data.horse);
                 updateRev('reveal_father', data.reveal_data.father);
                 updateRev('reveal_mother', data.reveal_data.mother);
+                updateRev('reveal_stable', data.reveal_data.stable);
+                updateRev('reveal_breeder', data.reveal_data.breeder);
             } else {
                 revealArea.style.display = 'none';
             }

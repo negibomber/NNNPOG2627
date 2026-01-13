@@ -131,11 +131,15 @@ async def status():
         res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
         if res.data:
             h_info = supabase.table("horses").select("father_name").eq("horse_name", res.data[0]['horse_name']).execute()
+            h_d = h_info.data[0] if h_info.data else {}
             reveal_data = {
+                "round": round_now,
                 "player": target, 
                 "horse": res.data[0]['horse_name'], 
                 "mother": res.data[0]['mother_name'], 
-                "father": h_info.data[0]['father_name'] if h_info.data else "データなし"
+                "father": h_d.get('father_name', "データなし"),
+                "stable": h_d.get('stable', "未登録"),
+                "breeder": h_d.get('breeder', "未登録")
             }
         else:
             reveal_data = {"player": target, "horse": "（未入力）", "mother": "-", "father": "-"}
