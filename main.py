@@ -119,8 +119,8 @@ async def status():
     winner_names = [w['player_name'] for w in winners.data]
     active_players = [p for p in all_players_list if p not in winner_names]
     
-    # DBの状態に左右されないよう、単独テーブルから取得（外部キー不備による500エラーを回避）
-    all_noms_res = supabase.table("draft_results").select("*").execute()
+    # 関連する馬情報を外部結合して取得し、父名を表示可能にする
+    all_noms_res = supabase.table("draft_results").select("*, horses(father_name, mother_name)").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
 
     # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
