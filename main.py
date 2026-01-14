@@ -120,8 +120,11 @@ async def status():
     # 【バグ修正】全巡を通じて、既に当選（is_winner=1）しているプレイヤーを取得
     winners_res = supabase.table("draft_results").select("player_name").eq("is_winner", 1).execute()
     winner_names = list(set([w['player_name'] for w in winners_res.data]))
-    # 全プレイヤーから、既に確定済みのプレイヤーを除外して「現在の有効な指名者」を決定
-    active_players = [p for p in all_players_list if p not in winner_names]
+    
+    # 【修正】公開順を固定するため、現在巡より前に確定済みのプレイヤーのみを除外する
+    past_winners_res = supabase.table("draft_results").select("player_name").lt("round", round_now).eq("is_winner", 1).execute()
+    past_winner_names = list(set([w['player_name'] for w in past_winners_res.data]))
+    active_players = [p for p in all_players_list if p not in past_winner_names]
     
     # サーバーログでアクティブなプレイヤーを追跡
     print(f"[DEBUG_STATUS] Round:{round_now}, Active:{active_players}, AllWinners:{winner_names}")
@@ -228,8 +231,10 @@ async def start_reveal():
 async def next_reveal():
     round_now = int(get_setting("current_round"))
     all_pts = supabase.table("participants").select("name").execute()
-    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
-    active_count = len(all_pts.data) - len(winners.data)
+    # 【修正】公開フェーズの対象人数は、今巡の開始時点で未確定だった人数（＝参加人数 - 前巡までの当選者）で固定する
+    past_winners = supabase.table("draft_results").select("player_name").lt("round", round_now).eq("is_winner", 1).execute()
+    past_winner_names = [w['player_name'] for w in past_winners.data]
+    active_count = len([p for p in all_pts.data if p['name'] not in past_winner_names])
     
     current_idx = int(get_setting("reveal_index"))
     new_idx = current_idx + 1
