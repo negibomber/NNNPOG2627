@@ -243,19 +243,67 @@ async def next_reveal():
 
 @app.post("/mc/run_lottery")
 async def run_lottery():
+    import json
     round_now = int(get_setting("current_round") or 1)
-    noms = supabase.table("draft_results").select("id, horse_name").eq("round", round_now).eq("is_winner", 0).execute()
+    # 現在の巡で指名されている全データを取得（is_winner=0）
+    noms = supabase.table("draft_results").select("*").eq("round", round_now).eq("is_winner", 0).execute()
     
     horse_groups = {}
     for n in noms.data:
-        horse_groups.setdefault(n['horse_name'], []).append(n['id'])
+        horse_groups.setdefault(n['horse_name'], []).append(n)
     
-    for h_name, ids in horse_groups.items():
-        winner_id = random.choice(ids)
-        supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner_id).execute()
-        supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+    lottery_results = {}
+    lottery_queue = []
     
-    update_setting("phase", "lottery")
+    for h_name, participants in horse_groups.items():
+        if len(participants) > 1:
+            # 重複：抽選を行う
+            winner = random.choice(participants)
+            lottery_queue.append(h_name)
+            lottery_results[h_name] = {
+                "winner_name": winner['player_name'],
+                "winner_id": winner['id'],
+                "participants": [p['player_name'] for p in participants]
+            }
+        else:
+            # 単独：即確定（演出用に結果には入れるがキューには入れない等調整可）
+            # 今回は「単独確定」として扱う
+            pass
+
+    # 演出用データを保存
+    update_setting("lottery_queue", json.dumps(lottery_queue))
+    update_setting("lottery_results", json.dumps(lottery_results))
+    update_setting("lottery_idx", "0")
+    update_setting("phase", "summary") # まずはまとめ画面へ
+    return {"status": "ok"}
+
+@app.post("/mc/advance_lottery")
+async def advance_lottery():
+    import json
+    phase = get_setting("phase")
+    if phase == "summary":
+        update_setting("phase", "lottery_reveal")
+    elif phase == "lottery_reveal":
+        queue = json.loads(get_setting("lottery_queue") or "[]")
+        idx = int(get_setting("lottery_idx") or 0)
+        
+        if idx + 1 < len(queue):
+            update_setting("lottery_idx", str(idx + 1))
+        else:
+            # 全ての演出終了 -> ここで初めてDB一括更新
+            results = json.loads(get_setting("lottery_results") or "{}")
+            round_now = int(get_setting("current_round") or 1)
+            
+            for h_name, res in results.items():
+                # 当選者更新
+                supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
+                # 落選者更新
+                supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+            
+            # 抽選なしで確定した馬（単独指名）を1にする
+            supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
+            
+            update_setting("phase", "lottery") # 既存の完了フェーズへ
     return {"status": "ok"}
 
 @app.post("/mc/next_round")

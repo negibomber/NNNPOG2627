@@ -28,13 +28,29 @@
 </div>
 
 <div class="container" style="padding: 15px;">
-    <div id="reveal_area" style="display:none; background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+<div id="reveal_area" style="display:none; background: #fffbeb; border: 2px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
         <div style="font-weight:bold; color:#b45309;"><span id="reveal_round"></span>位指名</div>
         <div id="reveal_player" style="font-size:1.2rem; margin:10px 0; font-weight:bold;"></div>
         <div id="reveal_horse" style="font-size:1.5rem; font-weight:bold; color:#1e293b;"></div>
         <div style="font-size:0.9rem; margin-top:5px; color:#64748b;">
             父: <span id="reveal_father"></span> / 母: <span id="reveal_mother"></span><br>
             厩舎: <span id="reveal_stable"></span> / 生産者: <span id="reveal_breeder"></span>
+        </div>
+    </div>
+
+    <div id="lottery_summary_area" style="display:none; background: #f8fafc; border: 2px solid #2563eb; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+        <h2 style="text-align:center; font-size:1.1rem; margin-top:0;">指名重複状況</h2>
+        <div id="lottery_summary_list"></div>
+    </div>
+
+    <div id="lottery_reveal_area" style="display:none; background: #fef2f2; border: 2px solid #ef4444; padding: 25px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+        <div style="color:#ef4444; font-weight:bold; margin-bottom:10px;">抽選中...</div>
+        <div id="lot_horse_name" style="font-size:1.8rem; font-weight:bold; margin-bottom:15px;"></div>
+        <div id="lot_candidate_list" style="font-size:0.9rem; color:#64748b; margin-bottom:20px;"></div>
+        <div id="lot_result_box" style="display:none; padding:15px; background:white; border-radius:8px; border:3px double #ef4444;">
+            <div style="font-weight:bold; color:#ef4444;">当選</div>
+            <div id="lot_winner_name" style="font-size:1.5rem; font-weight:bold; margin:10px 0;"></div>
+            <div style="font-size:0.8rem; color:#64748b;">おめでとうございます！<br>他の方は再指名となります。</div>
         </div>
     </div>
 

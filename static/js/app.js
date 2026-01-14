@@ -83,7 +83,13 @@ async function updateStatus() {
 
         updateText('round_display', data.round);
         
-        const phaseMap = {'nomination': '指名受付中', 'reveal': '指名公開中', 'lottery': '抽選・結果確定'};
+        const phaseMap = {
+            'nomination': '指名受付中', 
+            'reveal': '指名公開中', 
+            'summary': '重複確認',
+            'lottery_reveal': '抽選実施中',
+            'lottery': '抽選終了'
+        };
         const currentPhase = String(data.phase || "").trim().toLowerCase(); // 小文字に統一して比較
         console.log(`[DEBUG] Current Phase from server: "${currentPhase}"`); // 追跡用ログ
         if (currentPhase) {
@@ -341,8 +347,9 @@ window.doNominate = async function(name, mother, horse_id) {
 // --- MC操作 ---
 window.startReveal = async function() { await fetch('/mc/start_reveal', {method:'POST'}); updateStatus(); }
 window.nextReveal = async function() { await fetch('/mc/next_reveal', {method:'POST'}); updateStatus(); }
-window.runLottery = async function() { if(confirm("抽選を実行しますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
-window.nextRound = async function() { if(confirm("次のラウンドへ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
+window.runLottery = async function() { if(confirm("抽選の準備（重複チェック）をしますか？")) await fetch('/mc/run_lottery', {method:'POST'}); updateStatus(); }
+window.advanceLottery = async function() { await fetch('/mc/advance_lottery', {method:'POST'}); updateStatus(); }
+window.nextRound = async function() { if(confirm("確定して次の巡（または再指名）へ進みますか？")) await fetch('/mc/next_round', {method:'POST'}); updateStatus(); }
 
 // --- MC用ボタンの活性・非活性制御 ---
 function updateMCButtons(data) {
