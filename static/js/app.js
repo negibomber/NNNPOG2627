@@ -153,13 +153,17 @@ async function updateStatus() {
         // 最後に依存度の低いMCボタン更新を実行
         updateMCButtons(data);
 
+        i// 【チラつき防止】フェーズ変更検知時は、即座に処理を中断してリロード
         if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
-            console.log(`PHASE CHANGE DETECTED: ${window.lastPhase} -> ${data.phase}`);
+            console.log(`%c[PHASE_CHANGE] ${window.lastPhase} -> ${data.phase}`, "background: #ef4444; color: white; padding: 4px; border-radius: 4px;");
             window.lastPhase = data.phase;
             location.reload();
-            return;
+            return; // この後の古いデータによる描画を完全に阻止
         }
         window.lastPhase = data.phase;
+
+        // ブラウザコンソールで同期状態を確認できるようにする
+        console.debug(`[SYNC] Phase:${data.phase}, RevealIdx:${data.reveal_index}, ActiveCount:${data.total_players}`);
 
 // --- 抽選まとめ・演出画面の表示制御 ---
         const summaryArea = document.getElementById('lottery_summary_area');

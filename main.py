@@ -117,9 +117,14 @@ async def status():
     all_pts = supabase.table("participants").select("name").order("name").execute()
     all_players_list = [p['name'] for p in all_pts.data]
 
-    winners = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
-    winner_names = [w['player_name'] for w in winners.data]
+    # 【バグ修正】全巡を通じて、既に当選（is_winner=1）しているプレイヤーを取得
+    winners_res = supabase.table("draft_results").select("player_name").eq("is_winner", 1).execute()
+    winner_names = list(set([w['player_name'] for w in winners_res.data]))
+    # 全プレイヤーから、既に確定済みのプレイヤーを除外して「現在の有効な指名者」を決定
     active_players = [p for p in all_players_list if p not in winner_names]
+    
+    # サーバーログでアクティブなプレイヤーを追跡
+    print(f"[DEBUG_STATUS] Round:{round_now}, Active:{active_players}, AllWinners:{winner_names}")
     
     # 指名結果を全取得
     all_noms_res = supabase.table("draft_results").select("*").execute()
