@@ -128,11 +128,13 @@ async function updateStatus() {
                 } else {
                     playerNoms.forEach(n => {
                         let hName = n.horse_name;
+                        // 指名フェーズかつ他人の未確定指名は隠す
                         if (data.phase === 'nomination' && n.round === data.round && playerName !== me && n.is_winner === 0) {
                             hName = '??? (指名済み)';
                         }
                         const father = n.horses?.father_name || '-';
                         const mother = n.horses?.mother_name || n.mother_name || '-';
+                        // winClassの判定において、不適切な変数参照がないか再確認
                         const winClass = n.is_winner === 1 ? 'color:#059669; font-weight:bold;' : (n.is_winner === -1 ? 'color:#94a3b8; text-decoration:line-through;' : '');
 
                         html += `<tr style="border-bottom:1px solid #f1f5f9;">`;
