@@ -109,7 +109,7 @@ async function updateStatus() {
                 .map(n => n.player_name)).size;
             
             // 指名すべき総人数から、今巡の当選者を引く
-            const realTargetCount = data.total_players - currentWinnersCount;
+            const realTargetCount = (data.total_players || 0) - currentWinnersCount;
 
             const nominatedCount = new Set(allNoms
                 .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
@@ -286,9 +286,9 @@ async function searchHorses() {
         if (horses && horses.length > 0) {
             // 【修正】保存された latestStatusData を使用して判定
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
-            const d = window.latestStatusData;
-            const myNomination = (d && d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
-            const isMeWinner = !!myNomination;
+            const d = window.latestStatusData || {};
+            const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
+            const isMeWinner = !!myNomination;
             // デバッグ情報表示
             const debugInfo = document.createElement('div');
             debugInfo.style.cssText = "color:green; font-size:0.7rem; margin-bottom:5px;";
