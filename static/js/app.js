@@ -412,11 +412,12 @@ function updateMCButtons(data) {
         setBtn(btnReveal, isAllNominated); 
         setBtn(btnLottery, false); 
         setBtn(btnNext, false);
-} else if (phase === 'reveal') {
-        btnReveal.innerText = "次の公開へ";
-        btnReveal.onclick = window.nextReveal;
-        setBtn(btnReveal, true); 
-        setBtn(btnLottery, false); 
+    } else if (phase === 'reveal') {
+        const isEnd = data.reveal_index >= data.total_players;
+        btnReveal.innerText = isEnd ? "全公開終了" : "次の公開へ";
+        btnReveal.onclick = isEnd ? null : window.nextReveal;
+        setBtn(btnReveal, !isEnd); 
+        setBtn(btnLottery, isEnd); // 全員の公開が終わったら抽選ボタンを有効化
         setBtn(btnNext, false);
     } else if (phase === 'summary') {
         btnReveal.innerText = "抽選演出を開始";

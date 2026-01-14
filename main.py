@@ -229,7 +229,8 @@ async def next_reveal():
     current_idx = int(get_setting("reveal_index"))
     new_idx = current_idx + 1
     if new_idx >= active_count:
-        update_setting("phase", "lottery")
+        # 公開終了時は lottery に飛ばず、そのまま止める（MCが「2. 抽選実行」を押すのを待つ）
+        update_setting("reveal_index", str(new_idx))
     else:
         update_setting("reveal_index", str(new_idx))
     return {"status": "ok"}
@@ -288,12 +289,12 @@ async def advance_lottery():
             round_now = int(get_setting("current_round") or 1)
             
             for h_name, res in results.items():
-                # 当選者更新
-                supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
-                # 落選者更新
+                # 1. まず該当の馬の今回の巡の指名をすべて一旦「落選(-1)」にする
                 supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+                # 2. その後、当選者だけを「当選(1)」に上書きする
+                supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
             
-            # 抽選なしで確定した馬（単独指名）を1にする
+            # 3. 最後に、まだ「0」のまま残っている馬（＝重複しなかった単独指名馬）をすべて「当選(1)」にする
             supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
             
             update_setting("phase", "lottery") # 既存の完了フェーズへ
