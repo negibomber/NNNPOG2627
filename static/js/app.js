@@ -161,6 +161,45 @@ async function updateStatus() {
         }
         window.lastPhase = data.phase;
 
+// --- 抽選まとめ・演出画面の表示制御 ---
+        const summaryArea = document.getElementById('lottery_summary_area');
+        const lotRevealArea = document.getElementById('lottery_reveal_area');
+        if (summaryArea) summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
+        if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
+
+        if (data.phase === 'summary' && summaryArea) {
+            const listEl = document.getElementById('lottery_summary_list');
+            let sHtml = '<ul style="list-style:none; padding:0; font-size:0.9rem;">';
+            const horseGroups = {};
+            data.all_nominations.filter(n => n.round === data.round && n.is_winner === 0).forEach(n => {
+                if (!horseGroups[n.horse_name]) horseGroups[n.horse_name] = [];
+                horseGroups[n.horse_name].push(n.player_name);
+            });
+            Object.keys(horseGroups).forEach(h => {
+                const pts = horseGroups[h];
+                if (pts.length > 1) {
+                    sHtml += `<li style="padding:8px; border-bottom:1px dotted #cbd5e1; color:#ef4444;">⚠️ <strong>${h}</strong>: ${pts.join(', ')} (重複)</li>`;
+                } else {
+                    sHtml += `<li style="padding:8px; border-bottom:1px dotted #cbd5e1; color:#059669;">✅ <strong>${h}</strong>: ${pts[0]} (単独確定)</li>`;
+                }
+            });
+            listEl.innerHTML = sHtml + '</ul>';
+        }
+
+        if (data.phase === 'lottery_reveal' && lotRevealArea) {
+            const queue = data.lottery_queue || [];
+            const idx = data.lottery_idx || 0;
+            const resMap = data.lottery_results || {};
+            if (queue[idx]) {
+                const hName = queue[idx];
+                const res = resMap[hName];
+                document.getElementById('lot_horse_name').innerText = hName;
+                document.getElementById('lot_candidate_list').innerText = `候補: ${res.participants.join(', ')}`;
+                document.getElementById('lot_result_box').style.display = 'block';
+                document.getElementById('lot_winner_name').innerText = res.winner_name;
+            }
+        }
+
         const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
@@ -315,7 +354,7 @@ window.doNominate = async function(name, mother, horse_id) {
 
         const res = await fetch('/nominate', { method: 'POST', body: formData });
         const resText = await res.text(); // 生の応答をテキストで取得
-        console.log(`[CLIENT_TRACE] HTTP STATUS: ${res.status}`);
+        console.log(`[CLIENT_TRACE] HTTP STATUS: ${res.status}`);
         console.log(`[CLIENT_TRACE] RAW RESPONSE:`, resText);
 
         let data;
@@ -373,18 +412,29 @@ function updateMCButtons(data) {
         setBtn(btnReveal, isAllNominated); 
         setBtn(btnLottery, false); 
         setBtn(btnNext, false);
-    } else if (phase === 'reveal') {
+} else if (phase === 'reveal') {
         btnReveal.innerText = "次の公開へ";
         btnReveal.onclick = window.nextReveal;
         setBtn(btnReveal, true); 
         setBtn(btnLottery, false); 
         setBtn(btnNext, false);
+    } else if (phase === 'summary') {
+        btnReveal.innerText = "抽選演出を開始";
+        btnReveal.onclick = window.advanceLottery;
+        setBtn(btnReveal, true);
+        setBtn(btnLottery, false);
+        setBtn(btnNext, false);
+    } else if (phase === 'lottery_reveal') {
+        btnReveal.innerText = "次の抽選/確定へ";
+        btnReveal.onclick = window.advanceLottery;
+        setBtn(btnReveal, true);
+        setBtn(btnLottery, false);
+        setBtn(btnNext, false);
     } else if (phase === 'lottery') {
-        btnReveal.innerText = "1. 公開開始";
-        btnReveal.onclick = window.startReveal;
+        btnReveal.innerText = "公開済み";
         setBtn(btnReveal, false);
-        setBtn(btnLottery, hasDuplicates);
-        setBtn(btnNext, !hasDuplicates);
+        setBtn(btnLottery, false);
+        setBtn(btnNext, true);
     }
 }
 

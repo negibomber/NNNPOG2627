@@ -109,6 +109,7 @@ async def index(request: Request):
 
 @app.get("/status")
 async def status():
+    import json
     phase = get_setting("phase")
     round_now = int(get_setting("current_round") or 1)
     rev_idx = int(get_setting("reveal_index") or -1)
@@ -124,27 +125,25 @@ async def status():
     all_noms_res = supabase.table("draft_results").select("*").execute()
     all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
 
-    # 馬マスターから父・母情報を取得してマッピング（空白を考慮）
+    # 馬マスターから父・母情報を取得してマッピング
     raw_h_names = [n['horse_name'] for n in all_noms_data if n.get('horse_name')]
     h_names = list(set([name.strip() for name in raw_h_names]))
     
     h_map = {}
     if h_names:
-        h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name").in_("horse_name", h_names).execute()
+        h_info_res = supabase.table("horses").select("*").in_("horse_name", h_names).execute()
         if h_info_res.data:
-            # マップ作成時もキーを strip して完全一致を狙う
             h_map = {h['horse_name'].strip(): h for h in h_info_res.data}
 
     for n in all_noms_data:
         h_key = n.get('horse_name', "").strip()
         h_data = h_map.get(h_key, {})
-        # app.js の n.horses?.father_name 参照に対応する構造を作成
         n['horses'] = {
             "father_name": str(h_data.get('father_name') or "-"),
             "mother_name": str(h_data.get('mother_name') or n.get('mother_name') or "-")
         }
 
-    # 今回の巡の有効な指名（is_winner=0）のみを抽出して判定
+    # 今回の巡の有効な指名（is_winner=0）のみを抽出
     current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
     is_all_nominated = len(current_noms) >= len(active_players)
     
@@ -154,40 +153,34 @@ async def status():
     reveal_data = None
     if phase == "reveal" and 0 <= rev_idx < len(active_players):
         target = active_players[rev_idx]
-        res = supabase.table("draft_results").select("*").eq("player_name", target).eq("round", round_now).eq("is_winner", 0).execute()
-        if res.data:
-            # 1. 指名された馬名から余計な空白を徹底的に除去
-            h_name = res.data[0]['horse_name'].strip()
-            
-            # 2. ilikeを使用し、かつ前後に % を入れないことで「実質的な完全一致」を空白に強く行う
-            h_info = supabase.table("horses").select("*").ilike("horse_name", f"{h_name}").execute()
-            h_d = h_info.data[0] if h_info.data else {}
-            
+        res = [n for n in current_noms if n['player_name'] == target]
+        if res:
+            h_name = res[0]['horse_name'].strip()
+            h_d = h_map.get(h_name, {}) # 事前に取得済みのh_mapから抽出
             reveal_data = {
                 "round": str(round_now),
                 "player": target, 
                 "horse": h_name, 
-                "mother": res.data[0]['mother_name'], 
+                "mother": res[0]['mother_name'], 
                 "father": str(h_d.get('father_name') or "データなし"),
                 "stable": str(h_d.get('stable') or "未登録"),
                 "breeder": str(h_d.get('breeder') or "未登録")
             }
-        else:
-            reveal_data = {
-                "round": str(round_now),
-                "player": target, 
-                "horse": "（未入力）", 
-                "mother": "-", 
-                "father": "-",
-                "stable": "-",
-                "breeder": "-"
-            }
+
+    # --- 演出用データの取得 ---
+    lottery_queue = json.loads(get_setting("lottery_queue") or "[]")
+    lottery_results = json.loads(get_setting("lottery_results") or "{}")
+    lottery_idx = int(get_setting("lottery_idx") or 0)
+
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
         "reveal_data": reveal_data, "all_nominations": all_noms_data,
         "is_all_nominated": is_all_nominated,
-        "has_duplicates": has_duplicates
+        "has_duplicates": has_duplicates,
+        "lottery_queue": lottery_queue,
+        "lottery_results": lottery_results,
+        "lottery_idx": lottery_idx
     }
 
 @app.post("/nominate")
