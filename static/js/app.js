@@ -75,6 +75,7 @@ async function updateStatus() {
         const res = await fetch('/status');
         if (!res.ok) return;
         const data = await res.json();
+        window.latestStatusData = data; // 【追加】他関数から参照可能にする
 
         const updateText = (id, text) => {
             const el = document.getElementById(id);
@@ -283,9 +284,10 @@ async function searchHorses() {
         resultsEl.innerHTML = ""; // 既存の結果をクリア
 
         if (horses && horses.length > 0) {
-            // 【追加】自分が今巡ですでに当選しているか判定
+            // 【修正】保存された latestStatusData を使用して判定
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
-            const myNomination = (data && data.all_nominations) ? data.all_nominations.find(n => n.player_name === me && parseInt(n.round) === data.round && n.is_winner === 1) : null;
+            const d = window.latestStatusData;
+            const myNomination = (d && d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
             const isMeWinner = !!myNomination;
             // デバッグ情報表示
             const debugInfo = document.createElement('div');
@@ -310,7 +312,7 @@ async function searchHorses() {
 
                 // 4. ボタン作成
                 const btn = document.createElement('button');
-                btn.type = "button";
+                btn.type = "button";
                 if (isMeWinner) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
