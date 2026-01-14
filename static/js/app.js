@@ -102,10 +102,18 @@ async function updateStatus() {
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
 
         if (counterEl) {
+            // 今巡ですでに当選(1)している人数をカウント
+            const currentWinnersCount = new Set(allNoms
+                .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1)
+                .map(n => n.player_name)).size;
+            
+            // 指名すべき総人数から、今巡の当選者を引く
+            const realTargetCount = data.total_players - currentWinnersCount;
+
             const nominatedCount = new Set(allNoms
                 .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
                 .map(n => n.player_name)).size;
-            counterEl.innerText = `指名状況: ${nominatedCount} / ${data.total_players} 人`;
+            counterEl.innerText = `指名状況: ${nominatedCount} / ${realTargetCount} 人`;
         }
 
         const allStatusDiv = document.getElementById('all_status_list');
@@ -155,12 +163,16 @@ async function updateStatus() {
         // 最後に依存度の低いMCボタン更新を実行
         updateMCButtons(data);
 
-        // 【チラつき防止】フェーズ変更検知時は、即座に処理を中断してリロード
+        // 【修正】リロードが必要なのは「指名終了時」と「次の巡へ進む時」だけに限定し、チラつきを防止
         if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
-            console.log(`%c[PHASE_CHANGE] ${window.lastPhase} -> ${data.phase}`, "background: #ef4444; color: white; padding: 4px; border-radius: 4px;");
+            const needReload = (window.lastPhase === 'lottery' || data.phase === 'nomination');
             window.lastPhase = data.phase;
-            location.reload();
-            return; // この後の古いデータによる描画を完全に阻止
+            if (needReload) {
+                console.log("[PHASE_CHANGE] リロードを実行します");
+                location.reload();
+                return;
+            }
+            console.log("[PHASE_CHANGE] フェーズが切り替わりました（リロードなし）");
         }
         window.lastPhase = data.phase;
 
@@ -271,6 +283,10 @@ async function searchHorses() {
         resultsEl.innerHTML = ""; // 既存の結果をクリア
 
         if (horses && horses.length > 0) {
+            // 【追加】自分が今巡ですでに当選しているか判定
+            const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
+            const myNomination = (data && data.all_nominations) ? data.all_nominations.find(n => n.player_name === me && parseInt(n.round) === data.round && n.is_winner === 1) : null;
+            const isMeWinner = !!myNomination;
             // デバッグ情報表示
             const debugInfo = document.createElement('div');
             debugInfo.style.cssText = "color:green; font-size:0.7rem; margin-bottom:5px;";
@@ -292,11 +308,17 @@ async function searchHorses() {
                 infoDiv.style.cssText = "font-size:0.8rem; color:#64748b; margin-bottom:8px;";
                 infoDiv.textContent = `父: ${h.father_name} / 母: ${h.mother_name}`;
 
-                // 4. ボタン作成 (これが王道の方法)
+                // 4. ボタン作成
                 const btn = document.createElement('button');
-                btn.type = "button"; // Firefox対策
-                btn.textContent = "指名する";
-                btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
+                btn.type = "button";
+                if (isMeWinner) {
+                    btn.textContent = "指名確定済み";
+                    btn.disabled = true;
+                    btn.style.cssText = "width:100%; padding:10px; background:#94a3b8; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                } else {
+                    btn.textContent = "指名する";
+                    btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
+                }
                 
                 // 【デバッグログ追加】イベントの発生順序を詳細に記録
                 btn.onmousedown = (e) => {
