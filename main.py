@@ -117,42 +117,33 @@ async def status():
     all_pts = supabase.table("participants").select("name").order("name").execute()
     all_players_list = [p['name'] for p in all_pts.data]
 
-    # 【バグ修正】全巡を通じて、既に当選（is_winner=1）しているプレイヤーを取得
-    winners_res = supabase.table("draft_results").select("player_name").eq("is_winner", 1).execute()
-    winner_names = list(set([w['player_name'] for w in winners_res.data]))
-    
-    # 【修正】公開順を固定するため、現在巡より前に確定済みのプレイヤーのみを除外する
+    # アクティブプレイヤーの判定（過去巡の当選者を除外）
     past_winners_res = supabase.table("draft_results").select("player_name").lt("round", round_now).eq("is_winner", 1).execute()
     past_winner_names = list(set([w['player_name'] for w in past_winners_res.data]))
     active_players = [p for p in all_players_list if p not in past_winner_names]
     
-    # サーバーログでアクティブなプレイヤーを追跡
-    print(f"[DEBUG_STATUS] Round:{round_now}, Active:{active_players}, AllWinners:{winner_names}")
-    
-    # 指名結果を全取得
-    all_noms_res = supabase.table("draft_results").select("*").execute()
-    all_noms_data = all_noms_res.data if all_noms_res.data is not None else []
+    # 【高速化】データ取得を最小限に。現在の巡の指名(0)と、全巡の当選確定分(1)のみを取得
+    # 落選分(-1)や不要な過去データは取得しない
+    noms_res = supabase.table("draft_results").select("*").in_("is_winner", [0, 1]).execute()
+    all_noms_data = noms_res.data or []
 
-    # 馬マスターから父・母情報を取得してマッピング
-    raw_h_names = [n['horse_name'] for n in all_noms_data if n.get('horse_name')]
-    h_names = list(set([name.strip() for name in raw_h_names]))
+    # 馬マスターからのマッピング（現在の巡に関連する馬のみに限定して負荷軽減）
+    current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
+    relevant_h_names = list(set([n['horse_name'].strip() for n in all_noms_data if n.get('horse_name')]))
     
     h_map = {}
-    if h_names:
-        h_info_res = supabase.table("horses").select("*").in_("horse_name", h_names).execute()
-        if h_info_res.data:
-            h_map = {h['horse_name'].strip(): h for h in h_info_res.data}
+    if relevant_h_names:
+        # 必要な馬情報だけをピンポイントで取得
+        h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name").in_("horse_name", relevant_h_names).execute()
+        h_map = {h['horse_name'].strip(): h for h in h_info_res.data} if h_info_res.data else {}
 
     for n in all_noms_data:
         h_key = n.get('horse_name', "").strip()
-        h_data = h_map.get(h_key, {})
+        h_info = h_map.get(h_key, {})
         n['horses'] = {
-            "father_name": str(h_data.get('father_name') or "-"),
-            "mother_name": str(h_data.get('mother_name') or n.get('mother_name') or "-")
+            "father_name": str(h_info.get('father_name') or "-"),
+            "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-")
         }
-
-    # 今回の巡の有効な指名（is_winner=0）のみを抽出
-    current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
     is_all_nominated = len(current_noms) >= len(active_players)
     
     horse_names = [n['horse_name'] for n in current_noms]
