@@ -243,7 +243,13 @@ async function updateStatus() {
 }
 
 // --- 馬の検索 (自動で呼ばれる本体) ---
+window.searchController = null; // 通信キャンセル用
+
 async function searchHorses() {
+    // 実行中の検索があれば即座にキャンセルして新しいリクエストを優先する
+    if (window.searchController) window.searchController.abort();
+    window.searchController = new AbortController();
+
     const fInput = document.getElementById('s_father');
     const mInput = document.getElementById('s_mother');
     const resultsEl = document.getElementById('search_results');
@@ -277,7 +283,7 @@ async function searchHorses() {
     resultsEl.innerHTML = "<div style='color:blue; font-size:0.8rem;'>[DEBUG] サーバー通信中...</div>";
 
     try {
-        const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`);
+        const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`, { signal: window.searchController.signal });
         const horses = await res.json();
         console.log("SEARCH: サーバー回答受信", horses ? horses.length : 0, "件");
 
@@ -357,6 +363,10 @@ async function searchHorses() {
 
 // --- 指名実行 ---
 window.doNominate = async function(name, mother, horse_id) {
+    // ボタンが押されたら即座に進行中の検索通信を強制切断する
+    if (window.searchController) window.searchController.abort();
+    window.isProcessingNomination = true; 
+
     console.log(`[NOMINATE_DEBUG] 関数開始: ${name}`);
     // 【重要】ダイアログ表示前にステータス更新タイマーを完全に停止させ、割り込みを防ぐ
     if (window.statusTimer) {
