@@ -155,7 +155,7 @@ async function updateStatus() {
         // 最後に依存度の低いMCボタン更新を実行
         updateMCButtons(data);
 
-        i// 【チラつき防止】フェーズ変更検知時は、即座に処理を中断してリロード
+        // 【チラつき防止】フェーズ変更検知時は、即座に処理を中断してリロード
         if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
             console.log(`%c[PHASE_CHANGE] ${window.lastPhase} -> ${data.phase}`, "background: #ef4444; color: white; padding: 4px; border-radius: 4px;");
             window.lastPhase = data.phase;
