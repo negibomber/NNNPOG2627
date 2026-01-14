@@ -439,8 +439,16 @@ function updateMCButtons(data) {
     if (phase === 'nomination') {
         btnReveal.innerText = "1. 公開開始";
         btnReveal.onclick = window.startReveal;
-        setBtn(btnReveal, isAllNominated); 
-        setBtn(btnLottery, false); 
+
+        // 【修正】サーバーフラグに加え、フロント側の「必要人数 vs 完了人数」でも判定
+        const currentRoundInt = parseInt(data.round);
+        const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
+        const winCount = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name)).size;
+        const target = Math.max(0, (data.total_players || 0) - winCount);
+        const nominated = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name)).size;
+        
+        setBtn(btnReveal, isAllNominated || (nominated >= target && target > 0)); 
+        setBtn(btnLottery, false);
         setBtn(btnNext, false);
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= data.total_players;
