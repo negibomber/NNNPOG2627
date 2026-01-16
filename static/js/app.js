@@ -103,6 +103,9 @@ async function updateStatus() {
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
 
         if (counterEl) {
+            // 証拠収集用ログ：2巡目開始時の計算の元ネタを確認
+            console.log(`[EVIDENCE_LOG] Round:${currentRoundInt}, TotalPlayers:${data.total_players}, AllNomsLen:${allNoms.length}`);
+            console.log(`[EVIDENCE_LOG] 2巡目当選者リスト:`, allNoms.filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1));
             // 今巡ですでに当選(1)している人数をカウント
             const currentWinnersCount = new Set(allNoms
                 .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1)
