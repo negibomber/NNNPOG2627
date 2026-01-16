@@ -117,8 +117,8 @@ async def status():
     all_pts = supabase.table("participants").select("name").order("name").execute()
     all_players_list = [p['name'] for p in all_pts.data]
 
-    # アクティブプレイヤーの判定（過去巡の当選者を除外）
-    past_winners_res = supabase.table("draft_results").select("player_name").lt("round", round_now).eq("is_winner", 1).execute()
+    # 今巡において、既に当選確定(is_winner=1)している人だけを除外する
+    past_winners_res = supabase.table("draft_results").select("player_name").eq("round", round_now).eq("is_winner", 1).execute()
     past_winner_names = list(set([w['player_name'] for w in past_winners_res.data]))
     active_players = [p for p in all_players_list if p not in past_winner_names]
     
