@@ -228,7 +228,7 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
 async def start_reveal():
     update_setting("phase", "reveal")
     update_setting("reveal_index", "0")
-    return {"status": "ok"}
+    return await status()
 
 @app.post("/mc/next_reveal")
 async def next_reveal():
@@ -241,12 +241,8 @@ async def next_reveal():
     
     current_idx = int(get_setting("reveal_index"))
     new_idx = current_idx + 1
-    if new_idx >= active_count:
-        # 公開終了時は lottery に飛ばず、そのまま止める（MCが「2. 抽選実行」を押すのを待つ）
-        update_setting("reveal_index", str(new_idx))
-    else:
-        update_setting("reveal_index", str(new_idx))
-    return {"status": "ok"}
+    update_setting("reveal_index", str(new_idx))
+    return await status()
 
 @app.post("/mc/run_lottery")
 async def run_lottery():
@@ -285,7 +281,7 @@ async def run_lottery():
     # 重複の有無に関わらず、必ず「指名結果(summary)」画面へ遷移させる
     update_setting("phase", "summary")
         
-    return {"status": "ok"}
+    return await status()
 
 @app.post("/mc/advance_lottery")
 async def advance_lottery():
@@ -322,7 +318,7 @@ async def advance_lottery():
             supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
             
             update_setting("phase", "lottery") # 既存の完了フェーズへ
-    return {"status": "ok"}
+    return await status()
 
 @app.post("/mc/next_round")
 async def next_round():
@@ -336,7 +332,7 @@ async def next_round():
         update_setting("current_round", str(round_now + 1))
     
     update_setting("phase", "nomination")
-    return {"status": "ok"}
+    return await status()
 
 @app.post("/login")
 async def login(user: str = Form(...)):

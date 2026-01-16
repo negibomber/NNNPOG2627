@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.10";
+    const APP_VERSION = "0.0.11";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -70,11 +70,16 @@ window.isSearching = false;  // 【追加】通信中フラグ
 window.isProcessingNomination = false; // 【追加】指名処理中(confirm表示中)フラグ
 
 // --- ステータス更新 (既存機能維持) ---
-async function updateStatus() {
+async function updateStatus(preFetchedData = null) {
     try {
-        const res = await fetch('/status');
-        if (!res.ok) return;
-        const data = await res.json();
+        let data;
+        if (preFetchedData) {
+            data = preFetchedData;
+        } else {
+            const res = await fetch('/status');
+            if (!res.ok) return;
+            data = await res.json();
+        }
         window.latestStatusData = data; // 【追加】他関数から参照可能にする
 
         const updateText = (id, text) => {
@@ -472,7 +477,6 @@ window.doNominate = async function(name, mother, horse_id) {
 // --- MC操作 ---
 // ボタン押下後の通信を高速化するため、既存のタイマーを一度リセットしてから即時実行する
 async function mcAction(url, method = 'POST') {
-    // 1. 二重動作防止のため、即座に既存タイマーを停止
     if (window.statusTimer) {
         clearInterval(window.statusTimer);
         window.statusTimer = null;
@@ -480,7 +484,6 @@ async function mcAction(url, method = 'POST') {
     try {
         console.log(`[MC_ACTION_TRACE] Request: ${method} ${url}`);
         
-        // 【即時先行反映】通信が終わる前に、ボタンの見た目だけ先に「処理中」に変える
         const mainBtn = document.getElementById('mc_main_btn');
         if (mainBtn) {
             mainBtn.disabled = true;
@@ -488,9 +491,10 @@ async function mcAction(url, method = 'POST') {
             mainBtn.innerText = "更新中...";
         }
         const res = await fetch(url, { method: method });
+        if (!res.ok) throw new Error("Server Error");
         
-        // サーバーからの応答が来たら、100ms待たずに即座に status を取得
-        await updateStatus();
+        const newData = await res.json(); // サーバーから返された最新状態
+        await updateStatus(newData);      // 別の通信を挟まず、その場で描画
     } catch (e) {
         console.error("MC Action Error:", e);
     } finally {
