@@ -460,59 +460,56 @@ function updateMCButtons(data) {
     const phase = data.phase;
     const isAllNominated = data.is_all_nominated;
     const hasDuplicates = data.has_duplicates;
-    const btnReveal = document.getElementById('btn_mc_reveal');
-    const btnLottery = document.getElementById('btn_mc_lottery');
-    const btnNext = document.getElementById('btn_mc_next');
-    if (!btnReveal || !btnLottery || !btnNext) return;
+    const mainBtn = document.getElementById('mc_main_btn');
+    if (!mainBtn) return;
 
-    const setBtn = (btn, active) => {
+    const setBtn = (btn, active, color = "#3b82f6") => {
+        btn.style.background = color;
         btn.disabled = !active;
         btn.style.opacity = active ? "1.0" : "0.3";
         btn.style.cursor = active ? "pointer" : "not-allowed";
     };
 
-    // 1. ボタン名とアクションの初期化（ねじれ解消）
-    btnReveal.innerText = "進行ボタン";
-    btnLottery.innerText = "抽選実行";
-    btnNext.innerText = "次の巡へ";
-
     if (phase === 'nomination') {
-        btnReveal.innerText = "1. 公開開始";
-        btnReveal.onclick = window.startReveal;
         const currentRoundInt = parseInt(data.round);
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
         const winCount = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name)).size;
         const target = Math.max(0, (data.total_players || 0) - winCount);
         const nominated = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name)).size;
-        setBtn(btnReveal, isAllNominated || (nominated >= target && target > 0)); 
-        setBtn(btnLottery, false);
-        setBtn(btnNext, false);
+        
+        const isReady = isAllNominated || (nominated >= target && target > 0);
+        mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中...";
+        mainBtn.onclick = isReady ? window.startReveal : null;
+        setBtn(mainBtn, isReady);
+
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= data.total_players;
-        btnReveal.innerText = isEnd ? "1. 重複チェックを実行" : "1. 次の公開へ";
-        btnReveal.onclick = isEnd ? window.runLottery : window.nextReveal;
-        setBtn(btnReveal, true); 
-        setBtn(btnLottery, false); // 2番のボタンは予備とし、1番で進行可能にする
-        setBtn(btnNext, false);
+        mainBtn.innerText = isEnd ? "重複チェックを実行" : `次の指名を公開 (残り ${data.total_players - data.reveal_index}人)`;
+        mainBtn.onclick = isEnd ? window.runLottery : window.nextReveal;
+        setBtn(mainBtn, true, isEnd ? "#ef4444" : "#3b82f6");
+
     } else if (phase === 'summary') {
-        btnReveal.innerText = "1. 抽選演出開始";
-        btnReveal.onclick = window.advanceLottery;
-        setBtn(btnReveal, true);
-        setBtn(btnLottery, false); // 実行済みなので無効
-        setBtn(btnNext, false);
+        mainBtn.innerText = "抽選演出を開始";
+        mainBtn.onclick = window.advanceLottery;
+        setBtn(mainBtn, true, "#3b82f6");
+
     } else if (phase === 'lottery_reveal') {
         const queueLen = (data.lottery_queue || []).length;
         const currentIdx = (data.lottery_idx || 0);
-        btnReveal.innerText = (currentIdx + 1 >= queueLen) ? "1. 結果確定へ" : "1. 次の抽選へ";
-        btnReveal.onclick = window.advanceLottery;
-        setBtn(btnReveal, true);
-        setBtn(btnLottery, false);
-        setBtn(btnNext, false);
+        const isEnd = (currentIdx + 1 >= queueLen);
+        mainBtn.innerText = isEnd ? "最終結果を確定する" : "次の抽選結果を表示";
+        mainBtn.onclick = window.advanceLottery;
+        setBtn(mainBtn, true, isEnd ? "#8b5cf6" : "#3b82f6");
+
     } else if (phase === 'lottery') {
-        btnReveal.innerText = "1. 完了";
-        setBtn(btnReveal, false);
-        setBtn(btnLottery, false);
-        setBtn(btnNext, true); // 「3. 次の巡へ」のみ活性化
+        const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
+        const currentRoundInt = parseInt(data.round);
+        // 落選者（is_winner === -1）がいるかチェック
+        const hasLosers = allNoms.some(n => parseInt(n.round) === currentRoundInt && n.is_winner === -1);
+        
+        mainBtn.innerText = hasLosers ? "再指名へ進む" : "次の巡へ進む";
+        mainBtn.onclick = window.nextRound;
+        setBtn(mainBtn, true, "#10b981");
     }
 }
 
