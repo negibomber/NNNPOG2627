@@ -472,6 +472,7 @@ window.doNominate = async function(name, mother, horse_id) {
 // --- MC操作 ---
 // ボタン押下後の通信を高速化するため、既存のタイマーを一度リセットしてから即時実行する
 async function mcAction(url, method = 'POST') {
+    // 1. 二重動作防止のため、即座に既存タイマーを停止
     if (window.statusTimer) {
         clearInterval(window.statusTimer);
         window.statusTimer = null;
@@ -479,12 +480,18 @@ async function mcAction(url, method = 'POST') {
     try {
         console.log(`[MC_ACTION_TRACE] Request: ${method} ${url}`);
         const res = await fetch(url, { method: method });
-        console.log(`[MC_ACTION_TRACE] Response Status: ${res.status}`);
-        // ボタン押下後の status 更新を最優先で行う
+        
+        // 2. サーバー側でのDB更新時間を考慮し、極わずか（100ms）待機してから最新状態を取得
+        // これにより「反映前の古いデータ」を掴むリスクを減らします
+        await new Promise(r => setTimeout(r, 100));
         await updateStatus();
+    } catch (e) {
+        console.error("MC Action Error:", e);
     } finally {
-        // 処理完了後にタイマーを再開
-        if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
+        // 3. 最後に必ず定期更新タイマーを再起動（3秒間隔）
+        if (!window.statusTimer) {
+            window.statusTimer = setInterval(updateStatus, 3000);
+        }
     }
 }
 
