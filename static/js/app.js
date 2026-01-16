@@ -497,9 +497,11 @@ function updateMCButtons(data) {
         // 全員出し終えたら advanceLottery を呼ぶことで、直接「重複状況(summary)」へ移行させる
         console.log(`[DEBUG_REVEAL] index:${data.reveal_index}, total:${data.total_players}, isEnd:${isEnd}`);
         mainBtn.onclick = () => {
-            console.log(`[CLICK_EVENT] MC Main Button Clicked. isEnd=${isEnd}`);
+            // 再検証：isEndの状態をログに出し、正しい関数を呼び出す
+            console.log(`[CLICK_EVENT_TRACE] isEnd:${isEnd}`);
             if (isEnd) {
-                window.advanceLottery();
+                console.log("[EXECUTE] window.runLottery を実行します");
+                window.runLottery();
             } else {
                 window.nextReveal();
             }
