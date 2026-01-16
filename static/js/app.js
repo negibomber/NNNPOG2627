@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.8";
+    const APP_VERSION = "0.0.9";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -145,35 +145,43 @@ async function updateStatus() {
                         html += `<tr><td colspan="2" style="padding:10px; color:#94a3b8; text-align:center;">まだ指名がありません</td></tr>`;
                     } else {
                         playerNoms.forEach(n => {
-                            let hName = n.horse_name;
-                            // 他人の馬を隠す判定ロジック
+                            // 1. 基本情報の取得
                             const isMe = (playerName === me);
                             const isCurrentRound = (n.round === data.round);
                             const isUnconfirmed = (n.is_winner === 0);
 
+                            // 2. 「他人の未確定な今巡の指名」を隠すべきかどうかの判定（ステータスベース）
+                            let shouldHide = false;
+                            let hideMsg = '??? (未公開)';
+
                             if (!isMe && isCurrentRound && isUnconfirmed) {
-                                // 公開フェーズ(reveal)の場合は、まだ自分の番が来ていない人を隠す
-                                if (data.phase === 'reveal') {
+                                if (data.phase === 'nomination') {
+                                    shouldHide = true;
+                                    hideMsg = '??? (指名済み)';
+                                } else if (data.phase === 'reveal') {
                                     const playerIdx = data.all_players.indexOf(playerName);
                                     if (playerIdx > data.reveal_index) {
-                                        hName = '??? (公開待ち)';
+                                        shouldHide = true;
+                                        hideMsg = '??? (公開待ち)';
                                     }
-                                } 
-                                // 指名受付中(nomination)や集計中(summary)などは全員隠す
-                                else if (['nomination', 'summary', 'lottery_reveal'].includes(data.phase)) {
-                                    hName = '??? (未公開)';
+                                } else if (['summary', 'lottery_reveal'].includes(data.phase)) {
+                                    shouldHide = true;
+                                    hideMsg = '??? (抽選待ち)';
                                 }
                             }
+
+                            // 3. 表示用データの確定
+                            const hName = shouldHide ? hideMsg : n.horse_name;
                             const father = n.horses?.father_name || '-';
                             const mother = n.horses?.mother_name || n.mother_name || '-';
-                            // winClassの判定において、不適切な変数参照がないか再確認
                             const winClass = n.is_winner === 1 ? 'color:#059669; font-weight:bold;' : (n.is_winner === -1 ? 'color:#94a3b8; text-decoration:line-through;' : '');
 
+                            // 4. HTML組み立て（フラグ一つで馬名も血統も制御）
                             html += `<tr style="border-bottom:1px solid #f1f5f9;">`;
                             html += `<td style="padding:8px 5px; vertical-align:top;">${n.round}</td>`;
                             html += `<td style="padding:8px 5px; ${winClass}">`;
                             html += `<div>${hName}</div>`;
-                            if (hName !== '??? (指名済み)') {
+                            if (!shouldHide) {
                                 html += `<div style="font-size:0.7rem; color:#64748b;">${father} / ${mother}</div>`;
                             }
                             html += `</td></tr>`;
