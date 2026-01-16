@@ -484,10 +484,12 @@ function updateMCButtons(data) {
         setBtn(mainBtn, isReady);
 
     } else if (phase === 'reveal') {
-        const isEnd = data.reveal_index >= data.total_players;
-        mainBtn.innerText = isEnd ? "重複チェックを実行" : `次の指名を公開 (残り ${data.total_players - data.reveal_index-1}人)`;
-        mainBtn.onclick = isEnd ? window.runLottery : window.nextReveal;
-        setBtn(mainBtn, true, isEnd ? "#ef4444" : "#3b82f6");
+        const isEnd = data.reveal_index >= (data.total_players || 0);
+        // 残り人数計算に -1 を維持し、完了時は「抽選を開始」に統一
+        mainBtn.innerText = isEnd ? "抽選を開始" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)`;
+        // 全員出し終えたら advanceLottery を呼ぶことで、直接「重複状況(summary)」へ移行させる
+        mainBtn.onclick = isEnd ? window.advanceLottery : window.nextReveal;
+        setBtn(mainBtn, true, isEnd ? "#10b981" : "#3b82f6");
 
     } else if (phase === 'summary') {
         mainBtn.innerText = "抽選を開始";
@@ -505,10 +507,12 @@ function updateMCButtons(data) {
     } else if (phase === 'lottery') {
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
         const currentRoundInt = parseInt(data.round);
-        // 落選者（is_winner === -1）がいるかチェック
-        const hasLosers = allNoms.some(n => parseInt(n.round) === currentRoundInt && n.is_winner === -1);
-        
-        mainBtn.innerText = hasLosers ? "再指名へ進む" : "次の巡へ進む";
+        // 今巡で「確定(is_winner=1)」した人数をカウント
+        const winnersCount = new Set(allNoms.filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name)).size;
+        // 確定人数が参加総数より少なければ、未確定（再指名が必要）な人がいる
+        const hasUnfinished = winnersCount < (data.total_players || 0);
+
+        mainBtn.innerText = hasUnfinished ? "再指名へ進む" : "次の巡へ進む";
         mainBtn.onclick = window.nextRound;
         setBtn(mainBtn, true, "#10b981");
     }
