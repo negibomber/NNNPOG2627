@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.9";
+    const APP_VERSION = "0.0.10";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -479,11 +479,17 @@ async function mcAction(url, method = 'POST') {
     }
     try {
         console.log(`[MC_ACTION_TRACE] Request: ${method} ${url}`);
+        
+        // 【即時先行反映】通信が終わる前に、ボタンの見た目だけ先に「処理中」に変える
+        const mainBtn = document.getElementById('mc_main_btn');
+        if (mainBtn) {
+            mainBtn.disabled = true;
+            mainBtn.style.opacity = "0.5";
+            mainBtn.innerText = "更新中...";
+        }
         const res = await fetch(url, { method: method });
         
-        // 2. サーバー側でのDB更新時間を考慮し、極わずか（100ms）待機してから最新状態を取得
-        // これにより「反映前の古いデータ」を掴むリスクを減らします
-        await new Promise(r => setTimeout(r, 100));
+        // サーバーからの応答が来たら、100ms待たずに即座に status を取得
         await updateStatus();
     } catch (e) {
         console.error("MC Action Error:", e);
