@@ -298,15 +298,18 @@ async def advance_lottery():
             update_setting("lottery_idx", "0")
     elif phase == "lottery_reveal":
         idx = int(get_setting("lottery_idx") or 0)
+        # 次の抽選対象がある場合
         if idx + 1 < len(queue):
             update_setting("lottery_idx", str(idx + 1))
         else:
-            # 【自動化】最後の演出（最後の一人）を確認した瞬間にDBを確定
+            # 【自動化】最後の演出を表示した瞬間にDBを確定し、フェーズを「完了(lottery)」へ移行
             results = json.loads(get_setting("lottery_results") or "{}")
             for h_name, res in results.items():
+                # 重複していた馬の指名を一旦すべて落選にし、当選者のみ当選(1)に書き換え
                 supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
                 supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
             
+            # 単独指名でまだ「0」のままのデータをすべて当選(1)へ一括更新
             supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
             update_setting("phase", "lottery")
             
