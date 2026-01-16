@@ -441,7 +441,9 @@ async function mcAction(url, method = 'POST') {
         window.statusTimer = null;
     }
     try {
-        await fetch(url, { method: method });
+        console.log(`[MC_ACTION_TRACE] Request: ${method} ${url}`);
+        const res = await fetch(url, { method: method });
+        console.log(`[MC_ACTION_TRACE] Response Status: ${res.status}`);
         // ボタン押下後の status 更新を最優先で行う
         await updateStatus();
     } finally {
@@ -488,7 +490,15 @@ function updateMCButtons(data) {
         // 残り人数計算に -1 を維持し、完了時は「抽選を開始」に統一
         mainBtn.innerText = isEnd ? "抽選を開始" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)`;
         // 全員出し終えたら advanceLottery を呼ぶことで、直接「重複状況(summary)」へ移行させる
-        mainBtn.onclick = isEnd ? window.advanceLottery : window.nextReveal;
+        console.log(`[DEBUG_REVEAL] index:${data.reveal_index}, total:${data.total_players}, isEnd:${isEnd}`);
+        mainBtn.onclick = () => {
+            console.log(`[CLICK_EVENT] MC Main Button Clicked. isEnd=${isEnd}`);
+            if (isEnd) {
+                window.advanceLottery();
+            } else {
+                window.nextReveal();
+            }
+        };
         setBtn(mainBtn, true, isEnd ? "#10b981" : "#3b82f6");
 
     } else if (phase === 'summary') {
