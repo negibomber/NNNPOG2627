@@ -493,7 +493,8 @@ function updateMCButtons(data) {
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= (data.total_players || 0);
         // 残り人数計算に -1 を維持し、完了時は「抽選を開始」に統一
-        mainBtn.innerText = isEnd ? "抽選を開始" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)`;
+        // 全員表示済み(isEnd)なら「指名結果を表示」、未表示がいれば「公開」ボタン
+        mainBtn.innerText = isEnd ? "指名結果を表示" : ( (data.total_players - data.reveal_index - 1 === 0) ? "最後の一人を公開" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)` );
         // 全員出し終えたら advanceLottery を呼ぶことで、直接「重複状況(summary)」へ移行させる
         console.log(`[DEBUG_REVEAL] index:${data.reveal_index}, total:${data.total_players}, isEnd:${isEnd}`);
         mainBtn.onclick = () => {
