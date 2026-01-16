@@ -275,13 +275,8 @@ async def run_lottery():
     update_setting("lottery_results", json.dumps(lottery_results))
     update_setting("lottery_idx", "0")
     
-    if not lottery_queue:
-        # 重複がない場合：その場で全指名を「当選(1)」に確定させる
-        supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
-        update_setting("phase", "lottery") # 直接「確定画面」へ
-    else:
-        # 重複がある場合：確認画面へ
-        update_setting("phase", "summary")
+    # 重複の有無に関わらず、必ず「指名結果(summary)」画面へ遷移させる
+    update_setting("phase", "summary")
         
     return {"status": "ok"}
 
@@ -290,7 +285,15 @@ async def advance_lottery():
     import json
     phase = get_setting("phase")
     if phase == "summary":
-        update_setting("phase", "lottery_reveal")
+        queue = json.loads(get_setting("lottery_queue") or "[]")
+        if queue:
+            # 重複がある場合は演出へ
+            update_setting("phase", "lottery_reveal")
+        else:
+            # 重複がない場合は、ここでDBを一括確定させて完了画面へ
+            round_now = int(get_setting("current_round") or 1)
+            supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
+            update_setting("phase", "lottery")
     elif phase == "lottery_reveal":
         queue = json.loads(get_setting("lottery_queue") or "[]")
         idx = int(get_setting("lottery_idx") or 0)
