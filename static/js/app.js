@@ -337,10 +337,16 @@ async function searchHorses() {
                 // 4. ボタン作成
                 const btn = document.createElement('button');
                 btn.type = "button";
+                const isNominationPhase = (d.phase === 'nomination');
+
                 if (isMeWinner) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
                     btn.style.cssText = "width:100%; padding:10px; background:#94a3b8; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                } else if (!isNominationPhase) {
+                    btn.textContent = "指名受付外";
+                    btn.disabled = true;
+                    btn.style.cssText = "width:100%; padding:10px; background:#e2e8f0; color:#94a3b8; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
                 } else {
                     btn.textContent = "指名する";
                     btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";

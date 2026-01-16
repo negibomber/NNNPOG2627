@@ -196,6 +196,11 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         round_now = int(get_setting("current_round") or 1)
         print(f"[SERVER_TRACE] Current Round: {round_now}")
 
+        # 【追加】フェーズチェック
+        current_phase = get_setting("phase")
+        if current_phase != "nomination":
+            return {"status": "error", "message": "現在は指名期間外です"}
+
         # 【追加】今巡で既に当選確定（is_winner=1）しているプレイヤーは指名をブロックする
         already_won = supabase.table("draft_results").select("id").eq("player_name", user).eq("round", round_now).eq("is_winner", 1).execute()
         if already_won.data:
