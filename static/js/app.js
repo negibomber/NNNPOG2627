@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.7";
+    const APP_VERSION = "0.0.8";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -146,9 +146,23 @@ async function updateStatus() {
                     } else {
                         playerNoms.forEach(n => {
                             let hName = n.horse_name;
-                            // 指名フェーズかつ他人の未確定指名は隠す
-                            if (data.phase === 'nomination' && n.round === data.round && playerName !== me && n.is_winner === 0) {
-                                hName = '??? (指名済み)';
+                            // 他人の馬を隠す判定ロジック
+                            const isMe = (playerName === me);
+                            const isCurrentRound = (n.round === data.round);
+                            const isUnconfirmed = (n.is_winner === 0);
+
+                            if (!isMe && isCurrentRound && isUnconfirmed) {
+                                // 公開フェーズ(reveal)の場合は、まだ自分の番が来ていない人を隠す
+                                if (data.phase === 'reveal') {
+                                    const playerIdx = data.all_players.indexOf(playerName);
+                                    if (playerIdx > data.reveal_index) {
+                                        hName = '??? (公開待ち)';
+                                    }
+                                } 
+                                // 指名受付中(nomination)や集計中(summary)などは全員隠す
+                                else if (['nomination', 'summary', 'lottery_reveal'].includes(data.phase)) {
+                                    hName = '??? (未公開)';
+                                }
                             }
                             const father = n.horses?.father_name || '-';
                             const mother = n.horses?.mother_name || n.mother_name || '-';
