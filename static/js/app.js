@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.9";
+    const APP_VERSION = "0.0.7";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -513,14 +513,23 @@ function updateMCButtons(data) {
         setBtn(mainBtn, true, isEnd ? "#10b981" : "#3b82f6");
 
     } else if (phase === 'summary') {
-        mainBtn.innerText = "抽選を開始する";
-        mainBtn.onclick = window.advanceLottery;
-        setBtn(mainBtn, true, "#3b82f6");
+        if (hasDuplicates) {
+            mainBtn.innerText = "抽選を開始";
+            mainBtn.onclick = window.advanceLottery;
+            setBtn(mainBtn, true, "#3b82f6");
+        } else {
+            // 重複がない場合は「指名結果」を確認した後に「確定」させる
+            mainBtn.innerText = "最終結果を確定する";
+            mainBtn.onclick = window.advanceLottery; 
+            setBtn(mainBtn, true, "#10b981");
+        }
     } else if (phase === 'lottery_reveal') {
-        // 最後かどうかを問わず、ボタンは「次の抽選結果を表示」で統一
-        mainBtn.innerText = "次の抽選結果を表示";
+        const queueLen = (data.lottery_queue || []).length;
+        const currentIdx = (data.lottery_idx || 0);
+        const isEnd = (currentIdx + 1 >= queueLen);
+        mainBtn.innerText = isEnd ? "最終結果を確定する" : "次の抽選結果を表示";
         mainBtn.onclick = window.advanceLottery;
-        setBtn(mainBtn, true, "#3b82f6");
+        setBtn(mainBtn, true, isEnd ? "#8b5cf6" : "#3b82f6");
 
     } else if (phase === 'lottery') {
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
