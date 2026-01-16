@@ -491,7 +491,7 @@ function updateMCButtons(data) {
         setBtn(mainBtn, isReady);
 
     } else if (phase === 'reveal') {
-        const isEnd = data.reveal_index >= (data.total_players || 0);
+        const isEnd = (data.reveal_index >= (data.total_players || 0) - 1);
         // 残り人数計算に -1 を維持し、完了時は「抽選を開始」に統一
         // 全員表示済み(isEnd)なら「指名結果を表示」、未表示がいれば「公開」ボタン
         mainBtn.innerText = isEnd ? "指名結果を表示" : ( (data.total_players - data.reveal_index - 1 === 0) ? "最後の一人を公開" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)` );
