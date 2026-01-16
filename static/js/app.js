@@ -169,6 +169,7 @@ async function updateStatus() {
         }
 
         // 最後に依存度の低いMCボタン更新を実行
+        console.log("[MC_BUTTON_CALL] updateMCButtons を呼び出します");
         updateMCButtons(data);
 
         // 【修正】リロードが必要なのは「指名終了時」と「次の巡へ進む時」だけに限定し、チラつきを防止
@@ -193,7 +194,11 @@ async function updateStatus() {
         const revealArea = document.getElementById('reveal_area');
 
         // フェーズに応じたエリアの排他表示
-        if (summaryArea) summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
+        console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
+        if (summaryArea) {
+            summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
+            console.log(` -> summaryArea display: ${summaryArea.style.display}`);
+        }
         if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
         if (revealArea) revealArea.style.display = (data.phase === 'reveal' && data.reveal_data) ? 'block' : 'none';
 
