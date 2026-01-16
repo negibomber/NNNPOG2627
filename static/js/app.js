@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.2";
+    const APP_VERSION = "0.0.3";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -112,7 +112,7 @@ async function updateStatus() {
                 .map(n => n.player_name)).size;
             
             // 指名すべき総人数から、今巡の当選者を引く
-            const realTargetCount = (data.total_players || 0) - currentWinnersCount;
+            const realTargetCount = (data.total_players || 0);
 
             const nominatedCount = new Set(allNoms
                 .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
