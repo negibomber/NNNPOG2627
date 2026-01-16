@@ -274,7 +274,15 @@ async def run_lottery():
     update_setting("lottery_queue", json.dumps(lottery_queue))
     update_setting("lottery_results", json.dumps(lottery_results))
     update_setting("lottery_idx", "0")
-    update_setting("phase", "summary") # まずはまとめ画面へ
+    
+    if not lottery_queue:
+        # 重複がない場合：その場で全指名を「当選(1)」に確定させる
+        supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
+        update_setting("phase", "lottery") # 直接「確定画面」へ
+    else:
+        # 重複がある場合：確認画面へ
+        update_setting("phase", "summary")
+        
     return {"status": "ok"}
 
 @app.post("/mc/advance_lottery")
