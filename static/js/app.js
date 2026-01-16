@@ -190,8 +190,12 @@ async function updateStatus() {
 // --- 抽選まとめ・演出画面の表示制御 ---
         const summaryArea = document.getElementById('lottery_summary_area');
         const lotRevealArea = document.getElementById('lottery_reveal_area');
+        const revealArea = document.getElementById('reveal_area');
+
+        // フェーズに応じたエリアの排他表示
         if (summaryArea) summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
         if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
+        if (revealArea) revealArea.style.display = (data.phase === 'reveal' && data.reveal_data) ? 'block' : 'none';
 
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');
@@ -226,7 +230,6 @@ async function updateStatus() {
             }
         }
 
-        const revealArea = document.getElementById('reveal_area');
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
                 revealArea.style.display = 'block';
@@ -299,9 +302,9 @@ async function searchHorses() {
         if (horses && horses.length > 0) {
             // 【修正】保存された latestStatusData を使用して判定
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
-            const d = window.latestStatusData || {};
-            const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
-            const isMeWinner = !!myNomination;
+            const d = window.latestStatusData || {};
+            const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
+            const isMeWinner = !!myNomination;
             // デバッグ情報表示
             const debugInfo = document.createElement('div');
             debugInfo.style.cssText = "color:green; font-size:0.7rem; margin-bottom:5px;";
@@ -469,44 +472,48 @@ function updateMCButtons(data) {
         btn.style.cursor = active ? "pointer" : "not-allowed";
     };
 
+    // 1. ボタン名とアクションの初期化（ねじれ解消）
+    btnReveal.innerText = "進行ボタン";
+    btnLottery.innerText = "抽選実行";
+    btnNext.innerText = "次の巡へ";
+
     if (phase === 'nomination') {
         btnReveal.innerText = "1. 公開開始";
         btnReveal.onclick = window.startReveal;
-
-        // 【修正】サーバーフラグに加え、フロント側の「必要人数 vs 完了人数」でも判定
         const currentRoundInt = parseInt(data.round);
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
         const winCount = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name)).size;
         const target = Math.max(0, (data.total_players || 0) - winCount);
         const nominated = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name)).size;
-        
         setBtn(btnReveal, isAllNominated || (nominated >= target && target > 0)); 
         setBtn(btnLottery, false);
         setBtn(btnNext, false);
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= data.total_players;
-        btnReveal.innerText = isEnd ? "全公開終了" : "次の公開へ";
+        btnReveal.innerText = isEnd ? "1. 公開終了" : "1. 次の公開へ";
         btnReveal.onclick = isEnd ? null : window.nextReveal;
         setBtn(btnReveal, !isEnd); 
-        setBtn(btnLottery, isEnd); // 全員の公開が終わったら抽選ボタンを有効化
+        setBtn(btnLottery, isEnd); // 公開終了時のみ「2.抽選実行」を活性化
         setBtn(btnNext, false);
     } else if (phase === 'summary') {
-        btnReveal.innerText = "抽選演出を開始";
+        btnReveal.innerText = "1. 抽選演出開始";
         btnReveal.onclick = window.advanceLottery;
         setBtn(btnReveal, true);
-        setBtn(btnLottery, false);
+        setBtn(btnLottery, false); // 実行済みなので無効
         setBtn(btnNext, false);
     } else if (phase === 'lottery_reveal') {
-        btnReveal.innerText = "次の抽選/確定へ";
+        const queueLen = (data.lottery_queue || []).length;
+        const currentIdx = (data.lottery_idx || 0);
+        btnReveal.innerText = (currentIdx + 1 >= queueLen) ? "1. 結果確定へ" : "1. 次の抽選へ";
         btnReveal.onclick = window.advanceLottery;
         setBtn(btnReveal, true);
         setBtn(btnLottery, false);
         setBtn(btnNext, false);
     } else if (phase === 'lottery') {
-        btnReveal.innerText = "公開済み";
+        btnReveal.innerText = "1. 完了";
         setBtn(btnReveal, false);
         setBtn(btnLottery, false);
-        setBtn(btnNext, true);
+        setBtn(btnNext, true); // 「3. 次の巡へ」のみ活性化
     }
 }
 
