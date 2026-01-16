@@ -492,7 +492,7 @@ window.startReveal = async function() { await mcAction('/mc/start_reveal'); }
 window.nextReveal = async function() { await mcAction('/mc/next_reveal'); }
 window.runLottery = async function() { await mcAction('/mc/run_lottery'); }
 window.advanceLottery = async function() { await mcAction('/mc/advance_lottery'); }
-window.nextRound = async function() { if(confirm("確定して次の巡（または再指名）へ進みますか？")) await mcAction('/mc/next_round'); }
+window.nextRound = async function() { await mcAction('/mc/next_round'); }
 
 // --- MC用ボタンの活性・非活性制御 ---
 function updateMCButtons(data) {
