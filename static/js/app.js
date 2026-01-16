@@ -452,8 +452,7 @@ async function mcAction(url, method = 'POST') {
 
 window.startReveal = async function() { await mcAction('/mc/start_reveal'); }
 window.nextReveal = async function() { await mcAction('/mc/next_reveal'); }
-window.runLottery = async function() { if(confirm("抽選の準備（重複チェック）をしますか？")) await mcAction('/mc/run_lottery'); }
-window.advanceLottery = async function() { await mcAction('/mc/advance_lottery'); }
+window.runLottery = async function() { await mcAction('/mc/run_lottery'); }
 window.nextRound = async function() { if(confirm("確定して次の巡（または再指名）へ進みますか？")) await mcAction('/mc/next_round'); }
 
 // --- MC用ボタンの活性・非活性制御 ---
@@ -490,10 +489,10 @@ function updateMCButtons(data) {
         setBtn(btnNext, false);
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= data.total_players;
-        btnReveal.innerText = isEnd ? "1. 公開終了" : "1. 次の公開へ";
-        btnReveal.onclick = isEnd ? null : window.nextReveal;
-        setBtn(btnReveal, !isEnd); 
-        setBtn(btnLottery, isEnd); // 公開終了時のみ「2.抽選実行」を活性化
+        btnReveal.innerText = isEnd ? "1. 重複チェックを実行" : "1. 次の公開へ";
+        btnReveal.onclick = isEnd ? window.runLottery : window.nextReveal;
+        setBtn(btnReveal, true); 
+        setBtn(btnLottery, false); // 2番のボタンは予備とし、1番で進行可能にする
         setBtn(btnNext, false);
     } else if (phase === 'summary') {
         btnReveal.innerText = "1. 抽選演出開始";
