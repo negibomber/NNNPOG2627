@@ -453,6 +453,7 @@ async function mcAction(url, method = 'POST') {
 window.startReveal = async function() { await mcAction('/mc/start_reveal'); }
 window.nextReveal = async function() { await mcAction('/mc/next_reveal'); }
 window.runLottery = async function() { await mcAction('/mc/run_lottery'); }
+window.advanceLottery = async function() { await mcAction('/mc/advance_lottery'); }
 window.nextRound = async function() { if(confirm("確定して次の巡（または再指名）へ進みますか？")) await mcAction('/mc/next_round'); }
 
 // --- MC用ボタンの活性・非活性制御 ---
@@ -478,18 +479,18 @@ function updateMCButtons(data) {
         const nominated = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name)).size;
         
         const isReady = isAllNominated || (nominated >= target && target > 0);
-        mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中...";
+        mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中";
         mainBtn.onclick = isReady ? window.startReveal : null;
         setBtn(mainBtn, isReady);
 
     } else if (phase === 'reveal') {
         const isEnd = data.reveal_index >= data.total_players;
-        mainBtn.innerText = isEnd ? "重複チェックを実行" : `次の指名を公開 (残り ${data.total_players - data.reveal_index}人)`;
+        mainBtn.innerText = isEnd ? "重複チェックを実行" : `次の指名を公開 (残り ${data.total_players - data.reveal_index-1}人)`;
         mainBtn.onclick = isEnd ? window.runLottery : window.nextReveal;
         setBtn(mainBtn, true, isEnd ? "#ef4444" : "#3b82f6");
 
     } else if (phase === 'summary') {
-        mainBtn.innerText = "抽選演出を開始";
+        mainBtn.innerText = "抽選を開始";
         mainBtn.onclick = window.advanceLottery;
         setBtn(mainBtn, true, "#3b82f6");
 
