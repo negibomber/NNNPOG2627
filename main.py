@@ -308,8 +308,10 @@ async def next_round():
     if results_str and results_str != "{}":
         results = json.loads(results_str)
         for h_name, res in results.items():
+            # 重複があった馬の指名者を一度全員落選(-1)に更新
             supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            supabase.table("draft_results").update({"id": res["winner_id"], "is_winner": 1}).execute() # ID指定で当選確定
+            # 当選者のレコードのみ、IDをキーにして当選(1)に更新
+            supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
     
     # 2. 単独指名分の確定
     supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
