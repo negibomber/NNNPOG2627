@@ -285,12 +285,10 @@ async def run_lottery():
 
 @app.post("/mc/advance_lottery")
 async def advance_lottery():
-    """演出を進めるだけの関数（確定処理は行わない）"""
     import json
     phase = get_setting("phase")
     if phase == "summary":
         queue = json.loads(get_setting("lottery_queue") or "[]")
-        # 重複がある場合のみ演出フェーズへ、なければ何もしない（JS側で制御）
         if queue:
             update_setting("phase", "lottery_reveal")
     elif phase == "lottery_reveal":
@@ -302,41 +300,33 @@ async def advance_lottery():
 
 @app.post("/mc/next_round")
 async def next_round():
-    """『結果を確定して次へ』ボタンの本体：確定書き込みと次巡遷移を一括で行う"""
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # 1. 抽選結果の確定反映（重複があった馬の勝ち負けを書き込む）
+    # 1. 抽選結果の反映
     results_str = get_setting("lottery_results")
     if results_str and results_str != "{}":
         results = json.loads(results_str)
         for h_name, res in results.items():
-            # その馬を指名した全員を一旦落選(-1)に
             supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            # 当選者だけを当選(1)に上書き
-            supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
+            supabase.table("draft_results").update({"id": res["winner_id"], "is_winner": 1}).execute() # ID指定で当選確定
     
-    # 2. 単独指名分の確定（まだis_winner=0のまま残っているものは全て当選）
+    # 2. 単独指名分の確定
     supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
 
-    # 3. 次巡または再指名の判定
-    # 落選者（is_winner = -1）がいるか確認
+    # 3. 次巡判定（落選者がいれば再指名、いなければ次巡）
     losers_res = supabase.table("draft_results").select("id").eq("round", round_now).eq("is_winner", -1).execute()
-    
     if losers_res.data:
-        # 落選者がいる場合：落選レコードを物理削除し、roundはそのまま（再指名へ）
         supabase.table("draft_results").delete().eq("round", round_now).eq("is_winner", -1).execute()
     else:
-        # 全員確定した場合：巡を進める
         update_setting("current_round", str(round_now + 1))
     
-    # 4. 共通設定の初期化
+    # 4. 状態リセット
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
     update_setting("lottery_idx", "0")
-    update_setting("reveal_index", "-1") # 公開インデックスもリセット
+    update_setting("reveal_index", "-1")
     update_setting("phase", "nomination")
-    
     return await status()
 
 @app.post("/login")

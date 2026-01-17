@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.14";
+    const APP_VERSION = "0.0.15";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -495,11 +495,14 @@ async function mcAction(url, method = 'POST') {
         
         const newData = await res.json();
 
-        // 【解決策】next_round 実行後、フェーズが nomination になっていたら強制リロード
-        if (url.includes('next_round') && newData.phase === 'nomination') {
-            console.log("[MC_ACTION] 次の巡/再指名へ移行するためリロードします");
+        // フェーズが遷移した、あるいは指名フェーズに戻った場合は画面を完全に初期化する
+        const phaseChanged = window.lastPhase !== undefined && window.lastPhase !== newData.phase;
+        const isBackToNomination = newData.phase === 'nomination';
+
+        if (phaseChanged || isBackToNomination) {
+            console.log(`[MC_ACTION] Phase change detected (${window.lastPhase} -> ${newData.phase}). Reloading...`);
             location.reload();
-            return; 
+            return; // リロードするため、以降の updateStatus は不要
         }
 
         await updateStatus(newData);
