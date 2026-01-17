@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.12";
+    const APP_VERSION = "0.0.13";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -493,12 +493,19 @@ async function mcAction(url, method = 'POST') {
         const res = await fetch(url, { method: method });
         if (!res.ok) throw new Error("Server Error");
         
-        const newData = await res.json(); // サーバーから返された最新状態
-        await updateStatus(newData);      // 別の通信を挟まず、その場で描画
+        const newData = await res.json();
+
+        // 【解決策】next_round 実行後、フェーズが nomination になっていたら強制リロード
+        if (url.includes('next_round') && newData.phase === 'nomination') {
+            console.log("[MC_ACTION] 次の巡/再指名へ移行するためリロードします");
+            location.reload();
+            return; 
+        }
+
+        await updateStatus(newData);
     } catch (e) {
         console.error("MC Action Error:", e);
     } finally {
-        // 3. 最後に必ず定期更新タイマーを再起動（3秒間隔）
         if (!window.statusTimer) {
             window.statusTimer = setInterval(updateStatus, 3000);
         }
