@@ -303,31 +303,28 @@ async def next_round():
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # 1. 抽選結果の反映
+    # 【追加】まだ確定（is_winner=1）していない指名がある場合、確定処理を実行
+    # 抽選結果（lottery_results）がある場合は、それを反映
     results_str = get_setting("lottery_results")
     if results_str and results_str != "{}":
         results = json.loads(results_str)
         for h_name, res in results.items():
-            # 重複があった馬の指名者を一度全員落選(-1)に更新
             supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            # 当選者のレコードのみ、IDをキーにして当選(1)に更新
             supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
     
-    # 2. 単独指名分の確定
+    # 単独指名分を確定
     supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
 
-    # 3. 次巡判定（落選者がいれば再指名、いなければ次巡）
-    losers_res = supabase.table("draft_results").select("id").eq("round", round_now).eq("is_winner", -1).execute()
-    if losers_res.data:
-        supabase.table("draft_results").delete().eq("round", round_now).eq("is_winner", -1).execute()
+    # --- 以降、既存の次巡遷移ロジック ---
+    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
+    if losers.count > 0:
+        supabase.table("draft_results").delete().eq("is_winner", -1).execute()
     else:
         update_setting("current_round", str(round_now + 1))
     
-    # 4. 状態リセット
+    # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
-    update_setting("lottery_idx", "0")
-    update_setting("reveal_index", "-1")
     update_setting("phase", "nomination")
     return await status()
 
