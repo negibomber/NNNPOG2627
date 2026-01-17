@@ -599,3 +599,28 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
+
+// CSV出力機能：確定した全指名リストを保存
+window.downloadCSV = function() {
+    const data = window.latestStatusData; 
+    if (!data || !data.all_nominations) {
+        alert("データがロードされていません。しばらく待ってから再度お試しください。");
+        return;
+    }
+
+    const rows = [["参加者名", "指名順位", "馬名", "父名", "母名"]];
+    data.all_nominations.forEach(n => {
+        if (n && n.is_winner === 1) {
+            rows.push([n.player_name, n.round, n.horse_name, n.horses?.father_name || '-', n.horses?.mother_name || n.mother_name || '-']);
+        }
+    });
+
+    const csvContent = "\uFEFF" + rows.map(r => r.map(field => `"${field}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pog_results_round_${data.round}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+};
