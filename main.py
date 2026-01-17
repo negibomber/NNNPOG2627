@@ -290,47 +290,41 @@ async def advance_lottery():
     if phase == "summary":
         queue = json.loads(get_setting("lottery_queue") or "[]")
         if queue:
-            # 重複がある場合は演出へ
             update_setting("phase", "lottery_reveal")
-        else:
-            # 重複がない場合は、ここでDBを一括確定させて完了画面へ
-            round_now = int(get_setting("current_round") or 1)
-            supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
-            update_setting("phase", "lottery")
     elif phase == "lottery_reveal":
         queue = json.loads(get_setting("lottery_queue") or "[]")
         idx = int(get_setting("lottery_idx") or 0)
-        
         if idx + 1 < len(queue):
             update_setting("lottery_idx", str(idx + 1))
-        else:
-            # 全ての演出終了 -> ここで初めてDB一括更新
-            results = json.loads(get_setting("lottery_results") or "{}")
-            round_now = int(get_setting("current_round") or 1)
-            
-            for h_name, res in results.items():
-                # 1. まず該当の馬の今回の巡の指名をすべて一旦「落選(-1)」にする
-                supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-                # 2. その後、当選者だけを「当選(1)」に上書きする
-                supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
-            
-            # 3. 最後に、まだ「0」のまま残っている馬（＝重複しなかった単独指名馬）をすべて「当選(1)」にする
-            supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
-            
-            update_setting("phase", "lottery") # 既存の完了フェーズへ
     return await status()
 
 @app.post("/mc/next_round")
 async def next_round():
+    import json
     round_now = int(get_setting("current_round") or 1)
-    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
     
+    # 【追加】まだ確定（is_winner=1）していない指名がある場合、確定処理を実行
+    # 抽選結果（lottery_results）がある場合は、それを反映
+    results_str = get_setting("lottery_results")
+    if results_str and results_str != "{}":
+        results = json.loads(results_str)
+        for h_name, res in results.items():
+            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+            supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
+    
+    # 単独指名分を確定
+    supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
+
+    # --- 以降、既存の次巡遷移ロジック ---
+    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
     if losers.count > 0:
         supabase.table("draft_results").delete().eq("is_winner", -1).execute()
     else:
-        supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
         update_setting("current_round", str(round_now + 1))
     
+    # 抽選データをクリアして次へ
+    update_setting("lottery_queue", "[]")
+    update_setting("lottery_results", "{}")
     update_setting("phase", "nomination")
     return await status()
 
