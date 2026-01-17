@@ -365,11 +365,16 @@ async function searchHorses() {
                 const btn = document.createElement('button');
                 btn.type = "button";
                 const isNominationPhase = (d.phase === 'nomination');
+                const isOverLimit = (parseInt(d.round) > 10); // 10頭固定の判定
 
                 if (isMeWinner) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
                     btn.style.cssText = "width:100%; padding:10px; background:#94a3b8; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                } else if (isOverLimit) {
+                    btn.textContent = "全10頭 指名完了";
+                    btn.disabled = true;
+                    btn.style.cssText = "width:100%; padding:10px; background:#1e293b; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
                 } else if (!isNominationPhase) {
                     btn.textContent = "指名受付外";
                     btn.disabled = true;
