@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.14";
+    const APP_VERSION = "0.0.15";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -559,8 +559,8 @@ function updateMCButtons(data) {
             mainBtn.onclick = window.advanceLottery;
             setBtn(mainBtn, true, "#3b82f6");
         } else {
-            // 重複なし：直接「次の巡（または再指名）へ進む」を表示
-            mainBtn.innerText = (data.total_players === 0) ? "次の巡へ進む" : "結果を確定して次へ";
+            // 重複なし：直接「次の巡へ進む」を表示
+            mainBtn.innerText = "次の巡へ進む";
             mainBtn.onclick = window.nextRound; 
             setBtn(mainBtn, true, "#10b981");
         }
@@ -570,8 +570,8 @@ function updateMCButtons(data) {
         const isEnd = (currentIdx + 1 >= queueLen);
         
         if (isEnd) {
-            // 演出終了：直接「次の巡（または再指名）へ進む」を表示
-            mainBtn.innerText = "結果を確定して次へ";
+            // 演出終了：「再指名へ」を表示
+            mainBtn.innerText = "再指名へ進む";
             mainBtn.onclick = window.nextRound;
             setBtn(mainBtn, true, "#10b981");
         } else {
