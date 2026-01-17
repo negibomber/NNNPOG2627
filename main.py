@@ -285,10 +285,12 @@ async def run_lottery():
 
 @app.post("/mc/advance_lottery")
 async def advance_lottery():
+    """演出を進めるだけの関数（確定処理は行わない）"""
     import json
     phase = get_setting("phase")
     if phase == "summary":
         queue = json.loads(get_setting("lottery_queue") or "[]")
+        # 重複がある場合のみ演出フェーズへ、なければ何もしない（JS側で制御）
         if queue:
             update_setting("phase", "lottery_reveal")
     elif phase == "lottery_reveal":
@@ -300,32 +302,41 @@ async def advance_lottery():
 
 @app.post("/mc/next_round")
 async def next_round():
+    """『結果を確定して次へ』ボタンの本体：確定書き込みと次巡遷移を一括で行う"""
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # 【追加】まだ確定（is_winner=1）していない指名がある場合、確定処理を実行
-    # 抽選結果（lottery_results）がある場合は、それを反映
+    # 1. 抽選結果の確定反映（重複があった馬の勝ち負けを書き込む）
     results_str = get_setting("lottery_results")
     if results_str and results_str != "{}":
         results = json.loads(results_str)
         for h_name, res in results.items():
+            # その馬を指名した全員を一旦落選(-1)に
             supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+            # 当選者だけを当選(1)に上書き
             supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
     
-    # 単独指名分を確定
+    # 2. 単独指名分の確定（まだis_winner=0のまま残っているものは全て当選）
     supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
 
-    # --- 以降、既存の次巡遷移ロジック ---
-    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
-    if losers.count > 0:
-        supabase.table("draft_results").delete().eq("is_winner", -1).execute()
+    # 3. 次巡または再指名の判定
+    # 落選者（is_winner = -1）がいるか確認
+    losers_res = supabase.table("draft_results").select("id").eq("round", round_now).eq("is_winner", -1).execute()
+    
+    if losers_res.data:
+        # 落選者がいる場合：落選レコードを物理削除し、roundはそのまま（再指名へ）
+        supabase.table("draft_results").delete().eq("round", round_now).eq("is_winner", -1).execute()
     else:
+        # 全員確定した場合：巡を進める
         update_setting("current_round", str(round_now + 1))
     
-    # 抽選データをクリアして次へ
+    # 4. 共通設定の初期化
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
+    update_setting("lottery_idx", "0")
+    update_setting("reveal_index", "-1") # 公開インデックスもリセット
     update_setting("phase", "nomination")
+    
     return await status()
 
 @app.post("/login")
