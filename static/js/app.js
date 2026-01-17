@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.12";
+    const APP_VERSION = "0.0.13";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -479,27 +479,21 @@ window.doNominate = async function(name, mother, horse_id) {
 async function mcAction(url, method = 'POST') {
     if (window.statusTimer) {
         clearInterval(window.statusTimer);
-        window.statusTimer = null;
+        window.statusTimer = null; 
     }
     try {
-        console.log(`[MC_ACTION_TRACE] Request: ${method} ${url}`);
-        
         const mainBtn = document.getElementById('mc_main_btn');
         if (mainBtn) {
             mainBtn.disabled = true;
-            mainBtn.style.opacity = "0.5";
-            mainBtn.innerText = "更新中...";
+            mainBtn.innerText = "処理中...";
         }
         const res = await fetch(url, { method: method });
-        if (!res.ok) throw new Error("Server Error");
-        
         const newData = await res.json();
-        window.lastPhase = newData.phase; // 先祖帰りを防ぐためフラグを即座に更新
+        window.lastPhase = newData.phase;
         await updateStatus(newData);
     } catch (e) {
         console.error("MC Action Error:", e);
     } finally {
-        // 3. 最後に必ず定期更新タイマーを再起動（3秒間隔）
         if (!window.statusTimer) {
             window.statusTimer = setInterval(updateStatus, 3000);
         }
