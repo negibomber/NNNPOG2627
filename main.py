@@ -324,6 +324,9 @@ async def next_round():
         # 10巡目完了時は、巡目を増やさずにフェーズだけ終了させる
         if round_now < 10:
             update_setting("current_round", str(round_now + 1))
+        else:
+            # 10巡目完了時は確実に10で固定する
+            update_setting("current_round", "10")
     
     # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
