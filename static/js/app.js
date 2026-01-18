@@ -6,7 +6,7 @@ const debugLog = (msg, data = null) => {
     }
 };
 (function() {
-    const APP_VERSION = "0.2.2";
+    const APP_VERSION = "0.2.3";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -81,8 +81,12 @@ async function updateStatus(preFetchedData = null) {
     try {
         let data;
         if (preFetchedData) {
-            if (preFetchedData.phase === undefined) {
-                console.error("[CRITICAL_EVIDENCE] 引数で渡されたデータにphaseがありません。呼び出し元のスタックトレースを表示します:", new Error().stack);
+            // 【聖約：現行犯逮捕】データ汚染（phaseなし）を検知した際に証拠を全出力
+            if (preFetchedData.phase === undefined && DEBUG_MODE) {
+                console.error("[CRITICAL_EVIDENCE] 汚染データの流入を検知:", {
+                    arg: preFetchedData,
+                    stack: new Error().stack
+                });
             }
             data = preFetchedData;
         } else {
