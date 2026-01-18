@@ -9,8 +9,8 @@
 <body style="margin:0; background:#f1f5f9; font-family:sans-serif; padding-bottom:120px;">
 
 <header style="position:sticky; top:0; z-index:100;">
-    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 15px; background: #1e293b; color: white;">
-        <div style="font-weight:bold;">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 15px; background: #334155; color: white;">
+        <div style="font-weight:bold;">
             第 <span id="round_display">{{ current_round }}</span> 巡 
             <span id="phase_label" style="margin-left:10px; font-size:0.9rem; background:#3b82f6; padding:2px 8px; border-radius:4px;">
                 {% if phase.strip().lower() == 'nomination' %}指名受付中
@@ -28,7 +28,7 @@
             <a href="/logout" style="color:white; text-decoration:none; font-size:0.8rem; background:#ef4444; padding:6px 12px; border-radius:4px; font-weight:bold;">退出</a>
         </div>
     </div>
-    <div style="padding: 5px 15px; font-size: 0.8rem; background: #334155; color: #cbd5e1; display:flex; justify-content:space-between;">
+    <div style="padding: 5px 15px; font-size: 0.8rem; background: #475569; color: #cbd5e1; display:flex; justify-content:space-between;">
         <span>User: {{ user }}</span>
         <span id="status_counter">読み込み中...</span>
     </div>
