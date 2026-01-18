@@ -321,7 +321,9 @@ async def next_round():
     if losers.count > 0:
         supabase.table("draft_results").delete().eq("is_winner", -1).execute()
     else:
-        update_setting("current_round", str(round_now + 1))
+        # 10巡目完了時は、巡目を増やさずにフェーズだけ終了させる
+        if round_now < 10:
+            update_setting("current_round", str(round_now + 1))
     
     # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
