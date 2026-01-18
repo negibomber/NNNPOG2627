@@ -1,27 +1,314 @@
-/* ヘッダーの調整 */
+/* =========================================
+   NNNPOG 2026-27 全体スタイル定義
+   ========================================= */
+
+/* --- 1. ベース・レイアウト --- */
+body {
+    margin: 0;
+    background: #f1f5f9;
+    font-family: sans-serif;
+    padding-bottom: 120px; /* MCパネル用の余白 */
+}
+
+.container {
+    padding: 15px;
+}
+
+/* --- 2. ヘッダーエリア --- */
 header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* 退出ボタンをはっきりさせる */
-header a[href="/logout"] {
-    display: inline-block;
-    background: #ef4444; /* 赤色にして目立たせる */
-    color: white !important;
-    border: none !important;
-    font-weight: bold;
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #334155;
+    color: white;
 }
 
-/* タブボタンのスタイル */
-.tab-btn {
-    transition: all 0.2s;
-    outline: none;
+.header-sub {
+    padding: 5px 15px;
+    font-size: 0.8rem;
+    background: #475569;
+    color: #cbd5e1;
+    display: flex;
+    justify-content: space-between;
 }
+
+.badge-phase {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    background: #3b82f6;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: white;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.waiting-bar {
+    display: none;
+    padding: 6px 15px;
+    background: #f0f9ff;
+    color: #0369a1;
+    font-size: 0.75rem;
+    border-top: 1px solid #e0f2fe;
+    line-height: 1.4;
+}
+
+/* --- 3. タブ・ボタン --- */
+.tabs {
+    display: flex;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    background: none;
+    font-weight: bold;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
 .tab-btn.active {
+    border-bottom: 3px solid #2563eb;
     color: #2563eb;
 }
 
-/* 検索結果エリア */
-#search_results {
-    min-height: 50px;
+/* --- 3.5 ステータス表示の詳細装飾 (JS連動) --- */
+.col-horse.winner {
+    color: #059669; /* 当選：緑 */
+    font-weight: bold;
+}
+.col-horse.loser {
+    color: #94a3b8; /* 落選：グレー */
+    text-decoration: line-through;
+}
+.col-horse-sub {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+.status-empty-msg {
+    padding: 20px;
+    color: #94a3b8;
+    text-align: center;
+}
+/* 通信エラー表示 */
+.search-error {
+    color: #ef4444;
+    font-size: 0.8rem;
+    padding: 10px;
+    background: #fef2f2;
+    border-radius: 6px;
+    text-align: center;
+}
+.search-info {
+    padding: 15px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+/* --- 4. 共通コンポーネント --- */
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+}
+
+.btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    font-size: 0.8rem;
+    display: inline-block;
+}
+
+.btn-danger { background: #ef4444; color: white !important; }
+.btn-success { background: #16a34a; color: white; }
+.btn-primary { background: #3b82f6; color: white; }
+
+.input-field {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.status-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.status-table td {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 8px;
+    vertical-align: middle;
+}
+/* --- 5. 演出・ステータスエリア --- */
+/* 公開エリア */
+.reveal-card {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s ease;
+    background: #fffbeb;
+    border: 2px solid #f59e0b;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.reveal-label { font-weight: bold; color: #b45309; }
+.reveal-player { font-size: 1.2rem; margin: 10px 0; font-weight: bold; }
+.reveal-horse { font-size: 1.5rem; font-weight: bold; color: #1e293b; }
+.reveal-details { font-size: 0.9rem; margin-top: 5px; color: #64748b; }
+
+/* 抽選エリア */
+.lottery-box {
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s ease;
+    background: #fef2f2;
+    border: 2px solid #ef4444;
+    margin-bottom: 15px;
+    text-align: center;
+}
+.lot-result-card {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.9);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 3px double #ef4444;
+}
+/* --- 5.2 抽選・結果エリアの追加装飾 --- */
+.summary-area {
+    margin-top: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+}
+.area-title {
+    font-size: 1.1rem;
+    border-left: 4px solid #3b82f6;
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+.lot-horse {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #1e293b;
+    margin: 15px 0;
+}
+.win-label {
+    display: inline-block;
+    background: #ef4444;
+    color: white;
+    padding: 2px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+.win-player {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #ef4444;
+}
+/* --- 6. MC操作パネル (最下部固定) --- */
+#mc_panel {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: #1e293b;
+    color: white;
+    padding: 10px;
+    box-sizing: border-box;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+    z-index: 200;
+}
+.mc-btn-main {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s; /* 変化を滑らかに */
+}
+
+/* JSの btn.disabled = true/false と連動 */
+.mc-btn-main:disabled,
+.mc-btn-main.disabled {
+    opacity: 0.3 !important;      /* JSの opacity 0.3 を移行 */
+    cursor: not-allowed !important; /* JSの cursor を移行 */
+    background-color: #64748b !important; /* 無効時はグレーに統一 */
+}
+
+.mc-btn-main:not(:disabled).active {
+    opacity: 1.0;
+}
+/* 検討中リストバーの装飾 */
+.waiting-bar {
+    display: none; /* 検討中がいない時は非表示 */
+    padding: 8px 15px;
+    background: #f0f9ff;
+    color: #0369a1;
+    font-size: 0.75rem;
+    border-top: 1px solid #e0f2fe;
+    line-height: 1.4;
+    font-weight: 500;
+}
+/* ユーザー名のハイライト（もしJS側でスパン等を使う場合） */
+.waiting-user {
+    background: #e0f2fe;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin: 0 2px;
+    font-weight: bold;
+}
+/* 汎用表示制御クラス */
+.is-visible { 
+    display: block !important;
+    opacity: 1 !important; 
+    visibility: visible !important;
+    transform: scale(1) !important; /* 結果ボックス用 */
+}
+.is-hidden { 
+    display: none !important;
+    opacity: 0 !important; 
+    visibility: hidden !important; 
+}
+
+/* MCボタン用カラークラス（インラインbackgroundColorの代替） */
+.mc-bg-blue { background-color: #3b82f6 !important; }
+.mc-bg-emerald { background-color: #10b981 !important; }
+
+/* tab-content にもアニメーションを適用する*/
+.tab-content {
+    transition: opacity 0.3s ease;
 }

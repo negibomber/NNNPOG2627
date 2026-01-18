@@ -1,5 +1,5 @@
 (function() {
-    const APP_VERSION = "0.1.2";
+    const APP_VERSION = "0.2.0";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -128,9 +128,9 @@ async function updateStatus(preFetchedData = null) {
             if (waitDiv) {
                 if (waitingPlayers.length > 0 && data.phase === 'nomination') {
                     waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
-                    waitDiv.style.display = 'block';
+                    waitDiv.classList.add('is-visible'); waitDiv.classList.remove('is-hidden');
                 } else {
-                    waitDiv.style.display = 'none';
+                    waitDiv.classList.add('is-hidden'); waitDiv.classList.remove('is-visible');
                 }
             }
         }
@@ -147,17 +147,17 @@ async function updateStatus(preFetchedData = null) {
                 let html = '';
 
                 data.all_players.forEach(playerName => {
-                    html += `<div class="card" style="background:white; padding:15px; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.1); margin-bottom:15px;">`;
-                    html += `<h3 style="margin:0 0 10px 0; font-size:1rem; border-left:4px solid #2563eb; padding-left:10px;">${playerName}</h3>`;
-                    html += `<table style="width:100%; border-collapse:collapse; font-size:0.85rem;">`;
-                    html += `<tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;"><th style="padding:5px; text-align:left; width:10%;">巡</th><th style="padding:5px; text-align:left;">馬名 / 血統</th></tr>`;
+                    html += `<div class="card">`;
+                    html += `<h3 class="card-title-border">${playerName}</h3>`;
+                    html += `<table class="status-table">`;
+                    html += `<thead><tr><th>巡</th><th>馬名 / 血統</th></tr></thead>`;
 
                     const playerNoms = data.all_nominations
                         .filter(n => n.player_name === playerName)
                         .sort((a, b) => a.round - b.round);
 
                     if (playerNoms.length === 0) {
-                        html += `<tr><td colspan="2" style="padding:10px; color:#94a3b8; text-align:center;">まだ指名がありません</td></tr>`;
+                        html += `<tr><td colspan="2" class="status-empty-msg">まだ指名がありません</td></tr>`;
                     } else {
                         playerNoms.forEach(n => {
                             // 1. 基本情報の取得
@@ -189,15 +189,15 @@ async function updateStatus(preFetchedData = null) {
                             const hName = shouldHide ? hideMsg : n.horse_name;
                             const father = n.horses?.father_name || '-';
                             const mother = n.horses?.mother_name || n.mother_name || '-';
-                            const winClass = n.is_winner === 1 ? 'color:#059669; font-weight:bold;' : (n.is_winner === -1 ? 'color:#94a3b8; text-decoration:line-through;' : '');
+                            const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
 
                             // 4. HTML組み立て（フラグ一つで馬名も血統も制御）
-                            html += `<tr style="border-bottom:1px solid #f1f5f9;">`;
-                            html += `<td style="padding:8px 5px; vertical-align:top;">${n.round}</td>`;
-                            html += `<td style="padding:8px 5px; ${winClass}">`;
+                            html += `<tr>`;
+                            html += `<td class="col-round">${n.round}</td>`;
+                            html += `<td class="col-horse ${winStatusClass}">`;
                             html += `<div>${hName}</div>`;
                             if (!shouldHide) {
-                                html += `<div style="font-size:0.7rem; color:#64748b;">${father} / ${mother}</div>`;
+                                html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
                             }
                             html += `</td></tr>`;
                         });
@@ -235,13 +235,18 @@ async function updateStatus(preFetchedData = null) {
 
         // フェーズに応じたエリアの排他表示
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
-        if (summaryArea) {
-            summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
-            console.log(` -> summaryArea display: ${summaryArea.style.display}`);
+if (summaryArea) {
+            if (data.phase === 'summary') { summaryArea.classList.add('is-visible'); summaryArea.classList.remove('is-hidden'); }
+            else { summaryArea.classList.add('is-hidden'); summaryArea.classList.remove('is-visible'); }
         }
-        if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
-        if (revealArea) revealArea.style.display = (data.phase === 'reveal' && data.reveal_data) ? 'block' : 'none';
-
+        if (lotRevealArea) {
+            if (data.phase === 'lottery_reveal') { lotRevealArea.classList.add('is-visible'); lotRevealArea.classList.remove('is-hidden'); }
+            else { lotRevealArea.classList.add('is-hidden'); lotRevealArea.classList.remove('is-visible'); }
+        }
+        if (revealArea) {
+            if (data.phase === 'reveal' && data.reveal_data) { revealArea.classList.add('is-visible'); revealArea.classList.remove('is-hidden'); }
+            else { revealArea.classList.add('is-hidden'); revealArea.classList.remove('is-visible'); }
+        }
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');
             const horseGroups = {};
@@ -250,8 +255,8 @@ async function updateStatus(preFetchedData = null) {
                 horseGroups[n.horse_name].push(n.player_name);
             });
 
-            let singleHtml = '<div style="margin-bottom:15px;"><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#059669;">【単独確定】</h4><div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:5px;">';
-            let multiHtml = '<div><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#ef4444;">【重複・抽選対象】</h4>';
+            let singleHtml = '<div class="summary-section"><h4 class="summary-label-success">【単独確定】</h4><div class="summary-list-success">';
+            let multiHtml = '<div class="summary-section"><h4 class="summary-label-danger">【重複・抽選対象】</h4>';
             let hasMulti = false;
             let hasSingle = false;
 
@@ -259,12 +264,12 @@ async function updateStatus(preFetchedData = null) {
                 const pts = horseGroups[h];
                 if (pts.length > 1) {
                     hasMulti = true;
-                    multiHtml += `<div style="background:#fef2f2; border:1px solid #f87171; border-radius:6px; padding:10px; margin-bottom:8px;">`;
-                    multiHtml += `<div style="font-weight:bold; color:#b91c1c; font-size:1rem;">${h}</div>`;
-                    multiHtml += `<div style="font-size:0.85rem; color:#7f1d1d; margin-top:4px;">指名者: ${pts.join(' / ')}</div></div>`;
+                    multiHtml += `<div class="summary-card-danger">`;
+                    multiHtml += `<div class="summary-horse-name">${h}</div>`;
+                    multiHtml += `<div class="summary-participants">指名者: ${pts.join(' / ')}</div></div>`;
                 } else {
                     hasSingle = true;
-                    singleHtml += `<div style="font-size:0.85rem; padding:4px 8px; border-bottom:1px solid #d1fae5; color:#065f46;"><strong>${h}</strong> <span style="font-size:0.75rem; color:#059669;">(${pts[0]})</span></div>`;
+                    singleHtml += `<div class="summary-item-success"><strong>${h}</strong> <span class="summary-item-sub">(${pts[0]})</span></div>`;
                 }
             });
 
@@ -283,14 +288,14 @@ async function updateStatus(preFetchedData = null) {
                 const res = resMap[hName];
                 document.getElementById('lot_horse_name').innerText = hName;
                 document.getElementById('lot_candidate_list').innerText = `候補: ${res.participants.join(', ')}`;
-                document.getElementById('lot_result_box').style.display = 'block';
+                document.getElementById('lot_result_box').classList.add('is-visible');
                 document.getElementById('lot_winner_name').innerText = res.winner_name;
             }
         }
 
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
-                revealArea.style.display = 'block';
+                revealArea.classList.add('is-visible');
                 const updateRev = (id, val) => {
                     const el = document.getElementById(id);
                     if (el) el.innerText = (val !== undefined && val !== null) ? val : "";
@@ -303,7 +308,7 @@ async function updateStatus(preFetchedData = null) {
                 updateRev('reveal_stable', data.reveal_data.stable);
                 updateRev('reveal_breeder', data.reveal_data.breeder);
             } else {
-                revealArea.style.display = 'none';
+                revealArea.classList.add('is-hidden');
             }
         }
 
@@ -348,7 +353,7 @@ async function searchHorses() {
     window.isSearching = true;
 
     console.log(`SEARCH: サーバーへリクエスト送信: /search_horses?f=${f}&m=${m}`);
-    resultsEl.innerHTML = "<div style='color:blue; font-size:0.8rem;'>[DEBUG] サーバー通信中...</div>";
+    resultsEl.innerHTML = '<div class="search-loading">[DEBUG] サーバー通信中...</div>';
 
     try {
         const res = await fetch(`/search_horses?f=${encodeURIComponent(f)}&m=${encodeURIComponent(m)}`, { signal: window.searchController.signal });
@@ -365,23 +370,23 @@ async function searchHorses() {
             const isMeWinner = !!myNomination;
             // デバッグ情報表示
             const debugInfo = document.createElement('div');
-            debugInfo.style.cssText = "color:green; font-size:0.7rem; margin-bottom:5px;";
+            debugInfo.className = "search-debug-info";
             debugInfo.textContent = `[DEBUG] ${horses.length}件表示`;
             resultsEl.appendChild(debugInfo);
 
             horses.forEach(h => {
                 // 1. カードコンテナ作成
                 const card = document.createElement('div');
-                card.style.cssText = "padding:15px; border:1px solid #e2e8f0; border-radius:10px; margin-bottom:10px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.05);";
+                card.className = "card";
 
                 // 2. 馬名表示
                 const nameDiv = document.createElement('div');
-                nameDiv.style.cssText = "font-weight:bold; font-size:1.1rem;";
+                nameDiv.className = "search-horse-name";
                 nameDiv.textContent = h.horse_name;
 
                 // 3. 父母情報表示
                 const infoDiv = document.createElement('div');
-                infoDiv.style.cssText = "font-size:0.8rem; color:#64748b; margin-bottom:8px;";
+                infoDiv.className = "search-horse-info";
                 infoDiv.textContent = `父: ${h.father_name} / 母: ${h.mother_name}`;
 
                 // 4. ボタン作成
@@ -393,18 +398,18 @@ async function searchHorses() {
                 if (isMeWinner) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
-                    btn.style.cssText = "width:100%; padding:10px; background:#94a3b8; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                    btn.className = "btn-search-action btn-disabled";
                 } else if (isOverLimit) {
                     btn.textContent = "全10頭 指名終了";
                     btn.disabled = true;
-                    btn.style.cssText = "width:100%; padding:10px; background:#1e293b; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                    btn.className = "btn-search-action btn-dark";
                 } else if (!isNominationPhase) {
                     btn.textContent = "指名受付外";
                     btn.disabled = true;
-                    btn.style.cssText = "width:100%; padding:10px; background:#e2e8f0; color:#94a3b8; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
+                    btn.className = "btn-search-action btn-off";
                 } else {
                     btn.textContent = "指名する";
-                    btn.style.cssText = "width:100%; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;";
+                    btn.className = "btn-search-action btn-active";
                 }
                 
                 // 【デバッグログ追加】イベントの発生順序を詳細に記録
@@ -429,11 +434,11 @@ async function searchHorses() {
             });
         } else {
             console.log("SEARCH: ヒットなし");
-            resultsEl.innerHTML = "<div style='color:#94a3b8; text-align:center; padding:10px;'>[DEBUG] 該当なし</div>";
+            resultsEl.innerHTML = '<div class="search-no-result">[DEBUG] 該当なし</div>';
         }
     } catch (e) {
         console.error("SEARCH ERROR:", e);
-        resultsEl.innerHTML = `<div style="color:red; font-size:0.8rem;">通信エラー: ${e.message}</div>`;
+        resultsEl.innerHTML = `<div class="search-error">通信エラー: ${e.message}</div>`;
     } finally {
         // 通信完了
         window.isSearching = false;
@@ -543,11 +548,11 @@ function updateMCButtons(data) {
     const mainBtn = document.getElementById('mc_main_btn');
     if (!mainBtn) return;
 
-    const setBtn = (btn, active, color = "#3b82f6") => {
-        btn.style.background = color;
+    const setBtn = (btn, active, colorClass = "") => {
+        btn.classList.remove('mc-bg-blue', 'mc-bg-emerald');
+        if (colorClass) btn.classList.add(colorClass); 
         btn.disabled = !active;
-        btn.style.opacity = active ? "1.0" : "0.3";
-        btn.style.cursor = active ? "pointer" : "not-allowed";
+        btn.className = active ? `btn-mc-main active ${colorClass}` : "btn-mc-main disabled";
     };
 
     if (phase === 'nomination') {
@@ -624,8 +629,8 @@ function updateMCButtons(data) {
                 alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
                 const summaryArea = document.getElementById('lottery_summary_area');
                 const lotRevealArea = document.getElementById('lottery_reveal_area');
-                if (summaryArea) summaryArea.style.display = 'none';
-                if (lotRevealArea) lotRevealArea.style.display = 'none';
+                if (summaryArea) { summaryArea.classList.add('is-hidden'); summaryArea.classList.remove('is-visible'); }
+                if (lotRevealArea) { lotRevealArea.classList.add('is-hidden'); lotRevealArea.classList.remove('is-visible'); }
                 // 表示のデグレ（11巡発生）を防止
                 window.lastPhase = "DRAFT_FINISHED";
                 const roundEl = document.getElementById('round_display');
