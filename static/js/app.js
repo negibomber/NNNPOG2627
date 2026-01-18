@@ -6,7 +6,7 @@ const debugLog = (msg, data = null) => {
     }
 };
 (function() {
-    const APP_VERSION = "0.2.5";
+    const APP_VERSION = "0.2.6";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 

@@ -319,3 +319,193 @@ header {
     opacity: 0 !important; 
     visibility: hidden !important; 
 }
+
+/* --- 8. 検索結果エリアの装飾 (追加) --- */
+.search-item-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-left: 5px solid #3b82f6; /* 指名ボタンと合わせた青いアクセント */
+}
+
+.search-horse-name {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+.search-horse-info {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.btn-search-action {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+/* ボタンの状態別カラー */
+.btn-search-action.active {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.btn-search-action.active:hover {
+    background-color: #2563eb;
+}
+
+.btn-search-action.is-disabled {
+    background-color: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.btn-search-action.is-off {
+    background-color: #64748b;
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.search-debug-info {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-bottom: 10px;
+    text-align: right;
+}
+
+/* --- 9. 指名結果テーブルのレイアウト調整 (追加) --- */
+.status-table th {
+    text-align: left;
+    padding: 10px 8px;
+    background: #f8fafc;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+/* 巡目列：幅を絞って中央寄せ */
+.col-round {
+    width: 40px;
+    text-align: center;
+    font-weight: bold;
+    color: #64748b;
+}
+
+/* 馬名列：メインの情報を強調 */
+.col-horse {
+    padding-left: 15px !important;
+}
+
+.col-horse div:first-child {
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+/* 抽選待ちなどの状態テキスト */
+.pending {
+    color: #f59e0b;
+    font-style: italic;
+}
+
+/* カード内の余白調整 */
+.card-title-border {
+    font-size: 1rem;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #cbd5e1;
+    color: #334155;
+}
+
+/* --- 10. 抽選まとめエリアの装飾 (再精査による追加) --- */
+.summary-section { margin-bottom: 20px; }
+.summary-label-success { color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 5px; }
+.summary-label-danger { color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 5px; }
+.summary-list-success { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0; }
+.summary-item-success { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; }
+.summary-item-sub { color: #64748b; font-size: 0.8rem; }
+
+.summary-card-danger { background: #fef2f2; border: 1px solid #fee2e2; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+.summary-horse-name { font-size: 1.1rem; font-weight: bold; color: #b91c1c; }
+.summary-participants { font-size: 0.85rem; color: #7f1d1d; margin-top: 4px; }
+
+/* --- 11. 検索状態の装飾 --- */
+.search-loading, .search-no-result {
+    padding: 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+}
+/* --- 12. アニメーション・演出の定義 (追加) --- */
+
+/* ふわっと浮き上がるアニメーション */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 抽選結果がズームインする演出 */
+@keyframes zoomIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* JSが .is-visible をつけた時の挙動を強化 */
+.reveal-card.is-visible {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.lot-result-card.is-visible {
+    animation: zoomIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* ロード中の「...」が点滅する演出 */
+.search-loading::after {
+    content: "...";
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* --- 13. 視認性向上とCSVボタン (セルフチェックによる追加) --- */
+
+/* 当選・落選の行全体への色付け (あるべき姿) */
+.status-table tr:has(.winner) { background-color: #f0fdf4; }
+.status-table tr:has(.loser) { background-color: #f8fafc; }
+
+/* CSVボタンの配置調整 */
+#csv_download_btn {
+    margin: 10px 0;
+    width: 100%;
+    background: #475569;
+    color: white;
+}
+
+/* フォーム入力中の強調 */
+.input-field:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
