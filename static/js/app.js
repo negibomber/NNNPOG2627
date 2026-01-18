@@ -1,5 +1,5 @@
 (function() {
-    const APP_VERSION = "0.2.0";
+    const APP_VERSION = "0.2.1";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -296,6 +296,7 @@ if (summaryArea) {
         if (revealArea) {
             if (data.phase === 'reveal' && data.reveal_data) {
                 revealArea.classList.add('is-visible');
+                revealArea.classList.remove('is-hidden');
                 const updateRev = (id, val) => {
                     const el = document.getElementById(id);
                     if (el) el.innerText = (val !== undefined && val !== null) ? val : "";
@@ -377,7 +378,7 @@ async function searchHorses() {
             horses.forEach(h => {
                 // 1. カードコンテナ作成
                 const card = document.createElement('div');
-                card.className = "card";
+                card.className = "search-item-card card";
 
                 // 2. 馬名表示
                 const nameDiv = document.createElement('div');
@@ -398,18 +399,18 @@ async function searchHorses() {
                 if (isMeWinner) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
-                    btn.className = "btn-search-action btn-disabled";
+                    btn.className = "btn-search-action is-disabled";
                 } else if (isOverLimit) {
                     btn.textContent = "全10頭 指名終了";
                     btn.disabled = true;
-                    btn.className = "btn-search-action btn-dark";
+                    btn.className = "btn-search-action is-disabled";
                 } else if (!isNominationPhase) {
                     btn.textContent = "指名受付外";
                     btn.disabled = true;
-                    btn.className = "btn-search-action btn-off";
+                    btn.className = "btn-search-action is-off";
                 } else {
                     btn.textContent = "指名する";
-                    btn.className = "btn-search-action btn-active";
+                    btn.className = "btn-search-action active";
                 }
                 
                 // 【デバッグログ追加】イベントの発生順序を詳細に記録
@@ -514,7 +515,7 @@ async function mcAction(url, method = 'POST') {
         clearInterval(window.statusTimer);
         window.statusTimer = null; 
     }
-    const mainBtn = document.getElementById('mc_main_btn');
+    const mainBtn = document.getElementById('mc-btn-main');
     if (mainBtn) {
         mainBtn.disabled = true;
         mainBtn.innerText = "処理中...";
@@ -545,14 +546,14 @@ function updateMCButtons(data) {
     const phase = data.phase;
     const isAllNominated = data.is_all_nominated;
     const hasDuplicates = data.has_duplicates;
-    const mainBtn = document.getElementById('mc_main_btn');
+    const mainBtn = document.getElementById('mc-btn-main');
     if (!mainBtn) return;
 
     const setBtn = (btn, active, colorClass = "") => {
         btn.classList.remove('mc-bg-blue', 'mc-bg-emerald');
         if (colorClass) btn.classList.add(colorClass); 
         btn.disabled = !active;
-        btn.className = active ? `btn-mc-main active ${colorClass}` : "btn-mc-main disabled";
+        btn.className = active ? `mc-btn-main active ${colorClass}` : "mc-btn-main disabled";
     };
 
     if (phase === 'nomination') {
@@ -565,7 +566,7 @@ function updateMCButtons(data) {
         const isReady = isAllNominated || (nominated >= target && target > 0);
         mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中";
         mainBtn.onclick = isReady ? window.startReveal : null;
-        setBtn(mainBtn, isReady);
+        setBtn(mainBtn, isReady, "mc-bg-blue");
 
     } else if (phase === 'reveal') {
         const isEnd = (data.reveal_index >= (data.total_players || 0) - 1);
@@ -584,18 +585,18 @@ function updateMCButtons(data) {
                 window.nextReveal();
             }
         };
-        setBtn(mainBtn, true, isEnd ? "#10b981" : "#3b82f6");
+        setBtn(mainBtn, true, isEnd ? "mc-bg-emerald" : "mc-bg-blue");
 
     } else if (phase === 'summary') {
         if (hasDuplicates) {
             mainBtn.innerText = "抽選を開始";
             mainBtn.onclick = window.advanceLottery;
-            setBtn(mainBtn, true, "#3b82f6");
+            setBtn(mainBtn, true, "mc-bg-blue");
         } else {
             const isLastRound = (parseInt(data.round) >= 10);
             mainBtn.innerText = isLastRound ? "ドラフト終了" : "次の巡へ進む";
-            mainBtn.onclick = window.nextRound; // 【無駄排除】単一の関数呼び出しに統一
-            setBtn(mainBtn, true, "#10b981");
+            mainBtn.onclick = window.nextRound; 
+            setBtn(mainBtn, true, "mc-bg-emerald");
         }
     } else if (phase === 'lottery_reveal') {
         const queueLen = (data.lottery_queue || []).length;
@@ -606,11 +607,11 @@ function updateMCButtons(data) {
             // 演出終了：「再指名へ」を表示
             mainBtn.innerText = "再指名へ進む";
             mainBtn.onclick = window.nextRound;
-            setBtn(mainBtn, true, "#10b981");
+            setBtn(mainBtn, true, "mc-bg-emerald");
         } else {
             mainBtn.innerText = "次の抽選結果を表示";
             mainBtn.onclick = window.advanceLottery;
-            setBtn(mainBtn, true, "#3b82f6");
+            setBtn(mainBtn, true, "mc-bg-blue");
         }
 
     } else if (phase === 'lottery') {
@@ -638,11 +639,11 @@ function updateMCButtons(data) {
                 if (typeof switchTab === 'function') switchTab('tab-all');
             });
         } : window.nextRound;
-        setBtn(mainBtn, true, "#10b981");
+        setBtn(mainBtn, true, hasUnfinished ? "mc-bg-blue" : "mc-bg-emerald");
     } else if (phase === 'finished') {
         mainBtn.innerText = "ドラフト終了";
         mainBtn.onclick = null;
-        setBtn(mainBtn, false, "#64748b");
+        setBtn(mainBtn, false, "mc-bg-gray");
         // 終了時の一回限りの通知
         if (window.lastPhase !== 'finished') {
             alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
