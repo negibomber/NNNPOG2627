@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.15";
+    const APP_VERSION = "0.0.16";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -564,9 +564,16 @@ function updateMCButtons(data) {
             mainBtn.onclick = window.advanceLottery;
             setBtn(mainBtn, true, "#3b82f6");
         } else {
-            // 重複なし：直接「次の巡へ進む」を表示
-            mainBtn.innerText = "次の巡へ進む";
-            mainBtn.onclick = window.nextRound; 
+            // 重複なし：10巡目なら完了、それ以外は次の巡へ
+            const isLastRound = (parseInt(data.round) >= 10);
+            mainBtn.innerText = isLastRound ? "全10巡：ドラフト完了" : "次の巡へ進む";
+            mainBtn.onclick = isLastRound ? () => {
+                alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
+                // 完了後の演出：結果パネルを閉じ、全体リスト（タブ）を最新にする
+                const summaryArea = document.getElementById('lottery_summary_area');
+                if (summaryArea) summaryArea.style.display = 'none';
+                switchTab('tab-all'); 
+            } : window.nextRound;
             setBtn(mainBtn, true, "#10b981");
         }
     } else if (phase === 'lottery_reveal') {
@@ -625,7 +632,7 @@ window.downloadCSV = function() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `pog_results_round_${data.round}.csv`;
+    link.download = `pog_results_round_${data.round-1}.csv`;
     link.click();
     URL.revokeObjectURL(url);
 };

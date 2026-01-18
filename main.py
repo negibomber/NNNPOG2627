@@ -181,7 +181,8 @@ async def status():
         "has_duplicates": has_duplicates,
         "lottery_queue": lottery_queue,
         "lottery_results": lottery_results,
-        "lottery_idx": lottery_idx
+        "lottery_idx": lottery_idx,
+        "is_finished": (round_now >= 10 and phase == "nomination" and not current_noms and not lottery_queue)
     }
 
 @app.post("/nominate")
