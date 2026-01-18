@@ -1,5 +1,5 @@
 (function() {
-    const APP_VERSION = "0.2.1";
+    const APP_VERSION = "0.2.2";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -70,6 +70,7 @@ window.isProcessingNomination = false; // 【追加】指名処理中(confirm表
 
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus(preFetchedData = null) {
+    console.log(`[TRACE_2] updateStatus execute. Phase: "${preFetchedData?.phase}"`); // 追加
     try {
         let data;
         if (preFetchedData) {
@@ -209,7 +210,7 @@ async function updateStatus(preFetchedData = null) {
         }
 
         // 最後に依存度の低いMCボタン更新を実行
-        console.log("[MC_BUTTON_CALL] updateMCButtons を呼び出します");
+        console.log(`[TRACE_3] calling updateMCButtons now`); // 追加
         updateMCButtons(data);
 
         // 【修正】リロードが必要なのは「指名終了時」と「次の巡へ進む時」だけに限定し、チラつきを防止
@@ -493,6 +494,7 @@ window.doNominate = async function(name, mother, horse_id) {
             return;
         }
         if (data.status === 'success') {
+            console.log("[EVIDENCE_0] Nomination Success. Reloading..."); // 追加
             alert("指名完了");
             localStorage.setItem('activeTab', 'tab-my');
             location.reload();
@@ -524,6 +526,7 @@ async function mcAction(url, method = 'POST') {
     try {
         const res = await fetch(url, { method: method });
         const newData = await res.json();
+        console.log(`[TRACE_1] Server response: phase="${newData.phase}"`); // 追加
         window.lastPhase = newData.phase;
         await updateStatus(newData);
     } catch (e) {
@@ -544,6 +547,7 @@ window.nextRound = async function() { await mcAction('/mc/next_round'); }
 // --- MC用ボタンの活性・非活性制御 ---
 function updateMCButtons(data) {
     const phase = data.phase;
+    console.log(`[TRACE_4] Inside updateMCButtons. phase="${phase}"`); // 追加
     const isAllNominated = data.is_all_nominated;
     const hasDuplicates = data.has_duplicates;
     const mainBtn = document.getElementById('mc-btn-main');
