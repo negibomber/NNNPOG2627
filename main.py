@@ -331,7 +331,9 @@ async def next_round():
     # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
-    update_setting("phase", "nomination")
+    # 【改修】10巡目完了かつ残り落選者がいないなら、完全に終了状態(finished)へ移行
+    is_done = (round_now >= 10 and losers.count == 0)
+    update_setting("phase", "finished" if is_done else "nomination")
     return await status()
 
 @app.post("/login")
