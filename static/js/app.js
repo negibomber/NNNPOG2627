@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.18";
+    const APP_VERSION = "0.0.19";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -226,9 +226,7 @@ async function updateStatus(preFetchedData = null) {
         // フェーズに応じたエリアの排他表示
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
         if (summaryArea) {
-            // 10巡目かつ重複なし(has_duplicates=false)の場合は、完了演出を優先するため表示しない
-            const isCompleted = (data.phase === 'summary' && parseInt(data.round) >= 10 && !data.has_duplicates);
-            summaryArea.style.display = (data.phase === 'summary' && !isCompleted) ? 'block' : 'none';
+            summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
             console.log(` -> summaryArea display: ${summaryArea.style.display}`);
         }
         if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
@@ -571,10 +569,10 @@ function updateMCButtons(data) {
             mainBtn.innerText = isLastRound ? "ドラフト終了" : "次の巡へ進む";
             mainBtn.onclick = isLastRound ? () => {
                 alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
-                // 完了後の演出：結果パネルを閉じ、全体リスト（タブ）を最新にする
                 const summaryArea = document.getElementById('lottery_summary_area');
                 if (summaryArea) summaryArea.style.display = 'none';
-                switchTab('tab-all'); 
+                window.lastPhase = "DRAFT_FINISHED"; // 特殊な状態をセットして再描画を抑止
+                if (typeof switchTab === 'function') switchTab('tab-all'); 
             } : window.nextRound;
             setBtn(mainBtn, true, "#10b981");
         }
