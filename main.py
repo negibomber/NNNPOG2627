@@ -96,7 +96,7 @@ async def index(request: Request):
     won_horse = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 1).execute()
     current_nom = supabase.table("draft_results").select("horse_name").eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
     role_row = supabase.table("participants").select("role").eq("name", user).execute()
-    confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("round").order("player_name").execute()
+    confirmed = supabase.table("draft_results").select("round, player_name, horse_name").eq("is_winner", 1).order("player_name").order("round").execute()
 
     return templates.TemplateResponse("index.html", {
         "request": request, "user": user, "phase": phase, "current_round": round_now, 
