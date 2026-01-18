@@ -577,9 +577,15 @@ function updateMCButtons(data) {
     if (phase === 'nomination') {
         const currentRoundInt = parseInt(data.round);
         const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
-        const winCount = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name)).size;
-        const target = Math.max(0, (data.total_players || 0) - winCount);
-        const nominated = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name)).size;
+        const winners = allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1);
+        const winCount = new Set(winners.map(n => n.player_name)).size;
+        const target = (data.total_players || 0) - winCount;
+        const noms = allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0);
+        const nominated = new Set(noms.map(n => n.player_name)).size;
+
+        if (DEBUG_MODE) {
+            console.log(`[MC_CALC_EVIDENCE] Round:${currentRoundInt}, Total:${data.total_players}, WinCount:${winCount}, Target:${target}, Nominated:${nominated}`);
+        }
         
         const isReady = isAllNominated || (nominated >= target && target > 0);
         mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中";
