@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.23";
+    const APP_VERSION = "0.1.0";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -119,10 +119,24 @@ async function updateStatus(preFetchedData = null) {
             // 指名すべき総人数から、今巡の当選者を引く
             const realTargetCount = (data.total_players || 0);
 
-            const nominatedCount = new Set(allNoms
-                .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
-                .map(n => n.player_name)).size;
-            counterEl.innerText = `指名状況: ${nominatedCount} / ${realTargetCount} 人`;
+            const nominatedPlayers = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name));
+            const winners = new Set(allNoms.filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name));
+            const waitingPlayers = data.all_players.filter(p => !winners.has(p) && !nominatedPlayers.has(p));
+
+            counterEl.innerText = `指名状況: ${nominatedPlayers.size} / ${realTargetCount} 人`;
+
+            let waitDiv = document.getElementById('waiting_list_bar');
+            if (waitingPlayers.length > 0 && data.phase === 'nomination') {
+                if (!waitDiv) {
+                    waitDiv = document.createElement('div');
+                    waitDiv.id = 'waiting_list_bar';
+                    waitDiv.style.cssText = "padding:4px 15px; background:#f0f9ff; color:#0369a1; font-size:0.7rem; border-bottom:1px solid #e0f2fe; transition: all 0.3s ease;";
+                    counterEl.parentElement.parentElement.appendChild(waitDiv);
+                }
+                waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
+            } else if (waitDiv) {
+                waitDiv.remove();
+            }
         }
 
         const allStatusDiv = document.getElementById('all_status_list');
