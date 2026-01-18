@@ -372,7 +372,7 @@ async function searchHorses() {
                     btn.disabled = true;
                     btn.style.cssText = "width:100%; padding:10px; background:#94a3b8; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
                 } else if (isOverLimit) {
-                    btn.textContent = "全10頭 指名完了";
+                    btn.textContent = "全10頭 指名終了";
                     btn.disabled = true;
                     btn.style.cssText = "width:100%; padding:10px; background:#1e293b; color:white; border:none; border-radius:6px; font-weight:bold; cursor:not-allowed;";
                 } else if (!isNominationPhase) {
@@ -566,7 +566,7 @@ function updateMCButtons(data) {
         } else {
             // 重複なし：10巡目なら完了、それ以外は次の巡へ
             const isLastRound = (parseInt(data.round) >= 10);
-            mainBtn.innerText = isLastRound ? "全10巡：ドラフト完了" : "次の巡へ進む";
+            mainBtn.innerText = isLastRound ? "ドラフト終了" : "次の巡へ進む";
             mainBtn.onclick = isLastRound ? () => {
                 alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
                 // 完了後の演出：結果パネルを閉じ、全体リスト（タブ）を最新にする
