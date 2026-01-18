@@ -258,7 +258,7 @@ header {
     z-index: 200;
 }
 
-.mc-btn-main {
+.mc_main_btn {
     width: 100%;
     padding: 16px;
     border: none;
@@ -271,14 +271,14 @@ header {
 }
 
 /* JSの btn.disabled = true/false と連動 */
-.mc-btn-main:disabled,
-.mc-btn-main.disabled {
+.mc_main_btn:disabled,
+.mc_main_btn.disabled {
     opacity: 0.3 !important;      /* JSの opacity 0.3 を移行 */
     cursor: not-allowed !important; /* JSの cursor を移行 */
     background-color: #64748b !important; /* 無効時はグレーに統一 */
 }
 
-.mc-btn-main:not(:disabled).active {
+.mc_main_btn:not(:disabled).active {
     opacity: 1.0;
 }
 

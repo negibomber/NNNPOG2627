@@ -95,6 +95,7 @@ async function updateStatus(preFetchedData = null) {
             data = await res.json();
         }
         window.latestStatusData = data; // 【追加】他関数から参照可能にする
+        const phase = data.phase;
 
         const updateText = (id, text) => {
             const el = document.getElementById(id);
@@ -252,12 +253,13 @@ async function updateStatus(preFetchedData = null) {
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
         // 【聖約：現行犯逮捕】253行目から570行目の間の死角を全て可視化
         if (DEBUG_MODE) {
-            if (phase === 'nomination') {
+            // 【あるべき姿】このスコープではphaseではなくdata.phaseを参照する
+            if (data.phase === 'nomination') {
                 const sArea = document.getElementById('nomination-summary');
                 console.log(`[TRACE_PATH] 1. Nomination Block Entry. SummaryArea found: ${!!sArea}`);
                 if (!sArea) console.warn("[TRACE_PATH] 1-ERR: nomination-summary is MISSING. This might cause a return.");
             }
-            console.log(`[TRACE_PATH] 2. Checking MC Button existence... Target ID: mc-btn-main`);
+            console.log(`[TRACE_PATH] 2. Checking MC Button existence... Target ID: mc_main_btn`);
         }
 if (summaryArea) {
             if (data.phase === 'summary') { summaryArea.classList.add('is-visible'); summaryArea.classList.remove('is-hidden'); }
@@ -540,7 +542,7 @@ async function mcAction(url, method = 'POST') {
         clearInterval(window.statusTimer);
         window.statusTimer = null; 
     }
-    const mainBtn = document.getElementById('mc-btn-main');
+    const mainBtn = document.getElementById('mc_main_btn');
     if (mainBtn) {
         mainBtn.disabled = true;
         mainBtn.innerText = "処理中...";
@@ -573,18 +575,18 @@ function updateMCButtons(data) {
     console.log(`[TRACE_4] Inside updateMCButtons. phase="${phase}"`); // 追加
     const isAllNominated = data.is_all_nominated;
     const hasDuplicates = data.has_duplicates;
-    const mainBtn = document.getElementById('mc-btn-main');
+    const mainBtn = document.getElementById('mc_main_btn');
     if (!mainBtn) {
-        if (DEBUG_MODE) console.error("[TRACE_PATH] 3-FATAL: mc-btn-main NOT FOUND. Function terminating here.");
+        if (DEBUG_MODE) console.error("[TRACE_PATH] 3-FATAL: mc_main_btn NOT FOUND. Function terminating here.");
         return;
     }
-    if (DEBUG_MODE) console.log("[TRACE_PATH] 4. mc-btn-main confirmed. Proceeding to calculation...");
+    if (DEBUG_MODE) console.log("[TRACE_PATH] 4. mc_main_btn confirmed. Proceeding to calculation...");
 
     const setBtn = (btn, active, colorClass = "") => {
         btn.classList.remove('mc-bg-blue', 'mc-bg-emerald');
         if (colorClass) btn.classList.add(colorClass); 
         btn.disabled = !active;
-        btn.className = active ? `mc-btn-main active ${colorClass}` : "mc-btn-main disabled";
+        btn.className = active ? `mc_main_btn active ${colorClass}` : "mc_main_btn disabled";
     };
 
     if (phase === 'nomination') {
