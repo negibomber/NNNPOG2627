@@ -1,6 +1,5 @@
-// [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.1.0";
+    const APP_VERSION = "0.1.1";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -130,8 +129,9 @@ async function updateStatus(preFetchedData = null) {
                 if (!waitDiv) {
                     waitDiv = document.createElement('div');
                     waitDiv.id = 'waiting_list_bar';
-                    waitDiv.style.cssText = "padding:4px 15px; background:#f0f9ff; color:#0369a1; font-size:0.7rem; border-bottom:1px solid #e0f2fe; transition: all 0.3s ease;";
-                    counterEl.parentElement.parentElement.appendChild(waitDiv);
+                    // ヘッダーの直下に独立した行として配置
+                    waitDiv.style.cssText = "padding:6px 15px; background:#f0f9ff; color:#0369a1; font-size:0.75rem; border-bottom:1px solid #e0f2fe; line-height:1.4;";
+                    document.querySelector('header').appendChild(waitDiv);
                 }
                 waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
             } else if (waitDiv) {
