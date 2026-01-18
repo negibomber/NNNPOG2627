@@ -1,3 +1,10 @@
+const DEBUG_MODE = true; // 開発時は true、本番は false に切り替え
+const debugLog = (msg, data = null) => {
+    if (DEBUG_MODE) {
+        if (data) console.log(`[POG_DEBUG] ${msg}`, data);
+        else console.log(`[POG_DEBUG] ${msg}`);
+    }
+};
 (function() {
     const APP_VERSION = "0.2.2";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
@@ -70,10 +77,13 @@ window.isProcessingNomination = false; // 【追加】指名処理中(confirm表
 
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus(preFetchedData = null) {
-    console.log(`[TRACE_2] updateStatus execute. Phase: "${preFetchedData?.phase}"`); // 追加
+    debugLog(`[EVIDENCE_IN] updateStatus called. Source: ${preFetchedData ? 'Argument' : 'Fetch'}, Phase in Arg: ${preFetchedData?.phase}`);
     try {
         let data;
         if (preFetchedData) {
+            if (preFetchedData.phase === undefined) {
+                console.error("[CRITICAL_EVIDENCE] 引数で渡されたデータにphaseがありません。呼び出し元のスタックトレースを表示します:", new Error().stack);
+            }
             data = preFetchedData;
         } else {
             const res = await fetch('/status');
@@ -494,7 +504,7 @@ window.doNominate = async function(name, mother, horse_id) {
             return;
         }
         if (data.status === 'success') {
-            console.log("[EVIDENCE_0] Nomination Success. Reloading..."); // 追加
+            debugLog("[EVIDENCE_NOM] Nomination Result Data:", data);
             alert("指名完了");
             localStorage.setItem('activeTab', 'tab-my');
             location.reload();
@@ -526,7 +536,7 @@ async function mcAction(url, method = 'POST') {
     try {
         const res = await fetch(url, { method: method });
         const newData = await res.json();
-        console.log(`[TRACE_1] Server response: phase="${newData.phase}"`); // 追加
+        debugLog("[EVIDENCE_MC] MC Action Result Data:", newData);
         window.lastPhase = newData.phase;
         await updateStatus(newData);
     } catch (e) {
