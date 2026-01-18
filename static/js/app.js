@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.16";
+    const APP_VERSION = "0.0.18";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -226,7 +226,9 @@ async function updateStatus(preFetchedData = null) {
         // フェーズに応じたエリアの排他表示
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
         if (summaryArea) {
-            summaryArea.style.display = (data.phase === 'summary') ? 'block' : 'none';
+            // 10巡目かつ重複なし(has_duplicates=false)の場合は、完了演出を優先するため表示しない
+            const isCompleted = (data.phase === 'summary' && parseInt(data.round) >= 10 && !data.has_duplicates);
+            summaryArea.style.display = (data.phase === 'summary' && !isCompleted) ? 'block' : 'none';
             console.log(` -> summaryArea display: ${summaryArea.style.display}`);
         }
         if (lotRevealArea) lotRevealArea.style.display = (data.phase === 'lottery_reveal') ? 'block' : 'none';
@@ -600,8 +602,16 @@ function updateMCButtons(data) {
         // 確定人数が参加総数より少なければ、未確定（再指名が必要）な人がいる
         const hasUnfinished = winnersCount < (data.total_players || 0);
 
-        mainBtn.innerText = hasUnfinished ? "再指名へ進む" : "次の巡へ進む";
-        mainBtn.onclick = window.nextRound;
+        const isLastRound = (currentRoundInt >= 10);
+        mainBtn.innerText = hasUnfinished ? "再指名へ進む" : (isLastRound ? "ドラフト終了" : "次の巡へ進む");
+        mainBtn.onclick = (isLastRound && !hasUnfinished) ? () => {
+            alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
+            const summaryArea = document.getElementById('lottery_summary_area');
+            const lotRevealArea = document.getElementById('lottery_reveal_area');
+            if (summaryArea) summaryArea.style.display = 'none';
+            if (lotRevealArea) lotRevealArea.style.display = 'none';
+            if (typeof switchTab === 'function') switchTab('tab-all');
+        } : window.nextRound;
         setBtn(mainBtn, true, "#10b981");
     }
 }
@@ -630,9 +640,10 @@ window.downloadCSV = function() {
     const csvContent = "\uFEFF" + rows.map(r => r.map(field => `"${field}"`).join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
+    const fileRound = (parseInt(data.round) >= 10) ? 10 : (data.round - 1);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `pog_results_round_${data.round-1}.csv`;
+    link.download = `pog_results_round_${fileRound}.csv`;
     link.click();
     URL.revokeObjectURL(url);
 };
