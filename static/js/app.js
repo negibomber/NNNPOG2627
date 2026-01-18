@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.22";
+    const APP_VERSION = "0.0.23";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -234,21 +234,34 @@ async function updateStatus(preFetchedData = null) {
 
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');
-            let sHtml = '<ul style="list-style:none; padding:0; font-size:0.9rem;">';
             const horseGroups = {};
             data.all_nominations.filter(n => n.round === data.round && n.is_winner === 0).forEach(n => {
                 if (!horseGroups[n.horse_name]) horseGroups[n.horse_name] = [];
                 horseGroups[n.horse_name].push(n.player_name);
             });
+
+            let singleHtml = '<div style="margin-bottom:15px;"><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#059669;">【単独確定】</h4><div style="background:#ecfdf5; border:1px solid #10b981; border-radius:6px; padding:5px;">';
+            let multiHtml = '<div><h4 style="margin:0 0 8px 0; font-size:0.8rem; color:#ef4444;">【重複・抽選対象】</h4>';
+            let hasMulti = false;
+            let hasSingle = false;
+
             Object.keys(horseGroups).forEach(h => {
                 const pts = horseGroups[h];
                 if (pts.length > 1) {
-                    sHtml += `<li style="padding:8px; border-bottom:1px dotted #cbd5e1; color:#ef4444;">⚠️ <strong>${h}</strong>: ${pts.join(', ')} (重複)</li>`;
+                    hasMulti = true;
+                    multiHtml += `<div style="background:#fef2f2; border:1px solid #f87171; border-radius:6px; padding:10px; margin-bottom:8px;">`;
+                    multiHtml += `<div style="font-weight:bold; color:#b91c1c; font-size:1rem;">${h}</div>`;
+                    multiHtml += `<div style="font-size:0.85rem; color:#7f1d1d; margin-top:4px;">指名者: ${pts.join(' / ')}</div></div>`;
                 } else {
-                    sHtml += `<li style="padding:8px; border-bottom:1px dotted #cbd5e1; color:#059669;">✅ <strong>${h}</strong>: ${pts[0]} (単独確定)</li>`;
+                    hasSingle = true;
+                    singleHtml += `<div style="font-size:0.85rem; padding:4px 8px; border-bottom:1px solid #d1fae5; color:#065f46;"><strong>${h}</strong> <span style="font-size:0.75rem; color:#059669;">(${pts[0]})</span></div>`;
                 }
             });
-            listEl.innerHTML = sHtml + '</ul>';
+
+            singleHtml += '</div></div>';
+            multiHtml += '</div>';
+
+            listEl.innerHTML = (hasMulti ? multiHtml : "") + (hasSingle ? singleHtml : "");
         }
 
         if (data.phase === 'lottery_reveal' && lotRevealArea) {
