@@ -6,7 +6,7 @@ const debugLog = (msg, data = null) => {
     }
 };
 (function() {
-    const APP_VERSION = "0.2.4";
+    const APP_VERSION = "0.2.5";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -250,6 +250,15 @@ async function updateStatus(preFetchedData = null) {
 
         // フェーズに応じたエリアの排他表示
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
+        // 【聖約：現行犯逮捕】253行目から570行目の間の死角を全て可視化
+        if (DEBUG_MODE) {
+            if (phase === 'nomination') {
+                const sArea = document.getElementById('nomination-summary');
+                console.log(`[TRACE_PATH] 1. Nomination Block Entry. SummaryArea found: ${!!sArea}`);
+                if (!sArea) console.warn("[TRACE_PATH] 1-ERR: nomination-summary is MISSING. This might cause a return.");
+            }
+            console.log(`[TRACE_PATH] 2. Checking MC Button existence... Target ID: mc-btn-main`);
+        }
 if (summaryArea) {
             if (data.phase === 'summary') { summaryArea.classList.add('is-visible'); summaryArea.classList.remove('is-hidden'); }
             else { summaryArea.classList.add('is-hidden'); summaryArea.classList.remove('is-visible'); }
@@ -565,7 +574,11 @@ function updateMCButtons(data) {
     const isAllNominated = data.is_all_nominated;
     const hasDuplicates = data.has_duplicates;
     const mainBtn = document.getElementById('mc-btn-main');
-    if (!mainBtn) return;
+    if (!mainBtn) {
+        if (DEBUG_MODE) console.error("[TRACE_PATH] 3-FATAL: mc-btn-main NOT FOUND. Function terminating here.");
+        return;
+    }
+    if (DEBUG_MODE) console.log("[TRACE_PATH] 4. mc-btn-main confirmed. Proceeding to calculation...");
 
     const setBtn = (btn, active, colorClass = "") => {
         btn.classList.remove('mc-bg-blue', 'mc-bg-emerald');
