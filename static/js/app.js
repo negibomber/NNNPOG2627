@@ -1,5 +1,5 @@
 (function() {
-    const APP_VERSION = "0.1.1";
+    const APP_VERSION = "0.1.2";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -124,18 +124,14 @@ async function updateStatus(preFetchedData = null) {
 
             counterEl.innerText = `指名状況: ${nominatedPlayers.size} / ${realTargetCount} 人`;
 
-            let waitDiv = document.getElementById('waiting_list_bar');
-            if (waitingPlayers.length > 0 && data.phase === 'nomination') {
-                if (!waitDiv) {
-                    waitDiv = document.createElement('div');
-                    waitDiv.id = 'waiting_list_bar';
-                    // ヘッダーの直下に独立した行として配置
-                    waitDiv.style.cssText = "padding:6px 15px; background:#f0f9ff; color:#0369a1; font-size:0.75rem; border-bottom:1px solid #e0f2fe; line-height:1.4;";
-                    document.querySelector('header').appendChild(waitDiv);
+            const waitDiv = document.getElementById('waiting_list_bar');
+            if (waitDiv) {
+                if (waitingPlayers.length > 0 && data.phase === 'nomination') {
+                    waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
+                    waitDiv.style.display = 'block';
+                } else {
+                    waitDiv.style.display = 'none';
                 }
-                waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
-            } else if (waitDiv) {
-                waitDiv.remove();
             }
         }
 
