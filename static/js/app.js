@@ -1,6 +1,6 @@
 // [2026-01-12] app.js Version: 0.0.1 - Firefox Event Isolation & Timer Control
 (function() {
-    const APP_VERSION = "0.0.20";
+    const APP_VERSION = "0.0.21";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -568,11 +568,17 @@ function updateMCButtons(data) {
             const isLastRound = (parseInt(data.round) >= 10);
             mainBtn.innerText = isLastRound ? "ドラフト終了" : "次の巡へ進む";
             mainBtn.onclick = isLastRound ? () => {
-                alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
-                const summaryArea = document.getElementById('lottery_summary_area');
-                if (summaryArea) summaryArea.style.display = 'none';
-                window.lastPhase = "DRAFT_FINISHED"; // 特殊な状態をセットして再描画を抑止
-                if (typeof switchTab === 'function') switchTab('tab-all'); 
+                // 10巡目の指名を確定(is_winner=1)させるためにサーバーを叩く
+                mcAction('/mc/next_round').then(() => {
+                    alert("全10巡の指名がすべて確定しました。お疲れ様でした！");
+                    const summaryArea = document.getElementById('lottery_summary_area');
+                    if (summaryArea) summaryArea.style.display = 'none';
+                    // 表示のデグレ(11巡発生)防止
+                    window.lastPhase = "DRAFT_FINISHED";
+                    const roundEl = document.getElementById('round_display');
+                    if (roundEl) roundEl.innerText = "10";
+                    if (typeof switchTab === 'function') switchTab('tab-all'); 
+                });
             } : window.nextRound;
             setBtn(mainBtn, true, "#10b981");
         }
