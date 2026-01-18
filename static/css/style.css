@@ -421,17 +421,71 @@ header {
     color: #334155;
 }
 
-/* --- 10. 抽選まとめエリアの装飾 (再精査による追加) --- */
-.summary-section { margin-bottom: 20px; }
-.summary-label-success { color: #16a34a; border-bottom: 2px solid #16a34a; padding-bottom: 5px; }
-.summary-label-danger { color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 5px; }
-.summary-list-success { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0; }
-.summary-item-success { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; }
-.summary-item-sub { color: #64748b; font-size: 0.8rem; }
+/* --- 10. 抽選まとめエリアの装飾 --- */
+/* セクション全体の余白 */
+.summary-section { 
+    margin-bottom: 20px; 
+}
 
-.summary-card-danger { background: #fef2f2; border: 1px solid #fee2e2; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
-.summary-horse-name { font-size: 1.1rem; font-weight: bold; color: #b91c1c; }
-.summary-participants { font-size: 0.85rem; color: #7f1d1d; margin-top: 4px; }
+/* 「単独確定」の見出しラベル（緑） */
+.summary-label-success { 
+    color: #16a34a; 
+    border-bottom: 2px solid #16a34a; 
+    padding-bottom: 5px; 
+}
+
+/* 「重複・抽選対象」の見出しラベル（赤） */
+.summary-label-danger { 
+    color: #ef4444; 
+    border-bottom: 2px solid #ef4444; 
+    padding-bottom: 5px; 
+}
+
+/* 単独確定した馬たちを横並びにするコンテナ */
+.summary-list-success { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 10px; 
+    padding: 10px 0; 
+}
+
+/* 単独確定した馬のバッジ（薄緑背景） */
+.summary-item-success { 
+    background: #f0fdf4; 
+    border: 1px solid #bbf7d0; 
+    padding: 5px 10px; 
+    border-radius: 4px; 
+    font-size: 0.95rem; /* サイズを微調整して統一 */
+}
+
+/* 単独確定時の指名者名（カッコ内の文字） */
+.summary-item-sub { 
+    color: #64748b; 
+    font-size: 0.95rem; 
+}
+
+/* 抽選対象（重複）のカード外枠（薄赤背景） */
+.summary-card-danger { 
+    background: #fef2f2; 
+    border: 1px solid #fee2e2; 
+    padding: 12px; 
+    border-radius: 8px; 
+    margin-bottom: 10px; 
+}
+
+/* 抽選対象の馬名（赤字・太字） */
+.summary-horse-name { 
+    font-size: 0.95rem; /* 単独側とサイズを統一 */
+    font-weight: bold; 
+    color: #b91c1c; 
+}
+
+/* 抽選対象の指名者リスト（下の行） */
+.summary-participants { 
+    font-size: 0.95rem; 
+    color: #7f1d1d; 
+    margin-top: 4px; 
+}
 
 /* --- 11. 検索状態の装飾 --- */
 .search-loading, .search-no-result {

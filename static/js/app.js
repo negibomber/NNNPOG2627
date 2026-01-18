@@ -6,7 +6,7 @@ const debugLog = (msg, data = null) => {
     }
 };
 (function() {
-    const APP_VERSION = "0.2.6";
+    const APP_VERSION = "0.2.7";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -251,14 +251,7 @@ async function updateStatus(preFetchedData = null) {
 
         // フェーズに応じたエリアの排他表示
         console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
-        // 【聖約：現行犯逮捕】253行目から570行目の間の死角を全て可視化
         if (DEBUG_MODE) {
-            // 【あるべき姿】このスコープではphaseではなくdata.phaseを参照する
-            if (data.phase === 'nomination') {
-                const sArea = document.getElementById('nomination-summary');
-                console.log(`[TRACE_PATH] 1. Nomination Block Entry. SummaryArea found: ${!!sArea}`);
-                if (!sArea) console.warn("[TRACE_PATH] 1-ERR: nomination-summary is MISSING. This might cause a return.");
-            }
             console.log(`[TRACE_PATH] 2. Checking MC Button existence... Target ID: mc_main_btn`);
         }
 if (summaryArea) {
