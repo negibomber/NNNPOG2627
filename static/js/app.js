@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.3.1
+   POG Main Application Module (app.js) - Ver.0.3.2
    ========================================================================== */
 
 const DEBUG_MODE = true;
@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.1";
+    const APP_VERSION = "0.3.2";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -97,7 +97,7 @@ async function updateStatus(preFetchedData = null) {
         POG_UI.renderPlayerCards(data);
         POG_UI.renderPhaseUI(data);
 
-        updateMCButtons(data);
+        POG_UI.renderMCPanel(data);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             window.AppState.lastPhase = data.phase;
@@ -207,80 +207,6 @@ window.doNominate = async function(name, mother) {
         console.error("Nominate error:", e); 
         window.AppState.isProcessingNomination = false;
         window.statusTimer = setInterval(updateStatus, 3000);
-    }
-}
-
-async function mcAction(url) {
-    if (window.statusTimer) { clearInterval(window.statusTimer); window.statusTimer = null; }
-    const mainBtn = document.getElementById('mc_main_btn');
-    if (mainBtn) { mainBtn.disabled = true; mainBtn.innerText = "処理中..."; }
-    try {
-        const newData = await POG_API.postMCAction(url);
-        window.AppState.lastPhase = newData.phase;
-        await updateStatus(newData);
-    } catch (e) { console.error("MC Action Error:", e); }
-    finally { if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000); }
-}
-
-window.startReveal = () => mcAction('/mc/start_reveal');
-window.nextReveal = () => mcAction('/mc/next_reveal');
-window.runLottery = () => mcAction('/mc/run_lottery');
-window.advanceLottery = () => mcAction('/mc/advance_lottery');
-window.nextRound = () => mcAction('/mc/next_round');
-
-function updateMCButtons(data) {
-    const phase = data.phase;
-    const mainBtn = document.getElementById('mc_main_btn');
-    if (!mainBtn) return;
-
-    const setBtn = (btn, active, colorClass = "") => {
-        btn.classList.remove('mc-bg-blue', 'mc-bg-emerald');
-        if (colorClass) btn.classList.add(colorClass); 
-        btn.disabled = !active;
-        btn.className = active ? `mc_main_btn active ${colorClass}` : "mc_main_btn disabled";
-    };
-
-    if (phase === 'nomination') {
-        const currentRoundInt = parseInt(data.round);
-        const winners = (data.all_nominations || []).filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1);
-        const target = (data.total_players || 0) - new Set(winners.map(n => n.player_name)).size;
-        const noms = (data.all_nominations || []).filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 0);
-        const nominated = new Set(noms.map(n => n.player_name)).size;
-        
-        const isReady = data.is_all_nominated || (nominated >= target && target > 0);
-        mainBtn.innerText = isReady ? "指名公開を開始する" : "指名待機中";
-        mainBtn.onclick = isReady ? window.startReveal : null;
-        setBtn(mainBtn, isReady, "mc-bg-blue");
-
-    } else if (phase === 'reveal') {
-        const isEnd = (data.reveal_index >= (data.total_players || 0) - 1);
-        mainBtn.innerText = isEnd ? "指名結果を表示" : `次の指名を公開 (あと ${data.total_players - data.reveal_index - 1}人)`;
-        mainBtn.onclick = isEnd ? window.runLottery : window.nextReveal;
-        setBtn(mainBtn, true, isEnd ? "mc-bg-emerald" : "mc-bg-blue");
-
-    } else if (phase === 'summary') {
-        if (data.has_duplicates) {
-            mainBtn.innerText = "抽選を開始";
-            mainBtn.onclick = window.advanceLottery;
-            setBtn(mainBtn, true, "mc-bg-blue");
-        } else {
-            mainBtn.innerText = (parseInt(data.round) >= 10) ? "ドラフト終了" : "次の巡へ進む";
-            mainBtn.onclick = window.nextRound; 
-            setBtn(mainBtn, true, "mc-bg-emerald");
-        }
-    } else if (phase === 'lottery_reveal') {
-        const isEnd = ((data.lottery_idx || 0) + 1 >= (data.lottery_queue || []).length);
-        mainBtn.innerText = isEnd ? "再指名へ進む" : "次の抽選結果を表示";
-        mainBtn.onclick = isEnd ? window.nextRound : window.advanceLottery;
-        setBtn(mainBtn, true, isEnd ? "mc-bg-emerald" : "mc-bg-blue");
-
-    } else if (phase === 'lottery') {
-        mainBtn.innerText = "再指名へ進む"; // シンプル化
-        mainBtn.onclick = window.nextRound;
-        setBtn(mainBtn, true, "mc-bg-blue");
-    } else if (phase === 'finished') {
-        mainBtn.innerText = "ドラフト終了";
-        setBtn(mainBtn, false, "mc-bg-gray");
     }
 }
 

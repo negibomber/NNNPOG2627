@@ -173,6 +173,29 @@ async def status():
     lottery_results = json.loads(get_setting("lottery_results") or "{}")
     lottery_idx = int(get_setting("lottery_idx") or 0)
 
+    # MCボタン情報の生成
+    mc_action = None
+    if phase == "nomination":
+        if is_all_nominated:
+            mc_action = {"label": "指名公開を開始", "endpoint": "/mc/start_reveal", "class": "btn-primary"}
+        else:
+            mc_action = {"label": "指名待ち...", "endpoint": None, "class": "btn-secondary", "disabled": True}
+    elif phase == "reveal":
+        if rev_idx < len(active_players) - 1:
+            mc_action = {"label": "次の指名を公開", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
+        else:
+            mc_action = {"label": "重複確認へ", "endpoint": "/mc/run_lottery", "class": "btn-warning"}
+    elif phase == "summary":
+        if lottery_queue:
+            mc_action = {"label": "抽選演出を開始", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
+        else:
+            mc_action = {"label": "次の巡へ（全確定）", "endpoint": "/mc/next_round", "class": "btn-success"}
+    elif phase == "lottery_reveal":
+        if lottery_idx + 1 < len(lottery_queue):
+            mc_action = {"label": "次の抽選へ", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
+        else:
+            mc_action = {"label": "全抽選完了（結果確認へ）", "endpoint": "/mc/next_round", "class": "btn-success"}
+
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
@@ -182,7 +205,8 @@ async def status():
         "lottery_queue": lottery_queue,
         "lottery_results": lottery_results,
         "lottery_idx": lottery_idx,
-        "is_finished": (round_now >= 10 and phase == "nomination" and not current_noms and not lottery_queue)
+        "is_finished": (round_now >= 10 and phase == "nomination" and not current_noms and not lottery_queue),
+        "mc_action": mc_action  # ←【追加】
     }
 
 @app.post("/nominate")

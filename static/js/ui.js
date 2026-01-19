@@ -138,5 +138,29 @@ const POG_UI = {
                 waitDiv.classList.add('is-hidden'); waitDiv.classList.remove('is-visible');
             }
         }
+    },
+
+    // --- [UI Renderer] MC操作パネルの描画 (新規追加) ---
+    renderMCPanel(data) {
+        const btn = document.getElementById('mc_main_btn');
+        if (!btn || !data.mc_action) return;
+
+        const action = data.mc_action;
+        btn.innerText = action.label;
+        btn.disabled = action.disabled || false;
+        
+        // クラスの付け替え（btn-success, btn-primary等）
+        btn.className = 'mc_main_btn ' + (action.class || '');
+
+        // クリックイベントの再設定（以前のイベントをクリアして新しいエンドポイントを紐付け）
+        btn.onclick = () => {
+            if (action.endpoint) {
+                if (confirm(`${action.label} を実行しますか？`)) {
+                    POG_API.post(action.endpoint).then(res => {
+                        if (res) window.AppState.updateStatus();
+                    });
+                }
+            }
+        };
     }
 };
