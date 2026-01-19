@@ -184,12 +184,12 @@ async def status():
         if rev_idx < len(active_players) - 1:
             mc_action = {"label": "次の指名を公開", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
         else:
-            mc_action = {"label": "重複確認へ", "endpoint": "/mc/run_lottery", "class": "btn-primary"} 
+            mc_action = {"label": "指名結果確認", "endpoint": "/mc/run_lottery", "class": "btn-primary"} 
     elif phase == "summary":
         if lottery_queue:
-            mc_action = {"label": "抽選演出を開始", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
+            mc_action = {"label": "抽選開始", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
-            mc_action = {"label": "次の巡へ（全確定）", "endpoint": "/mc/next_round", "class": "btn-success"}
+            mc_action = {"label": "次の巡へ", "endpoint": "/mc/next_round", "class": "btn-success"}
     elif phase == "lottery_reveal":
         if lottery_idx + 1 < len(lottery_queue):
             mc_action = {"label": "次の抽選へ", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}

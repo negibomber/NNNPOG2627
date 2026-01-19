@@ -154,15 +154,21 @@ const POG_UI = {
 
         // クリックイベントの再設定（以前のイベントをクリアして新しいエンドポイントを紐付け）
         // クリックイベントの再設定
-        btn.onclick = () => {
+        btn.onclick = async () => {
             if (action.endpoint) {
-                // --- 読み込み表示処理（あるべき姿：フィードバックと連打防止） ---
+                // 1. 読み込み表示処理（フィードバックと連打防止）
                 const originalText = btn.innerText;
                 btn.innerText = "処理中...";
                 btn.disabled = true;
 
-                POG_API.postMCAction(action.endpoint).then(res => {
+                try {
+                    // 2. 非同期実行（あるべき姿：ネストを排した直列的な記述）
+                    const res = await POG_API.postMCAction(action.endpoint);
+                    
                     if (res) {
+                        // サーバー側のDB反映を待つための猶予
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
                         // グローバルに定義されている updateStatus を直接実行
                         if (typeof updateStatus === 'function') {
                             updateStatus();
@@ -170,14 +176,14 @@ const POG_UI = {
                             location.reload(); 
                         }
                     } else {
-                        // 失敗時は元の状態に戻す
                         btn.innerText = originalText;
                         btn.disabled = false;
                     }
-                }).catch(() => {
+                } catch (error) {
+                    console.error("[MC_ACTION_ERROR]", error);
                     btn.innerText = originalText;
                     btn.disabled = false;
-                });
+                }
             }
         };
     }

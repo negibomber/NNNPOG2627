@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.4";
+    const APP_VERSION = "0.3.5";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -74,6 +74,8 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null) {
+    if (window.AppState.isUpdating) return; 
+    window.AppState.isUpdating = true;
     debugLog(`[EVIDENCE_IN] updateStatus called.`);
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
@@ -105,7 +107,11 @@ async function updateStatus(preFetchedData = null) {
             return;
         }
         window.AppState.lastPhase = data.phase;
-    } catch (e) { console.error("Status update error:", e); }
+    } catch (e) {
+        console.error("Status update error:", e);
+    } finally {
+        window.AppState.isUpdating = false; // 必ずロックを解除
+    }
 }
 
 async function searchHorses() {
