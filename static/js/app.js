@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.6";
+    const APP_VERSION = "0.3.7";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -74,9 +74,14 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null) {
-    if (window.AppState.isUpdating) return; 
+    const isManual = (preFetchedData === null && !window.statusTimer); // 簡易判定
+    if (window.AppState.isUpdating) {
+        console.log(`[EVIDENCE_CAPTURE] updateStatus Blocked by Lock (isUpdating: true)`);
+        return; 
+    }
+    
     window.AppState.isUpdating = true;
-    debugLog(`[EVIDENCE_IN] updateStatus called.`);
+    console.log(`[EVIDENCE_CAPTURE] updateStatus Started. (Manual: ${!window.statusTimer})`);
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
         if (!data) return;

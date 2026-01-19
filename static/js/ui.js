@@ -168,13 +168,16 @@ const POG_UI = {
                     const res = await POG_API.postMCAction(action.endpoint);
                     
                     if (res) {
-                        // サーバー反映の確実性を高める猶予
+                        console.log(`[EVIDENCE_CAPTURE] 1. MC Action Response Received. Waiting 500ms...`);
                         await new Promise(resolve => setTimeout(resolve, 500));
                         
                         if (typeof updateStatus === 'function') {
-                            // ロックを一時解除して最新を強制取得
+                            console.log(`[EVIDENCE_CAPTURE] 2. Releasing Lock. isUpdating = false`);
                             window.AppState.isUpdating = false;
+                            
+                            console.log(`[EVIDENCE_CAPTURE] 3. Starting Manual updateStatus()`);
                             await updateStatus();
+                            console.log(`[EVIDENCE_CAPTURE] 5. Manual updateStatus() Finished.`);
                         } else {
                             location.reload(); 
                         }
