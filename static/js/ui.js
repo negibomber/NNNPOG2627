@@ -155,11 +155,9 @@ const POG_UI = {
         // クリックイベントの再設定（以前のイベントをクリアして新しいエンドポイントを紐付け）
         btn.onclick = () => {
             if (action.endpoint) {
-                if (confirm(`${action.label} を実行しますか？`)) {
-                    POG_API.post(action.endpoint).then(res => {
-                        if (res) window.AppState.updateStatus();
-                    });
-                }
+                POG_API.postMCAction(action.endpoint).then(res => {
+                    if (res) window.AppState.updateStatus();
+                });
             }
         };
     }
