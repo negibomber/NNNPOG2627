@@ -153,10 +153,30 @@ const POG_UI = {
         btn.className = 'mc_main_btn ' + (action.class || '');
 
         // クリックイベントの再設定（以前のイベントをクリアして新しいエンドポイントを紐付け）
+        // クリックイベントの再設定
         btn.onclick = () => {
             if (action.endpoint) {
+                // --- 読み込み表示処理（あるべき姿：フィードバックと連打防止） ---
+                const originalText = btn.innerText;
+                btn.innerText = "処理中...";
+                btn.disabled = true;
+
                 POG_API.postMCAction(action.endpoint).then(res => {
-                    if (res) window.AppState.updateStatus();
+                    if (res) {
+                        // グローバルに定義されている updateStatus を直接実行
+                        if (typeof updateStatus === 'function') {
+                            updateStatus();
+                        } else {
+                            location.reload(); 
+                        }
+                    } else {
+                        // 失敗時は元の状態に戻す
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }
+                }).catch(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                 });
             }
         };
