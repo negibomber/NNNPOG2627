@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.5";
+    const APP_VERSION = "0.3.6";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -211,6 +211,9 @@ window.doNominate = async function(name, mother) {
         }
     } catch (e) { 
         console.error("Nominate error:", e); 
+    } finally {
+        // --- 反映猶予：サーバーDBの書き換え完了を待つ ---
+        await new Promise(resolve => setTimeout(resolve, 500));
         window.AppState.isProcessingNomination = false;
         window.statusTimer = setInterval(updateStatus, 3000);
     }

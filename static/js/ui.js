@@ -162,25 +162,28 @@ const POG_UI = {
                 btn.disabled = true;
 
                 try {
-                    // 2. 非同期実行（あるべき姿：ネストを排した直列的な記述）
+                    // --- 修正の核心：自動更新をブロックするためにロックをかける ---
+                    window.AppState.isUpdating = true;
+
                     const res = await POG_API.postMCAction(action.endpoint);
                     
                     if (res) {
-                        // サーバー側のDB反映を待つための猶予
+                        // サーバー反映の確実性を高める猶予
                         await new Promise(resolve => setTimeout(resolve, 500));
                         
-                        // グローバルに定義されている updateStatus を直接実行
                         if (typeof updateStatus === 'function') {
-                            updateStatus();
+                            // ロックを一時解除して最新を強制取得
+                            window.AppState.isUpdating = false;
+                            await updateStatus();
                         } else {
                             location.reload(); 
                         }
-                    } else {
-                        btn.innerText = originalText;
-                        btn.disabled = false;
                     }
                 } catch (error) {
                     console.error("[MC_ACTION_ERROR]", error);
+                } finally {
+                    // 失敗・成功を問わず、最終的にロックを解除しUIを復帰
+                    window.AppState.isUpdating = false;
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }
