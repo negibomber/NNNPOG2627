@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.3.0
+   POG Main Application Module (app.js) - Ver.0.3.1
    ========================================================================== */
 
 const DEBUG_MODE = true;
@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.0";
+    const APP_VERSION = "0.3.1";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -297,9 +297,15 @@ window.downloadCSV = function() {
     data.all_nominations.forEach(n => {
         if (n && n.is_winner === 1) rows.push([n.player_name, n.round, n.horse_name, n.horses?.father_name || "", n.horses?.mother_name || n.mother_name || ""]);
     });
-    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+
+    // 文字化け対策：UTF-8 BOM (0xEF, 0xBB, 0xBF) を追加
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const csvString = rows.map(e => e.join(",")).join("\n");
+    const blob = new Blob([bom, csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("href", url);
     link.setAttribute("download", `pog_result_round_${data.round}.csv`);
     document.body.appendChild(link);
     link.click();
