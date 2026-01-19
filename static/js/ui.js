@@ -162,8 +162,11 @@ const POG_UI = {
                 btn.disabled = true;
 
                 try {
-                    // --- 修正の核心：自動更新をブロックするためにロックをかける ---
                     window.AppState.isUpdating = true;
+                    if (window.statusTimer) {
+                        clearInterval(window.statusTimer);
+                        window.statusTimer = null;
+                    }
 
                     const res = await POG_API.postMCAction(action.endpoint);
                     
@@ -173,11 +176,8 @@ const POG_UI = {
                         
                         if (typeof updateStatus === 'function') {
                             console.log(`[EVIDENCE_CAPTURE] 2. Releasing Lock. isUpdating = false`);
-                            window.AppState.isUpdating = false;
-                            
-                            console.log(`[EVIDENCE_CAPTURE] 3. Starting Manual updateStatus()`);
+                            // 反映が終わるまで isUpdating は true のまま維持
                             await updateStatus();
-                            console.log(`[EVIDENCE_CAPTURE] 5. Manual updateStatus() Finished.`);
                         } else {
                             location.reload(); 
                         }
@@ -185,8 +185,11 @@ const POG_UI = {
                 } catch (error) {
                     console.error("[MC_ACTION_ERROR]", error);
                 } finally {
-                    // 失敗・成功を問わず、最終的にロックを解除しUIを復帰
                     window.AppState.isUpdating = false;
+                    // ★タイマーを安全に再開
+                    if (!window.statusTimer) {
+                        window.statusTimer = setInterval(updateStatus, 3000);
+                    }
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }

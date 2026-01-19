@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.7";
+    const APP_VERSION = "0.3.8";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -187,7 +187,11 @@ window.doNominate = async function(name, mother) {
     if (window.searchController) window.searchController.abort();
     window.AppState.isProcessingNomination = true; 
 
-    if (window.statusTimer) { clearInterval(window.statusTimer); window.statusTimer = null; }
+    // 安全にタイマーを停止
+    if (window.statusTimer) { 
+        clearInterval(window.statusTimer); 
+        window.statusTimer = null; 
+    }
     try {
         if (!confirm(`${name} を指名しますか？`)) {
             window.AppState.isProcessingNomination = false;
