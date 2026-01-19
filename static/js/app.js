@@ -5,8 +5,11 @@ const debugLog = (msg, data = null) => {
         else console.log(`[POG_DEBUG] ${msg}`);
     }
 };
+/* ==========================================================================
+   1. [Core] App Initialization & State Definition
+   ========================================================================== */
 (function() {
-    const APP_VERSION = "0.2.7";
+    const APP_VERSION = "0.2.8";
     console.log(`--- POG DEBUG START (Ver.${APP_VERSION}) ---`);
     console.log("1. スクリプトの読み込みを確認しました.");
 
@@ -36,7 +39,7 @@ const debugLog = (msg, data = null) => {
             fInput.addEventListener('input', (e) => {
                 // 【修正】Firefox対策：通信中、または指名処理(confirm表示中)は検索を完全にブロック
                 // さらに、現在フォーカスが「指名する」ボタンにある場合（クリックの瞬間）も検索を阻止する
-                if (window.isSearching || window.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
+                if (window.AppState.isSearching || window.AppState.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
                     console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
@@ -45,7 +48,7 @@ const debugLog = (msg, data = null) => {
             });
             mInput.addEventListener('input', (e) => {
                 // 【修正】Firefox対策
-                if (window.isSearching || window.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
+                if (window.AppState.isSearching || window.AppState.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
                     console.log("-> 入力検知しましたが、処理中のため検索をスキップします.");
                     return;
                 }
@@ -69,12 +72,37 @@ const debugLog = (msg, data = null) => {
     window.statusTimer = setInterval(updateStatus, 3000);
 })();
 
-// グローバルスコープで管理
-window.lastPhase = "";
-window.lastSearchQuery = ""; // 【追加】重複検索・再描画防止用
-window.isSearching = false;  // 【追加】通信中フラグ
-window.isProcessingNomination = false; // 【追加】指名処理中(confirm表示中)フラグ
+/* ==========================================================================
+   2. [State] Global State Management
+   ========================================================================== */
+// --- [State Management] アプリケーションの状態を一括管理 ---
+window.AppState = {
+    lastPhase: "",
+    lastSearchQuery: "",        // 重複検索・再描画防止用
+    isSearching: false,         // 検索通信中フラグ
+    isProcessingNomination: false, // 指名処理中(confirm表示中)フラグ
+    latestData: null,           // 最新のサーバーレスポンス
+    lastStatusFingerprint: ""   // 再描画判定用
+};
 
+/**
+ * フェーズ遷移に伴うリロードが必要か判定する
+ * 【聖約】場当たり的な対応をせず、遷移パターンに基づき「あるべき挙動」を定義
+ */
+function shouldReloadPage(oldPhase, newPhase) {
+    if (!oldPhase || oldPhase === "" || oldPhase === newPhase) return false;
+    
+    // 1. 抽選終了(lottery)から次の巡(nomination)へ進む時
+    if (oldPhase === 'lottery' && newPhase === 'nomination') return true;
+    
+    // 2. 特殊ケース：ドラフト終了(finished)への移行
+    if (newPhase === 'finished' || oldPhase === 'DRAFT_FINISHED') return true;
+
+    return false;
+}
+/* ==========================================================================
+   3. [Logic] Data Fetching & Core Logic
+   ========================================================================== */
 // --- ステータス更新 (既存機能維持) ---
 async function updateStatus(preFetchedData = null) {
     debugLog(`[EVIDENCE_IN] updateStatus called. Source: ${preFetchedData ? 'Argument' : 'Fetch'}, Phase in Arg: ${preFetchedData?.phase}`);
@@ -94,7 +122,7 @@ async function updateStatus(preFetchedData = null) {
             if (!res.ok) return;
             data = await res.json();
         }
-        window.latestStatusData = data; // 【追加】他関数から参照可能にする
+        window.AppState.latestData = data; // 状態を集約
         const phase = data.phase;
 
         const updateText = (id, text) => {
@@ -117,221 +145,29 @@ async function updateStatus(preFetchedData = null) {
             updateText('phase_label', phaseMap[currentPhase] || currentPhase);
         }
 
-        // 指名人数の更新を優先（MCボタンのエラーに巻き込まれないようにする）
-        const counterEl = document.getElementById('status_counter');
-        const currentRoundInt = parseInt(data.round);
-        const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
-
-        if (counterEl) {
-            // 証拠収集用ログ：2巡目開始時の計算の元ネタを確認
-            console.log(`[EVIDENCE_LOG] Round:${currentRoundInt}, TotalPlayers:${data.total_players}, AllNomsLen:${allNoms.length}`);
-            console.log(`[EVIDENCE_LOG] 2巡目当選者リスト:`, allNoms.filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1));
-            // 今巡ですでに当選(1)している人数をカウント
-            const currentWinnersCount = new Set(allNoms
-                .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1)
-                .map(n => n.player_name)).size;
-            
-            // 指名すべき総人数から、今巡の当選者を引く
-            const realTargetCount = (data.total_players || 0);
-
-            const nominatedPlayers = new Set(allNoms.filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0).map(n => n.player_name));
-            const winners = new Set(allNoms.filter(n => parseInt(n.round) === currentRoundInt && n.is_winner === 1).map(n => n.player_name));
-            const waitingPlayers = data.all_players.filter(p => !winners.has(p) && !nominatedPlayers.has(p));
-
-            counterEl.innerText = `指名状況: ${nominatedPlayers.size} / ${realTargetCount} 人`;
-
-            const waitDiv = document.getElementById('waiting_list_bar');
-            if (waitDiv) {
-                if (waitingPlayers.length > 0 && data.phase === 'nomination') {
-                    waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
-                    waitDiv.classList.add('is-visible'); waitDiv.classList.remove('is-hidden');
-                } else {
-                    waitDiv.classList.add('is-hidden'); waitDiv.classList.remove('is-visible');
-                }
-            }
-        }
-
-        const allStatusDiv = document.getElementById('all_status_list');
-        if (allStatusDiv && data.all_players && data.all_nominations) {
-            // 【修正】データに変化がない場合は重いDOM操作(innerHTML)をスキップする
-            const currentFingerprint = JSON.stringify(data.all_nominations) + data.phase + data.reveal_index;
-            if (window.lastStatusFingerprint === currentFingerprint) {
-                // 変化なし
-            } else {
-                window.lastStatusFingerprint = currentFingerprint;
-                const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
-                let html = '';
-
-                data.all_players.forEach(playerName => {
-                    html += `<div class="card">`;
-                    html += `<h3 class="card-title-border">${playerName}</h3>`;
-                    html += `<table class="status-table">`;
-                    html += `<thead><tr><th>巡</th><th>馬名 / 血統</th></tr></thead>`;
-
-                    const playerNoms = data.all_nominations
-                        .filter(n => n.player_name === playerName)
-                        .sort((a, b) => a.round - b.round);
-
-                    if (playerNoms.length === 0) {
-                        html += `<tr><td colspan="2" class="status-empty-msg">まだ指名がありません</td></tr>`;
-                    } else {
-                        playerNoms.forEach(n => {
-                            // 1. 基本情報の取得
-                            const isMe = (playerName === me);
-                            const isCurrentRound = (n.round === data.round);
-                            const isUnconfirmed = (n.is_winner === 0);
-
-                            // 2. 「他人の未確定な今巡の指名」を隠すべきかどうかの判定（ステータスベース）
-                            let shouldHide = false;
-                            let hideMsg = '??? (未公開)';
-
-                            if (!isMe && isCurrentRound && isUnconfirmed) {
-                                if (data.phase === 'nomination') {
-                                    shouldHide = true;
-                                    hideMsg = '??? (指名済み)';
-                                } else if (data.phase === 'reveal') {
-                                    const playerIdx = data.all_players.indexOf(playerName);
-                                    if (playerIdx > data.reveal_index) {
-                                        shouldHide = true;
-                                        hideMsg = '??? (公開待ち)';
-                                    }
-                                } else if (['summary', 'lottery_reveal'].includes(data.phase)) {
-                                    shouldHide = true;
-                                    hideMsg = '??? (抽選待ち)';
-                                }
-                            }
-
-                            // 3. 表示用データの確定
-                            const hName = shouldHide ? hideMsg : n.horse_name;
-                            const father = n.horses?.father_name || '-';
-                            const mother = n.horses?.mother_name || n.mother_name || '-';
-                            const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
-
-                            // 4. HTML組み立て（フラグ一つで馬名も血統も制御）
-                            html += `<tr>`;
-                            html += `<td class="col-round">${n.round}</td>`;
-                            html += `<td class="col-horse ${winStatusClass}">`;
-                            html += `<div>${hName}</div>`;
-                            if (!shouldHide) {
-                                html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
-                            }
-                            html += `</td></tr>`;
-                        });
-                    }
-                    html += '</table></div>';
-                });
-                allStatusDiv.innerHTML = html;
-            }
-        }
+        // 指名状況カウンターと待機リストの描画（リファクタリング済み）
+        renderStatusCounter(data);
+        // プレイヤーカード一覧の描画（リファクタリング済み）
+        renderPlayerCards(data);
 
         // 最後に依存度の低いMCボタン更新を実行
-        console.log(`[TRACE_3] calling updateMCButtons now`); // 追加
+        console.log(`[TRACE_3] calling updateMCButtons now`);
         updateMCButtons(data);
 
-        // 【修正】リロードが必要なのは「指名終了時」と「次の巡へ進む時」だけに限定し、チラつきを防止
-        if (window.lastPhase !== undefined && window.lastPhase !== "" && window.lastPhase !== data.phase) {
-            const needReload = (window.lastPhase === 'lottery' || data.phase === 'nomination');
-            window.lastPhase = data.phase;
-            if (needReload) {
-                console.log("[PHASE_CHANGE] リロードを実行します");
-                location.reload();
-                return;
-            }
-            console.log("[PHASE_CHANGE] フェーズが切り替わりました（リロードなし）");
+        // フェーズ遷移判定とリロード処理（集約された状態を利用）
+        if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
+            console.log(`[PHASE_CHANGE] Reloading: ${window.AppState.lastPhase} -> ${data.phase}`);
+            window.AppState.lastPhase = data.phase;
+            location.reload();
+            return;
         }
-        window.lastPhase = data.phase;
+        window.AppState.lastPhase = data.phase;
 
         // ブラウザコンソールで同期状態を確認できるようにする
         console.debug(`[SYNC] Phase:${data.phase}, RevealIdx:${data.reveal_index}, ActiveCount:${data.total_players}`);
 
-// --- 抽選まとめ・演出画面の表示制御 ---
-        const summaryArea = document.getElementById('lottery_summary_area');
-        const lotRevealArea = document.getElementById('lottery_reveal_area');
-        const revealArea = document.getElementById('reveal_area');
-
-        // フェーズに応じたエリアの排他表示
-        console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
-        if (DEBUG_MODE) {
-            console.log(`[TRACE_PATH] 2. Checking MC Button existence... Target ID: mc_main_btn`);
-        }
-if (summaryArea) {
-            if (data.phase === 'summary') { summaryArea.classList.add('is-visible'); summaryArea.classList.remove('is-hidden'); }
-            else { summaryArea.classList.add('is-hidden'); summaryArea.classList.remove('is-visible'); }
-        }
-        if (lotRevealArea) {
-            if (data.phase === 'lottery_reveal') { lotRevealArea.classList.add('is-visible'); lotRevealArea.classList.remove('is-hidden'); }
-            else { lotRevealArea.classList.add('is-hidden'); lotRevealArea.classList.remove('is-visible'); }
-        }
-        if (revealArea) {
-            if (data.phase === 'reveal' && data.reveal_data) { revealArea.classList.add('is-visible'); revealArea.classList.remove('is-hidden'); }
-            else { revealArea.classList.add('is-hidden'); revealArea.classList.remove('is-visible'); }
-        }
-        if (data.phase === 'summary' && summaryArea) {
-            const listEl = document.getElementById('lottery_summary_list');
-            const horseGroups = {};
-            data.all_nominations.filter(n => n.round === data.round && n.is_winner === 0).forEach(n => {
-                if (!horseGroups[n.horse_name]) horseGroups[n.horse_name] = [];
-                horseGroups[n.horse_name].push(n.player_name);
-            });
-
-            let singleHtml = '<div class="summary-section"><h4 class="summary-label-success">【単独確定】</h4><div class="summary-list-success">';
-            let multiHtml = '<div class="summary-section"><h4 class="summary-label-danger">【重複・抽選対象】</h4>';
-            let hasMulti = false;
-            let hasSingle = false;
-
-            Object.keys(horseGroups).forEach(h => {
-                const pts = horseGroups[h];
-                if (pts.length > 1) {
-                    hasMulti = true;
-                    multiHtml += `<div class="summary-card-danger">`;
-                    multiHtml += `<div class="summary-horse-name">${h}</div>`;
-                    multiHtml += `<div class="summary-participants">指名者: ${pts.join(' / ')}</div></div>`;
-                } else {
-                    hasSingle = true;
-                    singleHtml += `<div class="summary-item-success"><strong>${h}</strong> <span class="summary-item-sub">(${pts[0]})</span></div>`;
-                }
-            });
-
-            singleHtml += '</div></div>';
-            multiHtml += '</div>';
-
-            listEl.innerHTML = (hasMulti ? multiHtml : "") + (hasSingle ? singleHtml : "");
-        }
-
-        if (data.phase === 'lottery_reveal' && lotRevealArea) {
-            const queue = data.lottery_queue || [];
-            const idx = data.lottery_idx || 0;
-            const resMap = data.lottery_results || {};
-            if (queue[idx]) {
-                const hName = queue[idx];
-                const res = resMap[hName];
-                document.getElementById('lot_horse_name').innerText = hName;
-                document.getElementById('lot_candidate_list').innerText = `候補: ${res.participants.join(', ')}`;
-                document.getElementById('lot_result_box').classList.add('is-visible');
-                document.getElementById('lot_winner_name').innerText = res.winner_name;
-            }
-        }
-
-        if (revealArea) {
-            if (data.phase === 'reveal' && data.reveal_data) {
-                revealArea.classList.add('is-visible');
-                revealArea.classList.remove('is-hidden');
-                const updateRev = (id, val) => {
-                    const el = document.getElementById(id);
-                    if (el) el.innerText = (val !== undefined && val !== null) ? val : "";
-                };
-                updateRev('reveal_round', data.reveal_data.round);
-                updateRev('reveal_player', data.reveal_data.player);
-                updateRev('reveal_horse', data.reveal_data.horse);
-                updateRev('reveal_father', data.reveal_data.father);
-                updateRev('reveal_mother', data.reveal_data.mother);
-                updateRev('reveal_stable', data.reveal_data.stable);
-                updateRev('reveal_breeder', data.reveal_data.breeder);
-            } else {
-                revealArea.classList.add('is-hidden');
-            }
-        }
-
+        // フェーズに応じた表示エリアの制御（リファクタリング済み）
+        renderPhaseUI(data);
     } catch (e) { console.error("Status update error:", e); }
 }
 
@@ -355,7 +191,7 @@ async function searchHorses() {
 
     // 【修正】検索語に変化がない、または通信中、または指名処理中の場合は処理をスキップ
     // これにより、Firefoxでボタンクリック時に「ボタンが消えて再描画される」のを防ぎます
-    if (currentQuery === window.lastSearchQuery || window.isSearching || window.isProcessingNomination) {
+    if (currentQuery === window.AppState.lastSearchQuery || window.AppState.isSearching || window.AppState.isProcessingNomination) {
         console.log("SEARCH: スキップ (変化なし または 処理中)");
         return;
     }
@@ -364,13 +200,13 @@ async function searchHorses() {
 
     if (f.length < 2 && m.length < 2) {
         resultsEl.innerHTML = "";
-        window.lastSearchQuery = currentQuery;
+        window.AppState.lastSearchQuery = currentQuery;
         return;
     }
 
     // 状態を更新
-    window.lastSearchQuery = currentQuery;
-    window.isSearching = true;
+    window.AppState.lastSearchQuery = currentQuery;
+    window.AppState.isSearching = true;
 
     console.log(`SEARCH: サーバーへリクエスト送信: /search_horses?f=${f}&m=${m}`);
     resultsEl.innerHTML = '<div class="search-loading">[DEBUG] サーバー通信中...</div>';
@@ -383,9 +219,9 @@ async function searchHorses() {
         resultsEl.innerHTML = ""; // 既存の結果をクリア
 
         if (horses && horses.length > 0) {
-            // 【修正】保存された latestStatusData を使用して判定
+            // 【修正】保存された latestData を使用して判定
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
-            const d = window.latestStatusData || {};
+            const d = window.AppState.latestData || {};
             const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
             const isMeWinner = !!myNomination;
             // デバッグ情報表示
@@ -436,7 +272,7 @@ async function searchHorses() {
                 btn.onmousedown = (e) => {
                     console.log(`[EVENT_LOG] mousedown検知: 馬名="${h.horse_name}"`);
                     // ボタンを押した瞬間に「指名処理中」フラグを立てて、inputイベントを封じる
-                    window.isProcessingNomination = true;
+                    window.AppState.isProcessingNomination = true;
                 };
 
                 btn.onmouseup = () => console.log(`[EVENT_LOG] mouseup検知`);
@@ -461,7 +297,7 @@ async function searchHorses() {
         resultsEl.innerHTML = `<div class="search-error">通信エラー: ${e.message}</div>`;
     } finally {
         // 通信完了
-        window.isSearching = false;
+        window.AppState.isSearching = false;
     }
 }
 
@@ -469,7 +305,7 @@ async function searchHorses() {
 window.doNominate = async function(name, mother, horse_id) {
     // ボタンが押されたら即座に進行中の検索通信を強制切断する
     if (window.searchController) window.searchController.abort();
-    window.isProcessingNomination = true; 
+    window.AppState.isProcessingNomination = true; 
 
     console.log(`[NOMINATE_DEBUG] 関数開始: ${name}`);
     // 【重要】ダイアログ表示前にステータス更新タイマーを完全に停止させ、割り込みを防ぐ
@@ -484,7 +320,7 @@ window.doNominate = async function(name, mother, horse_id) {
         console.log(`[NOMINATE_DEBUG] confirm結果: ${confirmed}`);
         
         if (!confirmed) {
-            window.isProcessingNomination = false; // キャンセル時はフラグ解除
+            window.AppState.isProcessingNomination = false; // キャンセル時はフラグ解除
             // タイマーを再開
             if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             return;
@@ -507,7 +343,7 @@ window.doNominate = async function(name, mother, horse_id) {
         } catch(e) {
             // JSONとして解釈できない（＝サーバーがクラッシュしてHTMLを返した）場合
             alert(`致命的エラーが発生しました(HTTP ${res.status})\n\n【サーバーの応答内容】\n${resText.substring(0, 300)}`);
-            window.isProcessingNomination = false;
+            window.AppState.isProcessingNomination = false;
             if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             return;
         }
@@ -518,12 +354,12 @@ window.doNominate = async function(name, mother, horse_id) {
             location.reload();
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
-            window.isProcessingNomination = false; // エラー時もフラグ解除
+            window.AppState.isProcessingNomination = false; // エラー時もフラグ解除
             if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
         }
     } catch (e) { 
         console.error("Nominate error:", e); 
-        window.isProcessingNomination = false;
+        window.AppState.isProcessingNomination = false;
         if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
     }
 }
@@ -545,7 +381,7 @@ async function mcAction(url, method = 'POST') {
         const res = await fetch(url, { method: method });
         const newData = await res.json();
         debugLog("[EVIDENCE_MC] MC Action Result Data:", newData);
-        window.lastPhase = newData.phase;
+        window.AppState.lastPhase = newData.phase;
         await updateStatus(newData);
     } catch (e) {
         console.error("MC Action Error:", e);
@@ -689,10 +525,192 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
+/* ==========================================================================
+   4. [UI] Renderer & Display Control
+   ========================================================================== */
+// --- [UI Renderer] プレイヤーカード一覧の生成 ---
+function renderPlayerCards(data) {
+    const allStatusDiv = document.getElementById('all_status_list');
+    if (!allStatusDiv || !data.all_players || !data.all_nominations) return;
 
+    // 指紋（Fingerprint）による再描画スキップ判定
+    const currentFingerprint = JSON.stringify(data.all_nominations) + data.phase + data.reveal_index;
+    if (window.AppState.lastStatusFingerprint === currentFingerprint) return;
+    window.AppState.lastStatusFingerprint = currentFingerprint;
+
+    const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
+    let html = '';
+
+    data.all_players.forEach(playerName => {
+        html += `<div class="card">`;
+        html += `<h3 class="card-title-border">${playerName}</h3>`;
+        html += `<table class="status-table">`;
+        html += `<thead><tr><th>巡</th><th>馬名 / 血統</th></tr></thead>`;
+
+        const playerNoms = data.all_nominations
+            .filter(n => n.player_name === playerName)
+            .sort((a, b) => a.round - b.round);
+
+        if (playerNoms.length === 0) {
+            html += `<tr><td colspan="2" class="status-empty-msg">まだ指名がありません</td></tr>`;
+        } else {
+            playerNoms.forEach(n => {
+                const isMe = (playerName === me);
+                const isCurrentRound = (n.round === data.round);
+                const isUnconfirmed = (n.is_winner === 0);
+
+                let shouldHide = false;
+                let hideMsg = '??? (未公開)';
+
+                if (!isMe && isCurrentRound && isUnconfirmed) {
+                    if (data.phase === 'nomination') {
+                        shouldHide = true;
+                        hideMsg = '??? (指名済み)';
+                    } else if (data.phase === 'reveal') {
+                        const playerIdx = data.all_players.indexOf(playerName);
+                        if (playerIdx > data.reveal_index) {
+                            shouldHide = true;
+                            hideMsg = '??? (公開待ち)';
+                        }
+                    } else if (['summary', 'lottery_reveal'].includes(data.phase)) {
+                        shouldHide = true;
+                        hideMsg = '??? (抽選待ち)';
+                    }
+                }
+
+                const hName = shouldHide ? hideMsg : n.horse_name;
+                const father = n.horses?.father_name || '-';
+                const mother = n.horses?.mother_name || n.mother_name || '-';
+                const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
+
+                html += `<tr>`;
+                html += `<td class="col-round">${n.round}</td>`;
+                html += `<td class="col-horse ${winStatusClass}">`;
+                html += `<div>${hName}</div>`;
+                if (!shouldHide) {
+                    html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
+                }
+                html += `</td></tr>`;
+            });
+        }
+        html += '</table></div>';
+    });
+    allStatusDiv.innerHTML = html;
+}
+
+// --- [UI Renderer] フェーズ別表示エリアの制御 ---
+function renderPhaseUI(data) {
+    const summaryArea = document.getElementById('lottery_summary_area');
+    const lotRevealArea = document.getElementById('lottery_reveal_area');
+    const revealArea = document.getElementById('reveal_area');
+
+    if (DEBUG_MODE) {
+        console.log(`[DISPLAY_CHECK] phase:${data.phase}, summaryArea:${!!summaryArea}, revealArea:${!!revealArea}`);
+    }
+
+    // エリアの排他表示制御
+    const toggleArea = (el, show) => {
+        if (!el) return;
+        if (show) { el.classList.add('is-visible'); el.classList.remove('is-hidden'); }
+        else { el.classList.add('is-hidden'); el.classList.remove('is-visible'); }
+    };
+
+    toggleArea(summaryArea, data.phase === 'summary');
+    toggleArea(lotRevealArea, data.phase === 'lottery_reveal');
+    toggleArea(revealArea, data.phase === 'reveal' && !!data.reveal_data);
+
+    // 重複確認（summary）画面の描画
+    if (data.phase === 'summary' && summaryArea) {
+        const listEl = document.getElementById('lottery_summary_list');
+        const horseGroups = {};
+        data.all_nominations.filter(n => n.round === data.round && n.is_winner === 0).forEach(n => {
+            if (!horseGroups[n.horse_name]) horseGroups[n.horse_name] = [];
+            horseGroups[n.horse_name].push(n.player_name);
+        });
+
+        let singleHtml = '<div class="summary-section"><h4 class="summary-label-success">【単独確定】</h4><div class="summary-list-success">';
+        let multiHtml = '<div class="summary-section"><h4 class="summary-label-danger">【重複・抽選対象】</h4>';
+        let hasMulti = false, hasSingle = false;
+
+        Object.keys(horseGroups).forEach(h => {
+            const pts = horseGroups[h];
+            if (pts.length > 1) {
+                hasMulti = true;
+                multiHtml += `<div class="summary-card-danger"><div class="summary-horse-name">${h}</div><div class="summary-participants">指名者: ${pts.join(' / ')}</div></div>`;
+            } else {
+                hasSingle = true;
+                singleHtml += `<div class="summary-item-success"><strong>${h}</strong> <span class="summary-item-sub">(${pts[0]})</span></div>`;
+            }
+        });
+        listEl.innerHTML = (hasMulti ? multiHtml + '</div>' : "") + (hasSingle ? singleHtml + '</div></div>' : "");
+    }
+
+    // 抽選演出（lottery_reveal）画面の描画
+    if (data.phase === 'lottery_reveal' && lotRevealArea) {
+        const queue = data.lottery_queue || [], idx = data.lottery_idx || 0, resMap = data.lottery_results || {};
+        if (queue[idx]) {
+            const hName = queue[idx], res = resMap[hName];
+            document.getElementById('lot_horse_name').innerText = hName;
+            document.getElementById('lot_candidate_list').innerText = `候補: ${res.participants.join(', ')}`;
+            document.getElementById('lot_result_box').classList.add('is-visible');
+            document.getElementById('lot_winner_name').innerText = res.winner_name;
+        }
+    }
+
+    // 指名公開（reveal）画面の描画
+    if (data.phase === 'reveal' && data.reveal_data && revealArea) {
+        const updateRev = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val ?? ""; };
+        ['round', 'player', 'horse', 'father', 'mother', 'stable', 'breeder'].forEach(key => {
+            updateRev(`reveal_${key}`, data.reveal_data[key]);
+        });
+    }
+}
+
+// --- [UI Renderer] 指名状況カウンターと待機リストの描画 ---
+function renderStatusCounter(data) {
+    const counterEl = document.getElementById('status_counter');
+    const waitDiv = document.getElementById('waiting_list_bar');
+    if (!counterEl) return;
+
+    const currentRoundInt = parseInt(data.round);
+    const allNoms = Array.isArray(data.all_nominations) ? data.all_nominations : [];
+    
+    // 指名済み（is_winner === 0）のプレイヤーをカウント
+    const nominatedPlayers = new Set(allNoms
+        .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 0)
+        .map(n => n.player_name));
+
+    // すでに当選（is_winner === 1）しているプレイヤーを特定
+    const winners = new Set(allNoms
+        .filter(n => n && parseInt(n.round) === currentRoundInt && n.is_winner === 1)
+        .map(n => n.player_name));
+
+    // 指名すべき総人数（現時点ではシンプルに参加者総数）
+    const realTargetCount = (data.total_players || 0);
+
+    counterEl.innerText = `指名状況: ${nominatedPlayers.size} / ${realTargetCount} 人`;
+
+    // 待機リスト（まだ指名も当選もしていない人）の更新
+    if (waitDiv) {
+        const waitingPlayers = data.all_players.filter(p => !winners.has(p) && !nominatedPlayers.has(p));
+        if (waitingPlayers.length > 0 && data.phase === 'nomination') {
+            waitDiv.innerText = `指名検討中: ${waitingPlayers.join(', ')}`;
+            waitDiv.classList.add('is-visible'); waitDiv.classList.remove('is-hidden');
+        } else {
+            waitDiv.classList.add('is-hidden'); waitDiv.classList.remove('is-visible');
+        }
+    }
+
+    if (DEBUG_MODE) {
+        console.log(`[COUNTER_LOG] Round:${currentRoundInt}, Target:${realTargetCount}, Nominated:${nominatedPlayers.size}`);
+    }
+}
+/* ==========================================================================
+   5. [Utility] Export & Shared Tools
+   ========================================================================== */
 // CSV出力機能：確定した全指名リストを保存
 window.downloadCSV = function() {
-    const data = window.latestStatusData; 
+    const data = window.AppState.latestData; 
     if (!data || !data.all_nominations) {
         alert("データがロードされていません。しばらく待ってから再度お試しください。");
         return;
