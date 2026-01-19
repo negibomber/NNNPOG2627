@@ -175,9 +175,10 @@ const POG_UI = {
                         await new Promise(resolve => setTimeout(resolve, 500));
                         
                         if (typeof updateStatus === 'function') {
-                            console.log(`[EVIDENCE_CAPTURE] 2. Releasing Lock. isUpdating = false`);
-                            // 反映が終わるまで isUpdating は true のまま維持
-                            await updateStatus();
+                            // ロックを解除せず、強制実行フラグ(true)を渡す
+                            // これにより、この呼び出しが終わるまで isUpdating は true のまま維持される
+                            await updateStatus(null, true);
+                            console.log(`[EVIDENCE_CAPTURE] 5. Manual updateStatus() Finished.`);
                         } else {
                             location.reload(); 
                         }

@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.8";
+    const APP_VERSION = "0.3.9";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -73,9 +73,9 @@ function shouldReloadPage(oldPhase, newPhase) {
 /* ==========================================================================
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
-async function updateStatus(preFetchedData = null) {
-    const isManual = (preFetchedData === null && !window.statusTimer); // 簡易判定
-    if (window.AppState.isUpdating) {
+async function updateStatus(preFetchedData = null, force = false) {
+    const isManual = (preFetchedData === null && !window.statusTimer) || force;
+    if (window.AppState.isUpdating && !force) {
         console.log(`[EVIDENCE_CAPTURE] updateStatus Blocked by Lock (isUpdating: true)`);
         return; 
     }
