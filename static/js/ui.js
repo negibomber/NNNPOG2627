@@ -141,12 +141,12 @@ const POG_UI = {
     },
 
     // --- [UI Renderer] MC操作パネルの描画 (新規追加) ---
-    renderMCPanel(data) {
+    renderMCPanel(data, isManual = false) {
         const btn = document.getElementById('mc_main_btn');
         if (!btn || !data.mc_action) return;
 
-        // ★[EVIDENCE] MC操作中（処理中...）は、外部からの描画上書きを禁止する
-        if (window.AppState.isUpdating) return;
+        // 【証拠に基づき検問】MC操作中かつ、それが「タイマー等の外部割り込み」の場合のみ描画をスキップ
+        if (window.AppState.isUpdating && !isManual) return;
 
         const action = data.mc_action;
         console.log(`[EVIDENCE_CAPTURE] Drawing MC Button: "${action.label}" (Phase: ${data.phase})`);

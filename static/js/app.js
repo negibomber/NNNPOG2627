@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.11";
+    const APP_VERSION = "0.3.12";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -103,8 +103,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_UI.renderStatusCounter(data);
         POG_UI.renderPlayerCards(data);
         POG_UI.renderPhaseUI(data);
-
-        POG_UI.renderMCPanel(data);
+        POG_UI.renderMCPanel(data, isManual);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             window.AppState.lastPhase = data.phase;
