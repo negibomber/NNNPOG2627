@@ -564,70 +564,106 @@ header {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
-/* --- 14. 演出専用レイヤー（Theater Layer） --- */
+/* --- 14. 演出専用レイヤー（Theater Layer） - Ver.0.4.2 全面刷新 --- */
 #theater_layer {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.95); /* 深い黒背景 */
-    z-index: 9999; /* 全ての要素の最前面 */
-    display: none; /* 初期状態は非表示 */
+    height: 100vh; /* 画面の高さ100% */
+    background: rgba(0, 0, 0, 0.98); /* より重厚な黒 */
+    z-index: 9999;
+    display: none; /* JSでflexに切り替え */
     flex-direction: column;
     justify-content: center;
     align-items: center;
     color: #f8fafc;
-    font-family: 'serif'; /* ドラフト会議らしい重厚なフォント（環境依存） */
+    font-family: 'serif';
+    overflow: hidden; /* スクロール禁止 */
 }
 
-/* 演出カードの基本スタイル */
+/* 演出カード：画面の高さに合わせて要素を等間隔に配置 */
 .theater-card {
-    min-height: 500px; /* 内容に合わせて調整してください */
+    width: 90%;
+    max-width: 900px;
+    height: 85vh; /* 画面高の85%を使用して上下に余白を確保 */
     display: flex;
     flex-direction: column;
-    justify-content: flex-start; /* 上から順に詰める */
+    justify-content: space-between; /* 要素を上下いっぱいに分散 */
     align-items: center;
-}
-/* 非表示でも場所は確保する（ガタつき防止） */
-.draft-area {
-    opacity: 0;
-    transition: opacity 0.5s ease;
-    width: 100%;
-}
-.draft-area.is-visible {
-    opacity: 1;
-}
-/* ドラフト会議風の文字装飾 */
-.draft-title {
-    font-size: 1.2rem;
-    color: #d4af37;
-    margin-bottom: 20px;
-    letter-spacing: 0.3rem;
-    border-bottom: 1px solid #d4af37;
-    display: inline-block;
-    padding-bottom: 5px;
+    padding: 40px 0;
+    box-sizing: border-box;
 }
 
+/* ドラフト会議風のタイトル（最上部固定） */
+.draft-title {
+    font-size: 1.5rem;
+    color: #d4af37;
+    letter-spacing: 0.5rem;
+    border-bottom: 2px solid #d4af37;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    flex-shrink: 0; /* 縮ませない */
+}
+
+/* 各項目エリア：flex: 1 で余白を均等に持ち、場所を固定 */
+.draft-area {
+    width: 100%;
+    flex: 1; /* 余白を均等に分配し、ガタつきを防止 */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 枠内の中央に配置 */
+    align-items: center;
+    opacity: 0; /* 初期状態は透明 */
+    visibility: hidden; /* 場所は確保するが非表示 */
+    transition: opacity 0.8s ease-in-out, transform 0.8s ease-out;
+    transform: translateY(10px); /* わずかに下から浮き上がる演出用 */
+}
+
+/* 表示状態：opacityのみで制御することでサイズ変動を物理的に排除 */
+.draft-area.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* ラベル：項目名 */
 .draft-label {
     font-size: 1rem;
     color: #94a3b8;
-    margin-top: 20px;
+    margin-bottom: 5px;
 }
 
+/* 値：具体的な名前など */
 .draft-value {
-    font-size: 2rem;
+    font-size: 2.8rem; /* フォントサイズを拡大 */
     font-weight: bold;
-    margin: 10px 0;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 0 0 15px rgba(212, 175, 55, 0.3); /* 金色の光彩 */
+    margin: 0;
 }
 
-/* 厩舎情報の強調 */
+/* 厩舎情報の調整 */
 .draft-stable {
-    color: #10b981; /* エメラルドグリーン */
-    font-size: 1.4rem;
+    color: #10b981;
+    font-size: 1.8rem;
 }
 
+/* 馬名：一番目立たせる（重み付け） */
+#t_horse_area {
+    flex: 1.5; /* 他のエリアより少し広く取る */
+}
+#t_horse_area .draft-value {
+    font-size: 4rem; /* 馬名を最大化 */
+    color: #d4af37;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+}
+
+/* スマホ対応：画面が小さい場合はフォントサイズを調整 */
+@media (max-height: 700px) {
+    .draft-value { font-size: 2rem; }
+    #t_horse_area .draft-value { font-size: 2.8rem; }
+    .theater-card { height: 95vh; padding: 20px 0; }
+}
 /* アニメーション用：フェードイン */
 .theater-animate-in {
     animation: fadeInUp 0.8s ease-out forwards;
