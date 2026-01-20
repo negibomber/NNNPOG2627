@@ -204,8 +204,7 @@ const POG_UI = {
                     if (!window.statusTimer) {
                         window.statusTimer = setInterval(updateStatus, 3000);
                     }
-                    if (DEBUG_MODE) console.log(`[EVIDENCE] FINALLY: Resetting text to "${originalText}". (Was: "${btn.innerText}")`);
-                    btn.innerText = originalText;
+                    if (DEBUG_MODE) console.log(`[EVIDENCE] FINALLY: FINALLY: Keep current text "${originalText}". (Was: "${btn.innerText}")`);
                     btn.disabled = false;
                 }
             }
