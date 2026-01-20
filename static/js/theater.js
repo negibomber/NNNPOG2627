@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Theater Module (Ver.0.1.0) - ドラフト会議風演出
+   POG Theater Module (Ver.0.1.1) - クリーンなDOM操作版
    ========================================================================== */
 const POG_Theater = {
     is_playing: false,
@@ -8,53 +8,52 @@ const POG_Theater = {
         if (this.is_playing) return;
         this.is_playing = true;
 
+        // 1. 各要素への参照を取得
         const layer = document.getElementById('theater_layer');
-        // 初期化（ドラフト風レイアウトの構築）
-        layer.innerHTML = `
-            <div class="theater-card theater-animate-in">
-                <div class="draft-title">第 ${data.round || '?'} 巡 選択希望選手</div>
-                <div class="draft-label">指名者</div>
-                <div class="draft-value">${data.player_name}</div>
-                <div id="t_father_area" style="opacity:0">
-                    <div class="draft-label">父</div>
-                    <div class="draft-value">${data.horses?.father_name || '---'}</div>
-                </div>
-                <div id="t_mother_area" style="opacity:0">
-                    <div class="draft-label">母</div>
-                    <div class="draft-value">${data.horses?.mother_name || data.mother_name}</div>
-                </div>
-                <div id="t_stable_area" style="opacity:0">
-                    <div class="draft-label">厩舎 / 生産者</div>
-                    <div class="draft-value draft-stable">${data.horses?.stable_name || '未定'} / ${data.horses?.breeder_name || '---'}</div>
-                </div>
-                <div id="t_horse_area" style="opacity:0">
-                    <div class="draft-label">馬名</div>
-                    <div class="draft-value" style="color:#d4af37">${data.horse_name}</div>
-                </div>
-            </div>
-        `;
+        const areas = ['t_father_area', 't_mother_area', 't_stable_area', 't_horse_area'];
+        
+        // 2. データの流し込み（innerHTMLを使わずinnerTextで安全に）
+        document.getElementById('t_title').innerText = `第 ${data.round || '?'} 巡 選択希望競走馬`;
+        document.getElementById('t_player').innerText = data.player_name || '---';
+        document.getElementById('t_father').innerText = data.father_name || (data.horses && data.horses.father_name) || '---';
+        document.getElementById('t_mother').innerText = data.mother_name || (data.horses && data.horses.mother_name) || '---';
+        document.getElementById('t_stable').innerText = `${data.stable_name || (data.horses && data.horses.stable_name) || '未定'} / ${data.breeder_name || (data.horses && data.horses.breeder_name) || '---'}`;
+        document.getElementById('t_horse').innerText = data.horse_name || '---';
+
+        // 3. 全エリアを隠し、レイヤーを表示
+        areas.forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.add('is-hidden');
+            el.classList.remove('is-visible');
+        });
         layer.style.display = 'flex';
 
-        // 演出の階段（ドラフト会議風のタメ）
+        // 4. 演出の階段（適切なタメ）
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
-        await wait(1500); // 指名者表示後のタメ
-        document.getElementById('t_father_area').style.opacity = 1;
-        await wait(1200); // 父名表示後のタメ
-        document.getElementById('t_mother_area').style.opacity = 1;
-        await wait(1000); // 母名表示後のタメ
-        document.getElementById('t_stable_area').style.opacity = 1;
-        await wait(1500); // 厩舎表示後のタメ
-        document.getElementById('t_horse_area').style.opacity = 1;
+        await wait(2000); // タイトル表示
+        this.showArea('t_father_area');
+        await wait(1800);
+        this.showArea('t_mother_area');
+        await wait(1500);
+        this.showArea('t_stable_area');
+        await wait(2000);
+        this.showArea('t_horse_area');
 
-        await wait(3000); // 最終表示の余韻
+        await wait(4000); // 余韻を長めに
         this.close();
     },
 
+    showArea(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('is-hidden');
+            el.classList.add('is-visible');
+        }
+    },
+
     close() {
-        const layer = document.getElementById('theater_layer');
-        layer.style.display = 'none';
-        layer.innerHTML = '';
+        document.getElementById('theater_layer').style.display = 'none';
         this.is_playing = false;
     }
 };
