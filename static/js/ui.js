@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG UI Module (Ver.0.3.0)
+   POG UI Module (Ver.0.3.16)
    ========================================================================== */
 const POG_UI = {
     // --- [Utility] 汎用更新 ---
@@ -149,8 +149,8 @@ const POG_UI = {
         if (!btn || !data.mc_action) return;
 
         // 【証拠に基づき検問】MC操作中かつ、それが「タイマー等の外部割り込み」の場合のみ描画をスキップ
-        if (DEBUG_MODE) console.log(`[EVIDENCE_CAPTURE] renderMCPanel CHECK: updating=${window.AppState.isUpdating}, manual=${isManual}`);
-        if (window.AppState.isUpdating && !isManual) {
+        if (DEBUG_MODE) console.log(`[EVIDENCE_CAPTURE] renderMCPanel CHECK: mcProcessing=${window.AppState.isMCProcessing}, manual=${isManual}`);
+        if (window.AppState.isMCProcessing && !isManual) {
             if (DEBUG_MODE) console.log("[EVIDENCE_CAPTURE] renderMCPanel: ABORTED by Guard.");
             return;
         }
@@ -175,7 +175,7 @@ const POG_UI = {
                 btn.disabled = true;
 
                 try {
-                    window.AppState.isUpdating = true;
+                    window.AppState.isMCProcessing = true;
                     if (window.statusTimer) {
                         clearInterval(window.statusTimer);
                         window.statusTimer = null;
@@ -199,7 +199,7 @@ const POG_UI = {
                 } catch (error) {
                     console.error("[MC_ACTION_ERROR]", error);
                 } finally {
-                    window.AppState.isUpdating = false;
+                    window.AppState.isMCProcessing = false;
                     // ★タイマーを安全に再開
                     if (!window.statusTimer) {
                         window.statusTimer = setInterval(updateStatus, 3000);

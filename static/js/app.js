@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.3.2
+   POG Main Application Module (app.js) - Ver.0.3.16
    ========================================================================== */
 
 const DEBUG_MODE = true;
@@ -16,6 +16,7 @@ window.AppState = {
     lastSearchQuery: "",
     isSearching: false,
     isProcessingNomination: false,
+    isMCProcessing: false,
     latestData: null,
     lastStatusFingerprint: ""
 };
@@ -27,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.15";
+    const APP_VERSION = "0.3.16";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
