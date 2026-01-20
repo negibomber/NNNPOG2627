@@ -145,6 +145,9 @@ const POG_UI = {
         const btn = document.getElementById('mc_main_btn');
         if (!btn || !data.mc_action) return;
 
+        // ★[EVIDENCE] MC操作中（処理中...）は、外部からの描画上書きを禁止する
+        if (window.AppState.isUpdating) return;
+
         const action = data.mc_action;
         console.log(`[EVIDENCE_CAPTURE] Drawing MC Button: "${action.label}" (Phase: ${data.phase})`);
         btn.innerText = action.label;
