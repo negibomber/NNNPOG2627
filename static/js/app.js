@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.3.16
+   POG Main Application Module (app.js) - Ver.0.4.0
    ========================================================================== */
 
 const DEBUG_MODE = true;
@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.17";
+    const APP_VERSION = "0.4.0";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -106,6 +106,17 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_UI.renderPlayerCards(data);
         POG_UI.renderPhaseUI(data);
         POG_UI.renderMCPanel(data, isManual);
+
+        // --- Theater Mode Trigger ---
+        if (data.phase === 'reveal' && data.reveal_data) {
+            const horseId = `${data.round}_${data.reveal_data.horse_name}`;
+            if (window.AppState.lastPlayedId !== horseId) {
+                window.AppState.lastPlayedId = horseId;
+                if (typeof POG_Theater !== 'undefined') {
+                    POG_Theater.playReveal(data.reveal_data);
+                }
+            }
+        }
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             window.AppState.lastPhase = data.phase;
