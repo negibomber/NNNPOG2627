@@ -46,10 +46,10 @@ const POG_Theater = {
         await wait(2000);
         document.getElementById('t_horse_area').classList.add('is-visible');
 
-        // 4. MC判定と後処理
-        await wait(2000); 
+        // --- MC判定と後処理 ---
+        await wait(2000); // 馬名表示後の余韻
         
-        // 【修正点1】HTML上のMCパネルの有無で判定（確実な証拠）
+        // 証拠：HTML上にMCパネルが存在するかで判定（より確実な証拠）
         const isMC = !!document.getElementById('mc_panel');
 
         if (isMC) {
@@ -57,6 +57,31 @@ const POG_Theater = {
         } else {
             await wait(5000);
             this.close();
+        }
+    },
+
+    // MCがボタンを押した時の処理
+    async triggerNext() {
+        const btn = document.getElementById('t_next_btn');
+        btn.disabled = true;
+        btn.innerText = "更新中...";
+
+        // 重要：app.js の演出ガードを解除し、次のデータを受け入れ可能にする
+        this.is_playing = false;
+
+        try {
+            // ui.js に新設した共通アクションを呼び出し
+            await POG_UI.handleMCAction();
+            
+            // 成功時はボタンエリアを隠す（次の演出に備える）
+            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
+        } catch (e) {
+            console.error("MC Action Error:", e);
+            alert("更新に失敗しました。");
+            this.is_playing = true; // 失敗時はガードを戻す
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "次の指名を公開 ≫";
         }
     },
 

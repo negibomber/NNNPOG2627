@@ -143,71 +143,64 @@ const POG_UI = {
         }
     },
 
-    // --- [UI Renderer] MC操作パネルの描画 (新規追加) ---
+    // --- [MC Action] MC共通アクションの実行 ---
+    async handleMCAction() {
+        const btn = document.getElementById('mc_main_btn');
+        const data = window.AppState.latestData;
+        if (!data || !data.mc_action) return;
+        
+        const action = data.mc_action;
+        const originalText = btn ? btn.innerText : "";
+
+        if (btn) {
+            btn.innerText = "処理中...";
+            btn.disabled = true;
+        }
+
+        try {
+            window.AppState.isMCProcessing = true;
+            if (window.statusTimer) {
+                clearInterval(window.statusTimer);
+                window.statusTimer = null;
+            }
+
+            // POG_API を使用してリクエスト送信
+            const res = await POG_API.postMCAction(action.endpoint);
+            if (res) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                if (typeof updateStatus === 'function') {
+                    // force=true で実行中のロックをバイパスして強制更新
+                    await updateStatus(null, true);
+                }
+            }
+        } catch (error) {
+            console.error("[MC_ACTION_ERROR]", error);
+            throw error; // theater.js側でキャッチ可能にする
+        } finally {
+            window.AppState.isMCProcessing = false;
+            if (!window.statusTimer) {
+                window.statusTimer = setInterval(updateStatus, 3000);
+            }
+            if (btn) {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+    },
+
+    // --- [UI Renderer] MC操作パネルの描画 ---
     renderMCPanel(data, isManual = false) {
         const btn = document.getElementById('mc_main_btn');
         if (!btn || !data.mc_action) return;
 
-        // 【証拠に基づき検問】MC操作中かつ、それが「タイマー等の外部割り込み」の場合のみ描画をスキップ
-        if (DEBUG_MODE) console.log(`[EVIDENCE_CAPTURE] renderMCPanel CHECK: mcProcessing=${window.AppState.isMCProcessing}, manual=${isManual}`);
-        if (window.AppState.isMCProcessing && !isManual) {
-            if (DEBUG_MODE) console.log("[EVIDENCE_CAPTURE] renderMCPanel: ABORTED by Guard.");
-            return;
-        }
+        if (window.AppState.isMCProcessing && !isManual) return;
 
         const action = data.mc_action;
-        console.log(`[EVIDENCE_CAPTURE] Drawing MC Button: "${action.label}" (Phase: ${data.phase})`);
         btn.innerText = action.label;
-        if (DEBUG_MODE) console.log(`[EVIDENCE] DOM_WRITE: mc_main_btn.innerText = "${btn.innerText}"`);
         btn.disabled = action.disabled || false;
-        
-        // クラスの付け替え（btn-success, btn-primary等）
         btn.className = 'mc_main_btn ' + (action.class || '');
 
-        // クリックイベントの再設定（以前のイベントをクリアして新しいエンドポイントを紐付け）
-        // クリックイベントの再設定
-        btn.onclick = async () => {
-            if (action.endpoint) {
-                // 1. 読み込み表示処理（フィードバックと連打防止）
-                const originalText = btn.innerText;
-                console.log(`[EVIDENCE_CAPTURE] Clicked: "${originalText}" -> Changing to "処理中..."`);
-                btn.innerText = "処理中...";
-                btn.disabled = true;
-
-                try {
-                    window.AppState.isMCProcessing = true;
-                    if (window.statusTimer) {
-                        clearInterval(window.statusTimer);
-                        window.statusTimer = null;
-                    }
-
-                    const res = await POG_API.postMCAction(action.endpoint);
-                    if (!res && DEBUG_MODE) console.warn("[EVIDENCE] API Response is EMPTY/FALSY. (Freeze cause?)");
-                    if (res) {
-                        if (DEBUG_MODE) console.log(`[EVIDENCE] API Response SUCCESS. Current Button Text: "${btn.innerText}"`);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        
-                        if (typeof updateStatus === 'function') {
-                            // ロックを解除せず、強制実行フラグ(true)を渡す
-                            // これにより、この呼び出しが終わるまで isUpdating は true のまま維持される
-                            await updateStatus(null, true);
-                            if (DEBUG_MODE) console.log(`[EVIDENCE] 5. Manual updateStatus Finished. Button Text is now: "${btn.innerText}"`);
-                        } else {
-                            location.reload(); 
-                        }
-                    }
-                } catch (error) {
-                    console.error("[MC_ACTION_ERROR]", error);
-                } finally {
-                    window.AppState.isMCProcessing = false;
-                    // ★タイマーを安全に再開
-                    if (!window.statusTimer) {
-                        window.statusTimer = setInterval(updateStatus, 3000);
-                    }
-                    if (DEBUG_MODE) console.log(`[EVIDENCE] FINALLY: FINALLY: Keep current text "${originalText}". (Was: "${btn.innerText}")`);
-                    btn.disabled = false;
-                }
-            }
-        };
+        // 共通メソッドを呼び出すように変更
+        btn.onclick = () => this.handleMCAction();
     }
 };
