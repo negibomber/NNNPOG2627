@@ -668,3 +668,29 @@ header {
 .theater-animate-in {
     animation: fadeInUp 0.8s ease-out forwards;
 }
+/* style.css 末尾に追加 */
+
+/* 演出画面内 MCボタン */
+.btn-mc-next {
+    background: transparent;
+    border: 2px solid #d4af37;
+    color: #d4af37;
+    padding: 12px 40px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-family: 'serif';
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+.btn-mc-next:hover {
+    background: #d4af37;
+    color: #000;
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.5);
+}
+
+.btn-mc-next:active {
+    transform: scale(0.95);
+}
