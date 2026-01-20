@@ -146,6 +146,7 @@ const POG_UI = {
         if (!btn || !data.mc_action) return;
 
         const action = data.mc_action;
+        console.log(`[EVIDENCE_CAPTURE] Drawing MC Button: "${action.label}" (Phase: ${data.phase})`);
         btn.innerText = action.label;
         btn.disabled = action.disabled || false;
         
@@ -158,6 +159,7 @@ const POG_UI = {
             if (action.endpoint) {
                 // 1. 読み込み表示処理（フィードバックと連打防止）
                 const originalText = btn.innerText;
+                console.log(`[EVIDENCE_CAPTURE] Clicked: "${originalText}" -> Changing to "処理中..."`);
                 btn.innerText = "処理中...";
                 btn.disabled = true;
 
