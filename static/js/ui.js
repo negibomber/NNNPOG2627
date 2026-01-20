@@ -143,44 +143,39 @@ const POG_UI = {
         }
     },
 
-    // --- [MC Action] MC共通アクションの実行 ---
-    async handleMCAction() {
-        const btn = document.getElementById('mc_main_btn');
+    // --- [MC Action] MC操作の実行 (共通ロジック) ---
+    async executeMCAction() {
         const data = window.AppState.latestData;
         if (!data || !data.mc_action) return;
-        
         const action = data.mc_action;
-        const originalText = btn ? btn.innerText : "";
-
-        if (btn) {
-            btn.innerText = "処理中...";
-            btn.disabled = true;
-        }
+        const btn = document.getElementById('mc_main_btn');
+        const originalText = btn ? btn.innerText : action.label;
 
         try {
             window.AppState.isMCProcessing = true;
+            if (btn) {
+                btn.innerText = "処理中...";
+                btn.disabled = true;
+            }
+
+            // タイマー停止
             if (window.statusTimer) {
                 clearInterval(window.statusTimer);
                 window.statusTimer = null;
             }
 
-            // POG_API を使用してリクエスト送信
             const res = await POG_API.postMCAction(action.endpoint);
             if (res) {
                 await new Promise(resolve => setTimeout(resolve, 500));
-                if (typeof updateStatus === 'function') {
-                    // force=true で実行中のロックをバイパスして強制更新
-                    await updateStatus(null, true);
-                }
+                // 強制更新により次の reveal_index を取得
+                if (typeof updateStatus === 'function') await updateStatus(null, true);
             }
         } catch (error) {
             console.error("[MC_ACTION_ERROR]", error);
-            throw error; // theater.js側でキャッチ可能にする
+            throw error; // 呼び出し元(theater)でエラーハンドリングさせる
         } finally {
             window.AppState.isMCProcessing = false;
-            if (!window.statusTimer) {
-                window.statusTimer = setInterval(updateStatus, 3000);
-            }
+            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             if (btn) {
                 btn.innerText = originalText;
                 btn.disabled = false;
@@ -188,11 +183,9 @@ const POG_UI = {
         }
     },
 
-    // --- [UI Renderer] MC操作パネルの描画 ---
     renderMCPanel(data, isManual = false) {
         const btn = document.getElementById('mc_main_btn');
         if (!btn || !data.mc_action) return;
-
         if (window.AppState.isMCProcessing && !isManual) return;
 
         const action = data.mc_action;
@@ -200,7 +193,11 @@ const POG_UI = {
         btn.disabled = action.disabled || false;
         btn.className = 'mc_main_btn ' + (action.class || '');
 
-        // 共通メソッドを呼び出すように変更
-        btn.onclick = () => this.handleMCAction();
+        // 共通メソッドを呼び出す
+        btn.onclick = () => {
+            if (confirm(`${action.label} を実行しますか？`)) {
+                this.executeMCAction().catch(() => alert("操作に失敗しました。"));
+            }
+        };
     }
 };

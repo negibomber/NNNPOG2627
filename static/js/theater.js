@@ -90,22 +90,19 @@ const POG_Theater = {
         btn.disabled = true;
         btn.innerText = "更新中...";
 
-        // 【修正点2】app.js のガードを通すため、演出フラグを下ろす
-        // 画面は閉じずに（黒背景のまま）、次の playReveal を待つ
-        this.is_playing = false;
+        // [あるべき姿] MCが次を押した＝現在の演出は終了である
+        this.is_playing = false; 
 
         try {
-            // ui.js の関数を呼び出し、サーバーの状態を進める
-            await POG_UI.handleMCAction('next_reveal');
+            // ui.js に新設した正式なメソッドを呼び出し
+            await POG_UI.executeMCAction();
             
-            // 成功すれば、app.js が新しいIndexを検知し、
-            // 自動的に playReveal() が再度呼ばれる -> 画面の内容が書き換わる
-            
+            // 次の演出データが来るまでボタンを隠す
+            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
         } catch (e) {
-            console.error("MC Action Error:", e);
+            this.is_playing = true; // 失敗時は演出中に戻す
             alert("更新に失敗しました。");
-            // エラー時は復帰させる
-            this.is_playing = true; 
+        } finally {
             btn.disabled = false;
             btn.innerText = "次の指名を公開 ≫";
         }
