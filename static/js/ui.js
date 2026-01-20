@@ -21,7 +21,10 @@ const POG_UI = {
         if (!allStatusDiv || !data.all_players || !data.all_nominations) return;
 
         const currentFingerprint = JSON.stringify(data.all_nominations) + data.phase + data.reveal_index;
-        if (window.AppState.lastStatusFingerprint === currentFingerprint) return;
+        if (window.AppState.lastStatusFingerprint === currentFingerprint) {
+            if (DEBUG_MODE) console.log("[EVIDENCE] renderPlayerCards: SKIP (Fingerprint match)");
+            return;
+        }
         window.AppState.lastStatusFingerprint = currentFingerprint;
 
         // getCookieはapp.js側にある共通ツールを想定
@@ -146,11 +149,16 @@ const POG_UI = {
         if (!btn || !data.mc_action) return;
 
         // 【証拠に基づき検問】MC操作中かつ、それが「タイマー等の外部割り込み」の場合のみ描画をスキップ
-        if (window.AppState.isUpdating && !isManual) return;
+        if (DEBUG_MODE) console.log(`[EVIDENCE_CAPTURE] renderMCPanel CHECK: updating=${window.AppState.isUpdating}, manual=${isManual}`);
+        if (window.AppState.isUpdating && !isManual) {
+            if (DEBUG_MODE) console.log("[EVIDENCE_CAPTURE] renderMCPanel: ABORTED by Guard.");
+            return;
+        }
 
         const action = data.mc_action;
         console.log(`[EVIDENCE_CAPTURE] Drawing MC Button: "${action.label}" (Phase: ${data.phase})`);
         btn.innerText = action.label;
+        if (DEBUG_MODE) console.log(`[EVIDENCE] DOM_WRITE: mc_main_btn.innerText = "${btn.innerText}"`);
         btn.disabled = action.disabled || false;
         
         // クラスの付け替え（btn-success, btn-primary等）
@@ -174,16 +182,16 @@ const POG_UI = {
                     }
 
                     const res = await POG_API.postMCAction(action.endpoint);
-                    
+                    if (!res && DEBUG_MODE) console.warn("[EVIDENCE] API Response is EMPTY/FALSY. (Freeze cause?)");
                     if (res) {
-                        console.log(`[EVIDENCE_CAPTURE] 1. MC Action Response Received. Waiting 500ms...`);
+                        if (DEBUG_MODE) console.log(`[EVIDENCE] API Response SUCCESS. Current Button Text: "${btn.innerText}"`);
                         await new Promise(resolve => setTimeout(resolve, 500));
                         
                         if (typeof updateStatus === 'function') {
                             // ロックを解除せず、強制実行フラグ(true)を渡す
                             // これにより、この呼び出しが終わるまで isUpdating は true のまま維持される
                             await updateStatus(null, true);
-                            console.log(`[EVIDENCE_CAPTURE] 5. Manual updateStatus() Finished.`);
+                            if (DEBUG_MODE) console.log(`[EVIDENCE] 5. Manual updateStatus Finished. Button Text is now: "${btn.innerText}"`);
                         } else {
                             location.reload(); 
                         }
@@ -196,6 +204,7 @@ const POG_UI = {
                     if (!window.statusTimer) {
                         window.statusTimer = setInterval(updateStatus, 3000);
                     }
+                    if (DEBUG_MODE) console.log(`[EVIDENCE] FINALLY: Resetting text to "${originalText}". (Was: "${btn.innerText}")`);
                     btn.innerText = originalText;
                     btn.disabled = false;
                 }

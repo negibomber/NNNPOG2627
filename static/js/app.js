@@ -27,7 +27,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.3.13";
+    const APP_VERSION = "0.3.15";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -75,13 +75,14 @@ function shouldReloadPage(oldPhase, newPhase) {
    ========================================================================== */
 async function updateStatus(preFetchedData = null, force = false) {
     const isManual = force || (preFetchedData === null && !window.statusTimer);
+    if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus INVOKE: force=${force}, timerStop=${!window.statusTimer}, result_isManual=${isManual}`);
     if (window.AppState.isUpdating && !force) {
-        console.log(`[EVIDENCE_CAPTURE] updateStatus Blocked by Lock (isUpdating: true)`);
+        if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus BLOCKED: isUpdating=${window.AppState.isUpdating}, force=${force}`);
         return; 
     }
     
     window.AppState.isUpdating = true;
-    console.log(`[EVIDENCE_CAPTURE] updateStatus Started. (Manual: ${!window.statusTimer})`);
+    if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus START: isManual=${isManual}, isUpdating=${window.AppState.isUpdating}`);
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
         if (!data) return;
@@ -188,13 +189,12 @@ window.doNominate = async function(name, mother) {
 
     // 安全にタイマーを停止
     if (window.statusTimer) { 
+        if (DEBUG_MODE) console.log(`[EVIDENCE] TIMER_STOP: ID=${window.statusTimer}`);
         clearInterval(window.statusTimer); 
         window.statusTimer = null; 
     }
     try {
         if (!confirm(`${name} を指名しますか？`)) {
-            window.AppState.isProcessingNomination = false;
-            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             return;
         }
 
@@ -204,8 +204,6 @@ window.doNominate = async function(name, mother) {
         let data;
         try { data = JSON.parse(resText); } catch(e) {
             alert(`致命的エラーが発生しました(HTTP ${result.status})\n\n${resText.substring(0, 300)}`);
-            window.AppState.isProcessingNomination = false;
-            window.statusTimer = setInterval(updateStatus, 3000);
             return;
         }
         if (data.status === 'success') {
@@ -214,8 +212,6 @@ window.doNominate = async function(name, mother) {
             location.reload();
         } else {
             alert("エラー: " + (data.message || "指名に失敗しました"));
-            window.AppState.isProcessingNomination = false;
-            window.statusTimer = setInterval(updateStatus, 3000);
         }
     } catch (e) { 
         console.error("Nominate error:", e); 
@@ -223,7 +219,8 @@ window.doNominate = async function(name, mother) {
         // --- 反映猶予：サーバーDBの書き換え完了を待つ ---
         await new Promise(resolve => setTimeout(resolve, 500));
         window.AppState.isProcessingNomination = false;
-        window.statusTimer = setInterval(updateStatus, 3000);
+        if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
+        if (DEBUG_MODE) console.log(`[EVIDENCE] TIMER_RESTART: ID=${window.statusTimer}`);
     }
 }
 
