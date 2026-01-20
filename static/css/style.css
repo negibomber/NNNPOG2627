@@ -583,16 +583,21 @@ header {
 
 /* 演出カードの基本スタイル */
 .theater-card {
-    width: 90%;
-    max-width: 600px;
-    text-align: center;
-    border: 2px solid #d4af37; /* 金色の縁取り */
-    padding: 40px 20px;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-    box-shadow: 0 0 50px rgba(212, 175, 55, 0.3);
-    border-radius: 4px;
+    min-height: 500px; /* 内容に合わせて調整してください */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 上から順に詰める */
+    align-items: center;
 }
-
+/* 非表示でも場所は確保する（ガタつき防止） */
+.draft-area {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    width: 100%;
+}
+.draft-area.is-visible {
+    opacity: 1;
+}
 /* ドラフト会議風の文字装飾 */
 .draft-title {
     font-size: 1.2rem;
