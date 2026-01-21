@@ -84,8 +84,6 @@ const POG_Theater = {
             alert("更新に失敗しました。");
             this.is_playing = true; // 失敗時はガードを戻す
         } finally {
-            // 証拠：演出ガードを解く直前に、再度ボタンエリアを非表示に固定する。
-            // これにより、app.js側のタイマー更新が割り込んでも、ui.js側のガードが機能する時間を稼ぐ。
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
             //this.is_playing = false;
             
