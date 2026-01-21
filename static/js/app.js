@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.10";
+    const APP_VERSION = "0.4.11";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -110,6 +110,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         // --- Theater Mode Trigger ---
         if (data.phase === 'reveal' && data.reveal_data) {
             const revealIdx = data.reveal_index; 
+            // 証拠：演出中でなく、かつ未再生のインデックスである場合のみ再生を開始する
             if (!POG_Theater.is_playing && window.AppState.lastPlayedIdx !== revealIdx) {
                 window.AppState.lastPlayedIdx = revealIdx;
                 POG_Theater.playReveal(data.reveal_data);

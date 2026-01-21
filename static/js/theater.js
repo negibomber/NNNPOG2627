@@ -70,23 +70,20 @@ const POG_Theater = {
         btn.disabled = true;
         btn.innerText = "更新中...";
 
-        // 証拠：次のデータが来る前にボタンエリア自体を即座に隠す
-        document.getElementById('t_mc_ctrl').classList.remove('is-visible');
-
-        // 重要：app.js の演出ガードを解除し、次のデータを受け入れ可能にする
-        this.is_playing = false;
-
         try {
             // ui.js に新設した共通アクションを呼び出し
             await POG_UI.executeMCAction();
             
-            // 成功時はボタンエリアを隠す（次の演出に備える）
+            // 成功時は即座にエリアを隠す（一瞬の表示を防ぐ）
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
         } catch (e) {
             console.error("MC Action Error:", e);
             alert("更新に失敗しました。");
             this.is_playing = true; // 失敗時はガードを戻す
         } finally {
+            // 証拠：通信完了後に初めて演出ガードを解き、ボタンエリアの非表示を確実にする
+            this.is_playing = false;
+            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
             btn.disabled = false;
             if (window.AppState.latestData?.mc_action?.label) {
                 btn.innerText = window.AppState.latestData.mc_action.label;
