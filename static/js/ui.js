@@ -167,15 +167,21 @@ const POG_UI = {
             const res = await POG_API.postMCAction(action.endpoint);
             if (res) {
                 await new Promise(resolve => setTimeout(resolve, 500));
-                // 強制更新により次の reveal_index を取得
-                if (typeof updateStatus === 'function') await updateStatus(null, true);
+                // 証拠：強制更新を完全に待機してから次のステップへ進む
+                if (typeof updateStatus === 'function') {
+                    await updateStatus(null, true);
+                }
             }
         } catch (error) {
             console.error("[MC_ACTION_ERROR]", error);
-            throw error; // 呼び出し元(theater)でエラーハンドリングさせる
+            throw error;
         } finally {
             window.AppState.isMCProcessing = false;
-            if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
+            // 証拠：タイマー再開は最後に行う。
+            // これにより、強制更新と定時更新の衝突（ボタンの再浮上）を物理的に防ぐ。
+            if (!window.statusTimer) {
+                window.statusTimer = setInterval(updateStatus, 3000);
+            }
             if (btn) {
                 // 最新のデータがある場合はそのラベルを優先し、ない場合のみ元のテキストに戻す
                 const latestLabel = window.AppState.latestData?.mc_action?.label;
