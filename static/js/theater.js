@@ -84,10 +84,10 @@ const POG_Theater = {
             alert("更新に失敗しました。");
             this.is_playing = true; // 失敗時はガードを戻す
         } finally {
+            // 成功時はガードを維持する（これにより「更新中...」が描画される隙をなくす）
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
-            //this.is_playing = false;
             
-            if (DEBUG_MODE) console.log("[EVIDENCE] theater: is_playing RELEASED.");
+            if (DEBUG_MODE) console.log("[EVIDENCE] theater: triggerNext FINISHED. (Guard maintained)");
             
             btn.disabled = false;
             if (window.AppState.latestData?.mc_action?.label) {
