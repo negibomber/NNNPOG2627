@@ -23,8 +23,11 @@ const POG_Theater = {
 
         // 2. 初期化：すべてのエリアを非表示（アニメーションリセットのためクラスを剥がす）
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
-            document.getElementById(id).classList.remove('is-visible');
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('is-visible');
         });
+        // 証拠：前回の演出のボタンが一瞬見えるのを防ぐため、明示的に非表示を確実にする
+        document.getElementById('t_mc_ctrl').classList.remove('is-visible');
         
         // ボタンの状態もリセット
         const btn = document.getElementById('t_next_btn');
@@ -66,6 +69,9 @@ const POG_Theater = {
         const btn = document.getElementById('t_next_btn');
         btn.disabled = true;
         btn.innerText = "更新中...";
+
+        // 証拠：次のデータが来る前にボタンエリア自体を即座に隠す
+        document.getElementById('t_mc_ctrl').classList.remove('is-visible');
 
         // 重要：app.js の演出ガードを解除し、次のデータを受け入れ可能にする
         this.is_playing = false;
