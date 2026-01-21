@@ -177,24 +177,24 @@ async def status():
     mc_action = None
     if phase == "nomination":
         if is_all_nominated:
-            mc_action = {"label": "指名公開を開始", "endpoint": "/mc/start_reveal", "class": "btn-primary"}
+            mc_action = {"label": "指名公開を開始 ≫", "endpoint": "/mc/start_reveal", "class": "btn-primary"}
         else:
             mc_action = {"label": "指名待ち...", "endpoint": None, "class": "btn-secondary", "disabled": True}
     elif phase == "reveal":
         if rev_idx < len(active_players) - 1:
-            mc_action = {"label": "次の指名を公開", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
+            mc_action = {"label": "次の指名を公開 ≫", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
         else:
-            mc_action = {"label": "指名結果確認", "endpoint": "/mc/run_lottery", "class": "btn-primary"} 
+            mc_action = {"label": "指名結果確認 ≫", "endpoint": "/mc/run_lottery", "class": "btn-primary"} 
     elif phase == "summary":
         if lottery_queue:
-            mc_action = {"label": "抽選開始", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
+            mc_action = {"label": "抽選開始 ≫", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
-            mc_action = {"label": "次の巡へ", "endpoint": "/mc/next_round", "class": "btn-success"}
+            mc_action = {"label": "次の巡へ ≫", "endpoint": "/mc/next_round", "class": "btn-success"}
     elif phase == "lottery_reveal":
         if lottery_idx + 1 < len(lottery_queue):
-            mc_action = {"label": "次の抽選へ", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
+            mc_action = {"label": "次の抽選へ ≫", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
-            mc_action = {"label": "全抽選完了（結果確認へ）", "endpoint": "/mc/next_round", "class": "btn-success"}
+            mc_action = {"label": "全抽選完了（結果確認へ ≫）", "endpoint": "/mc/next_round", "class": "btn-success"}
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 

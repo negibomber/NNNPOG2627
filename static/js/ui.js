@@ -195,9 +195,7 @@ const POG_UI = {
 
         // 共通メソッドを呼び出す
         btn.onclick = () => {
-            if (confirm(`${action.label} を実行しますか？`)) {
-                this.executeMCAction().catch(() => alert("操作に失敗しました。"));
-            }
+            this.executeMCAction().catch(() => alert("操作に失敗しました。"));
         };
     }
 };

@@ -29,7 +29,9 @@ const POG_Theater = {
         // ボタンの状態もリセット
         const btn = document.getElementById('t_next_btn');
         btn.disabled = false;
-        btn.innerText = "次の指名を公開 ≫";
+        if (data.mc_action && data.mc_action.label) {
+            btn.innerText = data.mc_action.label;
+        }
 
         // 画面を表示（既に開いている場合はそのまま）
         layer.style.display = 'flex';
@@ -81,7 +83,9 @@ const POG_Theater = {
             this.is_playing = true; // 失敗時はガードを戻す
         } finally {
             btn.disabled = false;
-            btn.innerText = "次の指名を公開 ≫";
+            if (window.AppState.latestData?.mc_action?.label) {
+                btn.innerText = window.AppState.latestData.mc_action.label;
+            }
         }
     },
 
