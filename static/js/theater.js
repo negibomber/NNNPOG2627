@@ -71,7 +71,7 @@ const POG_Theater = {
 
         try {
             // ui.js に新設した共通アクションを呼び出し
-            await POG_UI.handleMCAction();
+            await POG_UI.executeMCAction();
             
             // 成功時はボタンエリアを隠す（次の演出に備える）
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
