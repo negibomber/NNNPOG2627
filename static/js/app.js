@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.7";
+    const APP_VERSION = "0.4.8";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {

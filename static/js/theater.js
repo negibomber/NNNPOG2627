@@ -18,11 +18,11 @@ const POG_Theater = {
         document.getElementById('t_player').innerText = rd.player || '---';
         document.getElementById('t_father').innerText = rd.father || master.father_name || '---';
         document.getElementById('t_mother').innerText = rd.mother || master.mother_name || '---';
-        document.getElementById('t_stable').innerText = `${rd.stable || master.stable_name || '未定'} / ${rd.breeder || master.breeder_name || '---'}`;
         document.getElementById('t_horse').innerText = rd.horse || '---';
+        document.getElementById('t_stable').innerText = `${rd.stable || master.stable_name || '未定'} / ${rd.breeder || master.breeder_name || '---'}`;
 
         // 2. 初期化：すべてのエリアを非表示（アニメーションリセットのためクラスを剥がす）
-        ['t_father_area', 't_mother_area', 't_stable_area', 't_horse_area', 't_mc_ctrl'].forEach(id => {
+        ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             document.getElementById(id).classList.remove('is-visible');
         });
         
@@ -39,14 +39,16 @@ const POG_Theater = {
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
         // 3. 演出シーケンス（順番に表示）
-        await wait(500); // 少し待ってから開始
+        await wait(800);
+        document.getElementById('t_player_area').classList.add('is-visible');
+        await wait(2000); 
         document.getElementById('t_father_area').classList.add('is-visible');
-        await wait(1800);
+        await wait(2000);
         document.getElementById('t_mother_area').classList.add('is-visible');
         await wait(1500);
-        document.getElementById('t_stable_area').classList.add('is-visible');
-        await wait(2000);
         document.getElementById('t_horse_area').classList.add('is-visible');
+        await wait(1500);
+        document.getElementById('t_stable_area').classList.add('is-visible');
 
         // --- MC判定と後処理 ---
         await wait(2000); // 馬名表示後の余韻
