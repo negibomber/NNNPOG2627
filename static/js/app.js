@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.13";
+    const APP_VERSION = "0.4.14";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -118,9 +118,12 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // --- Theater Mode Trigger ---
         if (data.phase === 'reveal' && data.reveal_data) {
-            const revealIdx = data.reveal_index; 
-            // 証拠：演出中でなく、かつ未再生のインデックスである場合のみ再生を開始する
-            if (!POG_Theater.is_playing && window.AppState.lastPlayedIdx !== revealIdx) {
+            const revealIdx = data.reveal_index;
+            // 証拠：新しいインデックスのデータが届いた時のみ、古い演出ガードを解いて次を開始する。
+            // これにより「通信完了〜次のデータ到着」までの空白期間も is_playing=true が維持される。
+            if (window.AppState.lastPlayedIdx !== revealIdx) {
+                if (DEBUG_MODE) console.log(`[EVIDENCE] New Index detected: ${window.AppState.lastPlayedIdx} -> ${revealIdx}. Releasing guard and playing.`);
+                POG_Theater.is_playing = false; 
                 window.AppState.lastPlayedIdx = revealIdx;
                 POG_Theater.playReveal(data.reveal_data);
             }

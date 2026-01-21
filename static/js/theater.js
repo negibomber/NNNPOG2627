@@ -87,7 +87,7 @@ const POG_Theater = {
             // 証拠：演出ガードを解く直前に、再度ボタンエリアを非表示に固定する。
             // これにより、app.js側のタイマー更新が割り込んでも、ui.js側のガードが機能する時間を稼ぐ。
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
-            this.is_playing = false;
+            //this.is_playing = false;
             
             if (DEBUG_MODE) console.log("[EVIDENCE] theater: is_playing RELEASED.");
             
