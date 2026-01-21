@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.12";
+    const APP_VERSION = "0.4.13";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -75,13 +75,18 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null, force = false) {
+    const caller = force ? "MC_ACTION" : (preFetchedData ? "PRE_FETCHED" : "AUTO_TIMER");
     const isManual = force || (preFetchedData === null && !window.statusTimer);
-    if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus INVOKE: force=${force}, timerStop=${!window.statusTimer}, result_isManual=${isManual}`);
+    
+    if (DEBUG_MODE) {
+        console.log(`[EVIDENCE] updateStatus INVOKE: caller=${caller}, force=${force}, isUpdating=${window.AppState.isUpdating}`);
+    }
+
+    // 証拠：強制更新(force)以外は、フラグが立っている間は物理的に即座にリターンする
     if (window.AppState.isUpdating && !force) {
-        if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus BLOCKED: isUpdating=${window.AppState.isUpdating}, force=${force}`);
+        if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus ABORTED: Parallel execution blocked for ${caller}`);
         return; 
     }
-    
     window.AppState.isUpdating = true;
     if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus START: isManual=${isManual}, isUpdating=${window.AppState.isUpdating}`);
     try {
@@ -105,6 +110,10 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_UI.renderStatusCounter(data);
         POG_UI.renderPlayerCards(data);
         POG_UI.renderPhaseUI(data);
+        // 証拠：UIレンダリング直前のデータを詳細に記録し、汚染源（古いデータ）を特定する
+        if (DEBUG_MODE) {
+            console.log(`[EVIDENCE] UI_REFRESH: caller=${caller}, phase=${data.phase}, reveal_index=${data.reveal_index}, has_mc_action=${!!data.mc_action}`);
+        }
         POG_UI.renderMCPanel(data, isManual);
 
         // --- Theater Mode Trigger ---

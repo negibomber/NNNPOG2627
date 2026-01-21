@@ -67,23 +67,30 @@ const POG_Theater = {
     // MCがボタンを押した時の処理
     async triggerNext() {
         const btn = document.getElementById('t_next_btn');
+        if (!btn) return;
         btn.disabled = true;
         btn.innerText = "更新中...";
 
         try {
-            // ui.js に新設した共通アクションを呼び出し
+            // 証拠：通信開始前に、先行してボタンエリアを物理的に隠す
+            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
+            
+            // ui.js に新設した共通アクションを呼び出し（内部でupdateStatusをawaitしている）
             await POG_UI.executeMCAction();
             
-            // 成功時は即座にエリアを隠す（一瞬の表示を防ぐ）
-            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
+            if (DEBUG_MODE) console.log("[EVIDENCE] theater: triggerNext MCAction COMPLETED.");
         } catch (e) {
             console.error("MC Action Error:", e);
             alert("更新に失敗しました。");
             this.is_playing = true; // 失敗時はガードを戻す
         } finally {
-            // 証拠：通信完了後に初めて演出ガードを解き、ボタンエリアの非表示を確実にする
-            this.is_playing = false;
+            // 証拠：演出ガードを解く直前に、再度ボタンエリアを非表示に固定する。
+            // これにより、app.js側のタイマー更新が割り込んでも、ui.js側のガードが機能する時間を稼ぐ。
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
+            this.is_playing = false;
+            
+            if (DEBUG_MODE) console.log("[EVIDENCE] theater: is_playing RELEASED.");
+            
             btn.disabled = false;
             if (window.AppState.latestData?.mc_action?.label) {
                 btn.innerText = window.AppState.latestData.mc_action.label;

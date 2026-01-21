@@ -193,7 +193,17 @@ const POG_UI = {
 
     renderMCPanel(data, isManual = false) {
         const btn = document.getElementById('mc_main_btn');
-        if (!btn || !data.mc_action) return;
+        if (!btn) return;
+
+        // 証拠：データ内に mc_action がない場合、または演出中の場合は、即座にボタンを隠して終了する
+        if (!data.mc_action || (typeof POG_Theater !== 'undefined' && POG_Theater.is_playing)) {
+            if (DEBUG_MODE && btn.classList.contains('is-visible')) {
+                console.log(`[EVIDENCE] renderMCPanel HIDING: hasAction=${!!data.mc_action}, isTheaterPlaying=${POG_Theater?.is_playing}`);
+            }
+            btn.classList.remove('is-visible');
+            return;
+        }
+
         if (window.AppState.isMCProcessing && !isManual) return;
 
         const action = data.mc_action;
