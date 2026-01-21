@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.8";
+    const APP_VERSION = "0.4.9";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -117,9 +117,10 @@ async function updateStatus(preFetchedData = null, force = false) {
         } else {
             // [あるべき姿] 指名公開データが尽きた、あるいは公開フェーズを抜けた場合は演出を閉じる
             if (document.getElementById('theater_layer').style.display === 'flex') {
-                if (DEBUG_MODE) console.log(`[EVIDENCE] No reveal data or phase changed. Closing theater.`);
+                if (DEBUG_MODE) console.log(`[EVIDENCE] Phase changed or No data. Resetting is_playing and closing.`);
+                POG_Theater.is_playing = false; // 内部状態を強制リセット
                 POG_Theater.close();
-                window.AppState.lastPlayedIdx = -1; // 次の巡（フェーズ）の開始に備えてリセット
+                window.AppState.lastPlayedIdx = -1;
             }
         }
 

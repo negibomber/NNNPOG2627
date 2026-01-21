@@ -177,7 +177,9 @@ const POG_UI = {
             window.AppState.isMCProcessing = false;
             if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
             if (btn) {
-                btn.innerText = originalText;
+                // 最新のデータがある場合はそのラベルを優先し、ない場合のみ元のテキストに戻す
+                const latestLabel = window.AppState.latestData?.mc_action?.label;
+                btn.innerText = latestLabel || originalText;
                 btn.disabled = false;
             }
         }

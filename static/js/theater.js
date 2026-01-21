@@ -58,9 +58,6 @@ const POG_Theater = {
 
         if (isMC) {
             document.getElementById('t_mc_ctrl').classList.add('is-visible');
-        } else {
-            await wait(5000);
-            this.close();
         }
     },
 
