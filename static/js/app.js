@@ -28,7 +28,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.4";
+    const APP_VERSION = "0.4.5";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -110,12 +110,16 @@ async function updateStatus(preFetchedData = null, force = false) {
         // --- Theater Mode Trigger ---
         if (data.phase === 'reveal' && data.reveal_data) {
             const revealIdx = data.reveal_index; 
-            // 証拠：演出中ではなく、かつIndex（通し番号）が進んだ場合のみ開始
             if (!POG_Theater.is_playing && window.AppState.lastPlayedIdx !== revealIdx) {
                 window.AppState.lastPlayedIdx = revealIdx;
-                if (typeof POG_Theater !== 'undefined') {
-                    POG_Theater.playReveal(data.reveal_data);
-                }
+                POG_Theater.playReveal(data.reveal_data);
+            }
+        } else {
+            // [あるべき姿] 指名公開データが尽きた、あるいは公開フェーズを抜けた場合は演出を閉じる
+            if (document.getElementById('theater_layer').style.display === 'flex') {
+                if (DEBUG_MODE) console.log(`[EVIDENCE] No reveal data or phase changed. Closing theater.`);
+                POG_Theater.close();
+                window.AppState.lastPlayedIdx = -1; // 次の巡（フェーズ）の開始に備えてリセット
             }
         }
 

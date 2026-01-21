@@ -85,29 +85,6 @@ const POG_Theater = {
         }
     },
 
-    async triggerNext() {
-        const btn = document.getElementById('t_next_btn');
-        btn.disabled = true;
-        btn.innerText = "更新中...";
-
-        // [あるべき姿] MCが次を押した＝現在の演出は終了である
-        this.is_playing = false; 
-
-        try {
-            // ui.js に新設した正式なメソッドを呼び出し
-            await POG_UI.executeMCAction();
-            
-            // 次の演出データが来るまでボタンを隠す
-            document.getElementById('t_mc_ctrl').classList.remove('is-visible');
-        } catch (e) {
-            this.is_playing = true; // 失敗時は演出中に戻す
-            alert("更新に失敗しました。");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "次の指名を公開 ≫";
-        }
-    },
-
     close() {
         document.getElementById('theater_layer').style.display = 'none';
         this.is_playing = false;
