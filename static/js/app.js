@@ -43,7 +43,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.4";
+    const APP_VERSION = "0.5.5";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -121,6 +121,23 @@ async function updateStatus(preFetchedData = null, force = false) {
         }
 
         // --- UI Layer Call ---
+        // --- Theater Mode Pre-Check [真の案C: 統治権の先行確立] ---
+        // UIを1箇所も触る前に、演出が必要かどうかを判定し、必要なら即座にモードをTHEATERへ封印する。
+        const isNewReveal = (data.phase === 'reveal' && data.reveal_data && window.AppState.lastPlayedIdx !== data.reveal_index);
+        const isNewLottery = (data.phase === 'lottery_reveal' && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
+        
+        if (isNewReveal || isNewLottery) {
+            POG_Log.i(`Theater transition detected. Pre-setting THEATER mode to lock UI.`);
+            window.AppState.setMode('THEATER', 'updateStatus_precheck');
+        }
+
+        // 演出モード中は、自動更新によるUI描画を一切許可しない（チラつきの根源を断つ）
+        if (!window.AppState.canUpdateUI() && caller === "AUTO_TIMER") {
+            POG_Log.d(`UI_REFRESH ABORTED (Safety Lock): caller=${caller}`);
+            return;
+        }
+
+        // --- UI Layer Call ---
         POG_UI.updateText('round_display', data.round);
         const phaseMap = {
             'nomination': '指名受付中', 'reveal': '指名公開中', 
@@ -136,7 +153,7 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         POG_UI.renderMCPanel(data, isManual);
 
-        // --- Theater Mode Trigger ---
+        // --- Theater Mode Execution ---
         if (data.phase === 'reveal' && data.reveal_data) {
             const revealIdx = data.reveal_index;
             // 証拠：新しいインデックスのデータが届いた時のみ、古い演出ガードを解いて次を開始する。

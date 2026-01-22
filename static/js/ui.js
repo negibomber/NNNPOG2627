@@ -209,9 +209,11 @@ const POG_UI = {
 
     renderMCPanel(data, isManual = false) {
         POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel entry - mode=${window.AppState.uiMode}, isManual=${isManual}`);
-        // [あるべき姿] IDLE以外（演出中・通信中）は何があっても描画しない
-        if (!window.AppState.canUpdateUI() && !isManual) {
-            POG_Log.d(`renderMCPanel SKIP: UI busy and not manual (isManual=${isManual})`);
+
+        // 【真の案C: UI描画の許可制】
+        // 状態が IDLE 以外（THEATER/BUSY）であれば、誰の命令であっても「描画拒否」を貫く。
+        if (!window.AppState.canUpdateUI()) {
+            POG_Log.d(`renderMCPanel ABORT: UI status [${window.AppState.uiMode}] takes absolute precedence.`);
             return;
         }
 
