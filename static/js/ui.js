@@ -189,20 +189,20 @@ const POG_UI = {
             // 証拠：通信の結果「演出（THEATER）」が開始された場合は、IDLEに戻さず統治権を委譲する
             if (window.AppState.uiMode !== 'THEATER') {
                 window.AppState.setMode('IDLE', 'executeMCAction_finally');
+                
+                // 【あるべき姿：権限の限定】
+                // 演出に移行しなかった場合のみ、自身の管理下にあるタイマーとボタンを復元する。
+                if (!window.statusTimer) {
+                    window.statusTimer = setInterval(updateStatus, 3000);
+                }
+                if (btn) {
+                    const latestLabel = window.AppState.latestData?.mc_action?.label;
+                    btn.innerText = latestLabel || btn.dataset.originalText || "MC操作";
+                    btn.disabled = false;
+                }
             } else {
-                POG_Log.i("Handing over control to THEATER mode. Skipping IDLE reset.");
-            }
-            // 証拠：タイマー再開は最後に行う。
-            // これにより、強制更新と定時更新の衝突（ボタンの再浮上）を物理的に防ぐ。
-            if (!window.statusTimer) {
-                window.statusTimer = setInterval(updateStatus, 3000);
-            }
-            if (btn) {
-                // 証拠：最新データからラベルを再取得。取得不能なら保持していたテキストへ復元。
-                POG_Log.d(`DEBUG_EVIDENCE: executeMCAction finally - mode=${window.AppState.uiMode}, current_display=${btn.style.display}`);
-                const latestLabel = window.AppState.latestData?.mc_action?.label;
-                btn.innerText = latestLabel || btn.dataset.originalText || "MC操作";
-                btn.disabled = false;
+                // 演出に移行した場合は、ボタンの復元すら行わず、すべてを演出エンジンに委ねる。
+                POG_Log.i("Theater mode active. MC action controller yields all UI control.");
             }
         }
     },

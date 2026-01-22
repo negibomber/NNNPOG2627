@@ -43,7 +43,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.5";
+    const APP_VERSION = "0.5.6";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -131,13 +131,9 @@ async function updateStatus(preFetchedData = null, force = false) {
             window.AppState.setMode('THEATER', 'updateStatus_precheck');
         }
 
-        // 演出モード中は、自動更新によるUI描画を一切許可しない（チラつきの根源を断つ）
-        if (!window.AppState.canUpdateUI() && caller === "AUTO_TIMER") {
-            POG_Log.d(`UI_REFRESH ABORTED (Safety Lock): caller=${caller}`);
-            return;
-        }
-
         // --- UI Layer Call ---
+        // 証拠：演出モード中でも、フェーズラベルなどの基本情報の更新は許可する。
+        // ただし、一番下の renderMCPanel (ボタン描画) は ui.js 側のガードで確実に止まる。
         POG_UI.updateText('round_display', data.round);
         const phaseMap = {
             'nomination': '指名受付中', 'reveal': '指名公開中', 
