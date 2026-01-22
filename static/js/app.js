@@ -2,11 +2,18 @@
    POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
 
-const DEBUG_MODE = true;
-const debugLog = (msg, data = null) => {
-    if (DEBUG_MODE) {
-        if (data) console.log(`[POG_DEBUG] ${msg}`, data);
-        else console.log(`[POG_DEBUG] ${msg}`);
+// 証拠：アプリ全域の状態を自動付与する共通司令塔
+window.POG_Log = {
+    level: 1, // 1:DEBUG, 2:INFO, 3:ERROR
+    d(msg, data = null) { this.out(1, 'DEBUG', msg, data); },
+    i(msg, data = null) { this.out(2, 'INFO ', msg, data); },
+    e(msg, data = null) { this.out(3, 'ERROR', msg, data); },
+    out(lv, label, msg, data) {
+        if (lv < this.level) return;
+        const s = window.AppState;
+        const state = s ? `[${s.uiMode}|Upd:${s.isUpdating}|Idx:${s.lastPlayedIdx}]` : '[INIT]';
+        const logMsg = `${state} ${label}: ${msg}`;
+        if (data) console.log(logMsg, data); else console.log(logMsg);
     }
 };
 
@@ -24,7 +31,7 @@ window.AppState = {
 
     // 状態遷移の記録（現行犯逮捕用）
     setMode(newMode, caller) {
-        if (DEBUG_MODE) console.log(`[STATE_CHANGE] ${this.uiMode} -> ${newMode} (by ${caller})`);
+        POG_Log.d(`STATE_CHANGE: ${this.uiMode} -> ${newMode} (by ${caller})`);
         this.uiMode = newMode;
     }
 };
@@ -36,7 +43,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.1";
+    const APP_VERSION = "0.5.2";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -86,17 +93,15 @@ async function updateStatus(preFetchedData = null, force = false) {
     const caller = force ? "MC_ACTION" : (preFetchedData ? "PRE_FETCHED" : "AUTO_TIMER");
     const isManual = force || (preFetchedData === null && !window.statusTimer);
     
-    if (DEBUG_MODE) {
-        console.log(`[EVIDENCE] updateStatus INVOKE: caller=${caller}, force=${force}, isUpdating=${window.AppState.isUpdating}`);
-    }
+    POG_Log.d(`updateStatus INVOKE: caller=${caller}, force=${force}`);
 
     // 証拠：強制更新(force)以外は、フラグが立っている間は物理的に即座にリターンする
     if (window.AppState.isUpdating && !force) {
-        if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus ABORTED: Parallel execution blocked for ${caller}`);
+        POG_Log.d(`updateStatus ABORTED: Parallel execution blocked for ${caller}`);
         return; 
     }
     window.AppState.isUpdating = true;
-    if (DEBUG_MODE) console.log(`[EVIDENCE] updateStatus START: isManual=${isManual}, isUpdating=${window.AppState.isUpdating}`);
+    POG_Log.d(`updateStatus START: isManual=${isManual}`);
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
         if (!data) return;
@@ -104,13 +109,15 @@ async function updateStatus(preFetchedData = null, force = false) {
         window.AppState.latestData = data;
 
         // 証拠：演出中(THEATER)は、最新データが届いてもUIの再描画を完全にブロックする
-        if (!window.AppState.canUpdateUI()) {
-            if (DEBUG_MODE) console.log(`[EVIDENCE] UI_REFRESH ABORTED: Theater/Busy lock active. caller=${caller}`);
+        // 証拠：自動更新(AUTO_TIMER)時のみ、演出中(THEATER)の再描画をブロックする。
+        // MC操作(MC_ACTION)時は、ボタンの状態を確定させるために描画を許可する必要がある。
+        if (caller === "AUTO_TIMER" && !window.AppState.canUpdateUI()) {
+            POG_Log.d(`UI_REFRESH ABORTED: caller=${caller}`);
             return;
         }
         
         if (data.phase === undefined && DEBUG_MODE) {
-            console.error("[CRITICAL_EVIDENCE] 汚染データの流入を検知:", data);
+            POG_Log.e("汚染データの流入を検知（phase未定義）", data);
         }
 
         // --- UI Layer Call ---
@@ -124,10 +131,9 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_UI.renderStatusCounter(data);
         POG_UI.renderPlayerCards(data);
         POG_UI.renderPhaseUI(data);
-        // 証拠：UIレンダリング直前のデータを詳細に記録し、汚染源（古いデータ）を特定する
-        if (DEBUG_MODE) {
-            console.log(`[EVIDENCE] UI_REFRESH: caller=${caller}, phase=${data.phase}, reveal_index=${data.reveal_index}, has_mc_action=${!!data.mc_action}`);
-        }
+
+        POG_Log.d(`UI_REFRESH EXEC: caller=${caller}, phase=${data.phase}, idx=${data.reveal_index}`);
+
         POG_UI.renderMCPanel(data, isManual);
 
         // --- Theater Mode Trigger ---
@@ -136,7 +142,7 @@ async function updateStatus(preFetchedData = null, force = false) {
             // 証拠：新しいインデックスのデータが届いた時のみ、古い演出ガードを解いて次を開始する。
             // これにより「通信完了〜次のデータ到着」までの空白期間も is_playing=true が維持される。
             if (window.AppState.lastPlayedIdx !== revealIdx) {
-                if (DEBUG_MODE) console.log(`[EVIDENCE] New Index detected: ${window.AppState.lastPlayedIdx} -> ${revealIdx}. Starting Theater Mode.`);
+                POG_Log.i(`New Index detected: ${window.AppState.lastPlayedIdx} -> ${revealIdx}. Starting Theater Mode.`);
                 window.AppState.setMode('THEATER', 'updateStatus');
                 window.AppState.lastPlayedIdx = revealIdx;
                 POG_Theater.playReveal(data.reveal_data);
@@ -144,7 +150,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         } else {
             // [あるべき姿] 指名公開データが尽きた、あるいは公開フェーズを抜けた場合は演出を閉じる
             if (document.getElementById('theater_layer').style.display === 'flex') {
-                if (DEBUG_MODE) console.log(`[EVIDENCE] Phase changed or No data. Closing theater.`);
+                POG_Log.i(`Phase changed (${data.phase}) or No data. Closing theater.`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
             }
@@ -157,7 +163,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         }
         window.AppState.lastPhase = data.phase;
     } catch (e) {
-        console.error("Status update error:", e);
+        POG_Log.e("Status update error", e);
     } finally {
         window.AppState.isUpdating = false; // 必ずロックを解除
     }
@@ -186,7 +192,8 @@ async function searchHorses() {
 
     window.AppState.lastSearchQuery = currentQuery;
     window.AppState.setMode('BUSY', 'searchHorses');
-    resultsEl.innerHTML = '<div class="search-loading">[DEBUG] サーバー通信中...</div>';
+    POG_Log.d(`searchHorses START: ${currentQuery}`);
+    resultsEl.innerHTML = '<div class="search-loading">サーバー通信中...</div>';
 
     try {
         const horses = await POG_API.search(f, m, window.searchController.signal);
@@ -220,10 +227,13 @@ async function searchHorses() {
                 resultsEl.appendChild(card);
             });
         } else {
-            resultsEl.innerHTML = '<div class="search-no-result">[DEBUG] 該当なし</div>';
+            resultsEl.innerHTML = '<div class="search-no-result">該当なし</div>';
         }
     } catch (e) {
-        if (e.name !== 'AbortError') resultsEl.innerHTML = `<div class="search-error">通信エラー: ${e.message}</div>`;
+        if (e.name !== 'AbortError') {
+            POG_Log.e("Search horses error", e);
+            resultsEl.innerHTML = `<div class="search-error">通信エラー: ${e.message}</div>`;
+        }
     } finally { window.AppState.setMode('IDLE', 'searchHorses_finally'); }
 }
 
@@ -233,7 +243,7 @@ window.doNominate = async function(name, mother) {
 
     // 安全にタイマーを停止
     if (window.statusTimer) { 
-        if (DEBUG_MODE) console.log(`[EVIDENCE] TIMER_STOP: ID=${window.statusTimer}`);
+        POG_Log.d(`TIMER_STOP: ID=${window.statusTimer}`);
         clearInterval(window.statusTimer); 
         window.statusTimer = null; 
     }
@@ -258,13 +268,13 @@ window.doNominate = async function(name, mother) {
             alert("エラー: " + (data.message || "指名に失敗しました"));
         }
     } catch (e) { 
-        console.error("Nominate error:", e); 
+        POG_Log.e("Nominate error", e);
     } finally {
         // --- 反映猶予：サーバーDBの書き換え完了を待つ ---
         await new Promise(resolve => setTimeout(resolve, 500));
         window.AppState.setMode('IDLE', 'doNominate_finally');
         if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
-        if (DEBUG_MODE) console.log(`[EVIDENCE] TIMER_RESTART: ID=${window.statusTimer}`);
+        POG_Log.d(`TIMER_RESTART: ID=${window.statusTimer}`);
     }
 }
 

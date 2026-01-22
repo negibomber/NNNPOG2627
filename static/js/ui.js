@@ -22,6 +22,7 @@ const POG_UI = {
 
         // [あるべき姿] 描画可否は uiMode (AppState) が一括管理する
         if (!window.AppState.canUpdateUI()) {
+            POG_Log.d("renderPlayerCards SKIP: UI is not IDLE");
             return;
         }
 
@@ -102,6 +103,7 @@ const POG_UI = {
             const queue = data.lottery_queue || [], idx = data.lottery_idx || 0, resMap = data.lottery_results || {};
             if (queue[idx]) {
                 const hName = queue[idx], res = resMap[hName];
+                POG_Log.d(`renderPhaseUI LOTTERY: index=${idx}, horse=${hName}`);
                 document.getElementById('lot_horse_name').innerText = hName;
                 document.getElementById('lot_candidate_list').innerText = `候補: ${res.participants.join(', ')}`;
                 document.getElementById('lot_result_box').classList.add('is-visible');
@@ -155,7 +157,7 @@ const POG_UI = {
                 btn.dataset.originalText = btn.innerText;
                 btn.innerText = "処理中...";
                 btn.disabled = true;
-                if (DEBUG_MODE) console.log(`[EVIDENCE] ui: executeMCAction. text: "${btn.dataset.originalText}" -> "${btn.innerText}"`);
+                POG_Log.d(`executeMCAction UI_LOCK: label="${btn.dataset.originalText}"`);
             }
 
             // タイマー停止
@@ -173,12 +175,15 @@ const POG_UI = {
                 }
             }
         } catch (error) {
-            console.error("[MC_ACTION_ERROR]", error);
+            POG_Log.e("MCAction Error", error);
             throw error;
         } finally {
+            POG_Log.d(`MCAction FINALLY: Current status before IDLE check`);
             // 証拠：通信の結果「演出（THEATER）」が開始された場合は、IDLEに戻さず統治権を委譲する
             if (window.AppState.uiMode !== 'THEATER') {
                 window.AppState.setMode('IDLE', 'executeMCAction_finally');
+            } else {
+                POG_Log.i("Handing over control to THEATER mode. Skipping IDLE reset.");
             }
             // 証拠：タイマー再開は最後に行う。
             // これにより、強制更新と定時更新の衝突（ボタンの再浮上）を物理的に防ぐ。
@@ -197,6 +202,7 @@ const POG_UI = {
     renderMCPanel(data, isManual = false) {
         // [あるべき姿] IDLE以外（演出中・通信中）は何があっても描画しない
         if (!window.AppState.canUpdateUI() && !isManual) {
+            POG_Log.d(`renderMCPanel SKIP: UI busy and not manual (isManual=${isManual})`);
             return;
         }
 

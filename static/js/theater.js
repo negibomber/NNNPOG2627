@@ -3,7 +3,7 @@ const POG_Theater = {
     // 自身の状態を廃止し、AppStateに依存
     async playReveal(data) {
         
-        console.log("[THEATER_DEBUG] Received data:", data);
+        POG_Log.i(`Theater START: Round=${data.round}, Player=${data.player}`);
 
         const layer = document.getElementById('theater_layer');
         const rd = data;
@@ -40,16 +40,20 @@ const POG_Theater = {
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
         // 3. 演出シーケンス（順番に表示）
+        POG_Log.d("Theater Sequence: START");
         await wait(800);
         document.getElementById('t_player_area').classList.add('is-visible');
         await wait(2000); 
+        POG_Log.d("Theater Sequence: Lineage revealed");
         document.getElementById('t_father_area').classList.add('is-visible');
         await wait(2000);
         document.getElementById('t_mother_area').classList.add('is-visible');
         await wait(1500);
+        POG_Log.d("Theater Sequence: Horse name revealed");
         document.getElementById('t_horse_area').classList.add('is-visible');
         await wait(1500);
         document.getElementById('t_stable_area').classList.add('is-visible');
+        POG_Log.d("Theater Sequence: FINISHED");
 
         // --- MC判定と後処理 ---
         await wait(2000); // 馬名表示後の余韻
@@ -66,30 +70,30 @@ const POG_Theater = {
     async triggerNext() {
         const btn = document.getElementById('t_next_btn');
         if (!btn) return;
-        if (DEBUG_MODE) console.log(`[EVIDENCE] theater: triggerNext START. current text: "${btn.innerText}"`);
+        POG_Log.d(`triggerNext START: current="${btn.innerText}"`);
         btn.disabled = true;
         btn.innerText = "更新中...";
-        if (DEBUG_MODE) console.log(`[EVIDENCE] theater: triggerNext. text changed to: "${btn.innerText}"`);
 
         try {
             // 証拠：通信開始前に、先行してボタンエリアを物理的に隠す
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
             
-            // ui.js に新設した共通アクションを呼び出し（内部でupdateStatusをawaitしている）
+            // ui.js に新設した共通アクションを呼び出し
             await POG_UI.executeMCAction();
             
-            if (DEBUG_MODE) console.log("[EVIDENCE] theater: triggerNext MCAction COMPLETED.");
+            POG_Log.d("triggerNext MCAction COMPLETED.");
         } catch (e) {
-            console.error("MC Action Error:", e);
+            POG_Log.e("MC Action Error in Theater", e);
             alert("更新に失敗しました。");
-            window.AppState.setMode('THEATER', 'triggerNext_error');
         } finally {
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
         }
     },
 
     close() {
+        POG_Log.i("Theater CLOSE: Hiding layer and resetting state.");
         document.getElementById('theater_layer').style.display = 'none';
-        window.AppState.setMode('IDLE', 'theater_close');
+        // 証拠：AppStateのuiMode変更はapp.js側の統治に任せるため、ここでは記録のみ行う
+        // もしここで強制的にIDLEに戻すと、app.jsの更新サイクルと衝突してチラつきの原因になる
     }
 };
