@@ -168,13 +168,14 @@ const POG_UI = {
 
             const res = await POG_API.postMCAction(action.endpoint);
             if (res) {
-                // 【あるべき姿】
-                // 演出（reveal/lottery）が始まる場合は、0.5秒の待機も手動更新も「百害あって一利なし」です。
-                // 即座に処理を切り上げることで、チラつきの物理的な「隙」をゼロにします。
                 const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(res.phase);
 
                 if (isTheaterPhase) {
-                    POG_Log.i("Theater mode detected. Aborting manual refresh to eliminate flicker window.");
+                    // 【真のあるべき姿：先行統治】
+                    // サーバーが演出フェーズだと答えたなら、この瞬間に THEATER モードを確立する。
+                    // これにより、直後の finally ブロックによる「不要なボタン復元」を論理的に封鎖する。
+                    POG_Log.i("Theater mode detected in API response. Pre-locking THEATER mode.");
+                    window.AppState.setMode('THEATER', 'executeMCAction_api_res');
                 } else if (typeof updateStatus === 'function') {
                     // 演出がない場合のみ、従来通りの安全な待機と更新を行います。
                     await new Promise(resolve => setTimeout(resolve, 500));
