@@ -250,6 +250,8 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
 
 @app.post("/mc/start_reveal")
 async def start_reveal():
+    import datetime
+    print(f"[SERVER_EVIDENCE] {datetime.datetime.now().strftime('%H:%M:%S.%f')} - start_reveal: returning status")
     update_setting("phase", "reveal")
     update_setting("reveal_index", "0")
     return await status()

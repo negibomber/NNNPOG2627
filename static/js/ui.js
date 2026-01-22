@@ -192,6 +192,7 @@ const POG_UI = {
             }
             if (btn) {
                 // 証拠：最新データからラベルを再取得。取得不能なら保持していたテキストへ復元。
+                POG_Log.d(`DEBUG_EVIDENCE: executeMCAction finally - mode=${window.AppState.uiMode}, current_display=${btn.style.display}`);
                 const latestLabel = window.AppState.latestData?.mc_action?.label;
                 btn.innerText = latestLabel || btn.dataset.originalText || "MC操作";
                 btn.disabled = false;
@@ -200,6 +201,7 @@ const POG_UI = {
     },
 
     renderMCPanel(data, isManual = false) {
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel entry - mode=${window.AppState.uiMode}, isManual=${isManual}`);
         // [あるべき姿] IDLE以外（演出中・通信中）は何があっても描画しない
         if (!window.AppState.canUpdateUI() && !isManual) {
             POG_Log.d(`renderMCPanel SKIP: UI busy and not manual (isManual=${isManual})`);
@@ -210,13 +212,20 @@ const POG_UI = {
         if (!btn) return;
 
         if (!data.mc_action) {
+            POG_Log.d("DEBUG_EVIDENCE: renderMCPanel - Hiding button (no action)");
             btn.style.display = 'none';
             return;
         }
 
+        // 証拠：ここから下の「プロパティ書き換え」がチラつきの物理的な原因かどうかを特定する
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel - WRITING PROPERTIES. mode=${window.AppState.uiMode}`);
+
         const action = data.mc_action;
         btn.innerText = action.label;
         btn.disabled = action.disabled || false;
+        
+        // 証拠：クラス名変更による暗黙的な表示発生を追跡
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel - Setting className: ${action.class || 'default'}`);
         btn.className = 'mc_main_btn ' + (action.class || '');
 
         // 共通メソッドを呼び出す
