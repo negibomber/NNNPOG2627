@@ -1,5 +1,5 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.4
+   POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
 
 const DEBUG_MODE = true;
@@ -12,13 +12,21 @@ const debugLog = (msg, data = null) => {
 
 // --- [State Management] アプリケーションの状態を一括管理 ---
 window.AppState = {
-    lastPhase: "",
-    lastSearchQuery: "",
-    isSearching: false,
-    isProcessingNomination: false,
-    isMCProcessing: false,
-    latestData: null,
-    lastStatusFingerprint: ""
+    uiMode: 'IDLE',      // 'IDLE', 'BUSY' (通信中), 'THEATER' (演出中)
+    latestData: null,    // 唯一のデータソース
+    lastPlayedIdx: -1,   // 演出重複防止
+    isUpdating: false,   // 通信ロック
+
+    // UI更新の唯一の判断基準
+    canUpdateUI() {
+        return this.uiMode === 'IDLE';
+    },
+
+    // 状態遷移の記録（現行犯逮捕用）
+    setMode(newMode, caller) {
+        if (DEBUG_MODE) console.log(`[STATE_CHANGE] ${this.uiMode} -> ${newMode} (by ${caller})`);
+        this.uiMode = newMode;
+    }
 };
 
 window.searchController = null;
@@ -28,7 +36,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.4.16";
+    const APP_VERSION = "0.5.0";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -41,7 +49,7 @@ window.statusTimer = null;
             mInput.oninput = null;
 
             const handleInput = (e) => {
-                if (window.AppState.isSearching || window.AppState.isProcessingNomination || document.activeElement?.tagName === 'BUTTON') {
+                if (!window.AppState.canUpdateUI() || document.activeElement?.tagName === 'BUTTON') {
                     return;
                 }
                 searchHorses();
@@ -122,16 +130,15 @@ async function updateStatus(preFetchedData = null, force = false) {
             // 証拠：新しいインデックスのデータが届いた時のみ、古い演出ガードを解いて次を開始する。
             // これにより「通信完了〜次のデータ到着」までの空白期間も is_playing=true が維持される。
             if (window.AppState.lastPlayedIdx !== revealIdx) {
-                if (DEBUG_MODE) console.log(`[EVIDENCE] New Index detected: ${window.AppState.lastPlayedIdx} -> ${revealIdx}. Releasing guard and playing.`);
-                POG_Theater.is_playing = false; 
+                if (DEBUG_MODE) console.log(`[EVIDENCE] New Index detected: ${window.AppState.lastPlayedIdx} -> ${revealIdx}. Starting Theater Mode.`);
+                window.AppState.setMode('THEATER', 'updateStatus');
                 window.AppState.lastPlayedIdx = revealIdx;
                 POG_Theater.playReveal(data.reveal_data);
             }
         } else {
             // [あるべき姿] 指名公開データが尽きた、あるいは公開フェーズを抜けた場合は演出を閉じる
             if (document.getElementById('theater_layer').style.display === 'flex') {
-                if (DEBUG_MODE) console.log(`[EVIDENCE] Phase changed or No data. Resetting is_playing and closing.`);
-                POG_Theater.is_playing = false; // 内部状態を強制リセット
+                if (DEBUG_MODE) console.log(`[EVIDENCE] Phase changed or No data. Closing theater.`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
             }
@@ -163,7 +170,7 @@ async function searchHorses() {
     const m = mInput.value;
     const currentQuery = `f=${f}&m=${m}`;
 
-    if (currentQuery === window.AppState.lastSearchQuery || window.AppState.isSearching || window.AppState.isProcessingNomination) return;
+    if (currentQuery === window.AppState.lastSearchQuery || !window.AppState.canUpdateUI()) return;
 
     if (f.length < 2 && m.length < 2) {
         resultsEl.innerHTML = "";
@@ -172,7 +179,7 @@ async function searchHorses() {
     }
 
     window.AppState.lastSearchQuery = currentQuery;
-    window.AppState.isSearching = true;
+    window.AppState.setMode('BUSY', 'searchHorses');
     resultsEl.innerHTML = '<div class="search-loading">[DEBUG] サーバー通信中...</div>';
 
     try {
@@ -200,7 +207,7 @@ async function searchHorses() {
                 else if (!isNominationPhase) { btn.textContent = "指名受付外"; btn.disabled = true; btn.className = "btn-search-action is-off"; }
                 else { btn.textContent = "指名する"; btn.className = "btn-search-action active"; }
                 
-                btn.onmousedown = () => { window.AppState.isProcessingNomination = true; };
+                // 証拠：onmousedownでの個別フラグ操作を廃止。doNominate内のsetModeで統治する。
                 btn.setAttribute('onclick', `event.preventDefault(); event.stopPropagation(); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
 
                 card.appendChild(btn);
@@ -211,12 +218,12 @@ async function searchHorses() {
         }
     } catch (e) {
         if (e.name !== 'AbortError') resultsEl.innerHTML = `<div class="search-error">通信エラー: ${e.message}</div>`;
-    } finally { window.AppState.isSearching = false; }
+    } finally { window.AppState.setMode('IDLE', 'searchHorses_finally'); }
 }
 
 window.doNominate = async function(name, mother) {
     if (window.searchController) window.searchController.abort();
-    window.AppState.isProcessingNomination = true; 
+    window.AppState.setMode('BUSY', 'doNominate');
 
     // 安全にタイマーを停止
     if (window.statusTimer) { 
@@ -249,7 +256,7 @@ window.doNominate = async function(name, mother) {
     } finally {
         // --- 反映猶予：サーバーDBの書き換え完了を待つ ---
         await new Promise(resolve => setTimeout(resolve, 500));
-        window.AppState.isProcessingNomination = false;
+        window.AppState.setMode('IDLE', 'doNominate_finally');
         if (!window.statusTimer) window.statusTimer = setInterval(updateStatus, 3000);
         if (DEBUG_MODE) console.log(`[EVIDENCE] TIMER_RESTART: ID=${window.statusTimer}`);
     }

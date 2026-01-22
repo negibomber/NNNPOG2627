@@ -20,15 +20,13 @@ const POG_UI = {
         const allStatusDiv = document.getElementById('all_status_list');
         if (!allStatusDiv || !data.all_players || !data.all_nominations) return;
 
-        const currentFingerprint = JSON.stringify(data.all_nominations) + data.phase + data.reveal_index;
-        if (window.AppState.lastStatusFingerprint === currentFingerprint) {
-            if (DEBUG_MODE) console.log("[EVIDENCE] renderPlayerCards: SKIP (Fingerprint match)");
+        // [あるべき姿] 描画可否は uiMode (AppState) が一括管理する
+        if (!window.AppState.canUpdateUI()) {
             return;
         }
-        window.AppState.lastStatusFingerprint = currentFingerprint;
 
-        // getCookieはapp.js側にある共通ツールを想定
-        const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
+        // getCookieはapp.js側の共通ツールをwindow経由または直接参照
+        const me = decodeURIComponent((typeof getCookie === 'function' ? getCookie('pog_user') : "") || "").replace(/\+/g, ' ');
         let html = '';
 
         data.all_players.forEach(playerName => {
@@ -149,13 +147,15 @@ const POG_UI = {
         if (!data || !data.mc_action) return;
         const action = data.mc_action;
         const btn = document.getElementById('mc_main_btn');
-        const originalText = btn ? btn.innerText : action.label;
 
         try {
-            window.AppState.isMCProcessing = true;
+            window.AppState.setMode('BUSY', 'executeMCAction');
             if (btn) {
+                // 証拠：一時停止中のテキストを確実に保持
+                btn.dataset.originalText = btn.innerText;
                 btn.innerText = "処理中...";
                 btn.disabled = true;
+                if (DEBUG_MODE) console.log(`[EVIDENCE] ui: executeMCAction. text: "${btn.dataset.originalText}" -> "${btn.innerText}"`);
             }
 
             // タイマー停止
@@ -176,39 +176,34 @@ const POG_UI = {
             console.error("[MC_ACTION_ERROR]", error);
             throw error;
         } finally {
-            window.AppState.isMCProcessing = false;
+            window.AppState.setMode('IDLE', 'executeMCAction_finally');
             // 証拠：タイマー再開は最後に行う。
             // これにより、強制更新と定時更新の衝突（ボタンの再浮上）を物理的に防ぐ。
             if (!window.statusTimer) {
                 window.statusTimer = setInterval(updateStatus, 3000);
             }
             if (btn) {
-                // 最新のデータがある場合はそのラベルを優先し、ない場合のみ元のテキストに戻す
+                // 証拠：最新データからラベルを再取得。取得不能なら保持していたテキストへ復元。
                 const latestLabel = window.AppState.latestData?.mc_action?.label;
-                btn.innerText = latestLabel || originalText;
+                btn.innerText = latestLabel || btn.dataset.originalText || "MC操作";
                 btn.disabled = false;
             }
         }
     },
 
     renderMCPanel(data, isManual = false) {
-        // [あるべき姿] 演出中（is_playing）は、theater.jsが画面を支配している。
-        // UIモジュールはボタンの表示状態やテキストを一切触らず、即座に制御を戻すべきである。
-        if (typeof POG_Theater !== 'undefined' && POG_Theater.is_playing) {
+        // [あるべき姿] IDLE以外（演出中・通信中）は何があっても描画しない
+        if (!window.AppState.canUpdateUI() && !isManual) {
             return;
         }
 
         const btn = document.getElementById('mc_main_btn');
         if (!btn) return;
 
-        // 証拠：データ内に mc_action がない場合は、ボタンを非表示にする
         if (!data.mc_action) {
-            btn.classList.remove('is-visible');
-            btn.style.display = 'none'; // 物理的に消去を確実にする
+            btn.style.display = 'none';
             return;
         }
-
-        if (window.AppState.isMCProcessing && !isManual) return;
 
         const action = data.mc_action;
         btn.innerText = action.label;

@@ -1,11 +1,7 @@
 /* theater.js (Ver.0.4.4) - MC判定とループ制御の適正化 */
 const POG_Theater = {
-    is_playing: false,
-
+    // 自身の状態を廃止し、AppStateに依存
     async playReveal(data) {
-        // app.jsからの二重呼び出し防止
-        if (this.is_playing) return;
-        this.is_playing = true;
         
         console.log("[THEATER_DEBUG] Received data:", data);
 
@@ -32,8 +28,10 @@ const POG_Theater = {
         // ボタンの状態もリセット
         const btn = document.getElementById('t_next_btn');
         btn.disabled = false;
-        if (data.mc_action && data.mc_action.label) {
-            btn.innerText = data.mc_action.label;
+        // 証拠：グローバルな最新データからMCアクションのラベルを特定する
+        const mcLabel = window.AppState.latestData?.mc_action?.label;
+        if (mcLabel) {
+            btn.innerText = mcLabel;
         }
 
         // 画面を表示（既に開いている場合はそのまま）
@@ -68,8 +66,10 @@ const POG_Theater = {
     async triggerNext() {
         const btn = document.getElementById('t_next_btn');
         if (!btn) return;
+        if (DEBUG_MODE) console.log(`[EVIDENCE] theater: triggerNext START. current text: "${btn.innerText}"`);
         btn.disabled = true;
         btn.innerText = "更新中...";
+        if (DEBUG_MODE) console.log(`[EVIDENCE] theater: triggerNext. text changed to: "${btn.innerText}"`);
 
         try {
             // 証拠：通信開始前に、先行してボタンエリアを物理的に隠す
@@ -82,22 +82,14 @@ const POG_Theater = {
         } catch (e) {
             console.error("MC Action Error:", e);
             alert("更新に失敗しました。");
-            this.is_playing = true; // 失敗時はガードを戻す
+            window.AppState.setMode('THEATER', 'triggerNext_error');
         } finally {
-            // 成功時はガードを維持する（これにより「更新中...」が描画される隙をなくす）
             document.getElementById('t_mc_ctrl').classList.remove('is-visible');
-            
-            if (DEBUG_MODE) console.log("[EVIDENCE] theater: triggerNext FINISHED. (Guard maintained)");
-            
-            btn.disabled = false;
-            if (window.AppState.latestData?.mc_action?.label) {
-                btn.innerText = window.AppState.latestData.mc_action.label;
-            }
         }
     },
 
     close() {
         document.getElementById('theater_layer').style.display = 'none';
-        this.is_playing = false;
+        window.AppState.setMode('IDLE', 'theater_close');
     }
 };
