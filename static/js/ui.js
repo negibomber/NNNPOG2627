@@ -168,9 +168,16 @@ const POG_UI = {
 
             const res = await POG_API.postMCAction(action.endpoint);
             if (res) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                // 証拠：強制更新を完全に待機してから次のステップへ進む
-                if (typeof updateStatus === 'function') {
+                // 【あるべき姿】
+                // 演出（reveal/lottery）が始まる場合は、0.5秒の待機も手動更新も「百害あって一利なし」です。
+                // 即座に処理を切り上げることで、チラつきの物理的な「隙」をゼロにします。
+                const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(res.phase);
+
+                if (isTheaterPhase) {
+                    POG_Log.i("Theater mode detected. Aborting manual refresh to eliminate flicker window.");
+                } else if (typeof updateStatus === 'function') {
+                    // 演出がない場合のみ、従来通りの安全な待機と更新を行います。
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     await updateStatus(null, true);
                 }
             }
