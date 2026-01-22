@@ -36,7 +36,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.0";
+    const APP_VERSION = "0.5.1";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -102,6 +102,12 @@ async function updateStatus(preFetchedData = null, force = false) {
         if (!data) return;
 
         window.AppState.latestData = data;
+
+        // 証拠：演出中(THEATER)は、最新データが届いてもUIの再描画を完全にブロックする
+        if (!window.AppState.canUpdateUI()) {
+            if (DEBUG_MODE) console.log(`[EVIDENCE] UI_REFRESH ABORTED: Theater/Busy lock active. caller=${caller}`);
+            return;
+        }
         
         if (data.phase === undefined && DEBUG_MODE) {
             console.error("[CRITICAL_EVIDENCE] 汚染データの流入を検知:", data);

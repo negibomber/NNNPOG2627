@@ -176,7 +176,10 @@ const POG_UI = {
             console.error("[MC_ACTION_ERROR]", error);
             throw error;
         } finally {
-            window.AppState.setMode('IDLE', 'executeMCAction_finally');
+            // 証拠：通信の結果「演出（THEATER）」が開始された場合は、IDLEに戻さず統治権を委譲する
+            if (window.AppState.uiMode !== 'THEATER') {
+                window.AppState.setMode('IDLE', 'executeMCAction_finally');
+            }
             // 証拠：タイマー再開は最後に行う。
             // これにより、強制更新と定時更新の衝突（ボタンの再浮上）を物理的に防ぐ。
             if (!window.statusTimer) {
