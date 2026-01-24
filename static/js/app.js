@@ -1,6 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
+const APP_VERSION = "0.5.10";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -43,8 +44,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.9";
-    console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
+    console.log(`%c --- POG APP START (Ver.${APP_VERSION}) --- `, 'background: #222; color: #bada55');
 
     const init = () => {
         updateStatus();

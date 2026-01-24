@@ -202,8 +202,13 @@ const POG_UI = {
     },
 
     renderMCPanel(data, isManual = false) {
+        // 証拠：この関数が呼ばれた瞬間の「モード」と「強制フラグ」を記録する
+        const currentMode = window.AppState.uiMode;
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel CALLED. mode=[${currentMode}], isManual=[${isManual}]`);
+
         // 【案Cの鉄則】BUSY（通信中）の間は、誰が何と言おうとボタンを上書きさせない
-        if (window.AppState.uiMode === 'BUSY' && !isManual) {
+        if (currentMode === 'BUSY' && !isManual) {
+            POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel SKIPPED (BUSY mode)`);
             return;
         }
 
@@ -211,12 +216,15 @@ const POG_UI = {
         if (!btn) return;
 
         // 演出中(THEATER)、またはアクションデータがない場合はボタンを消す
-        if (window.AppState.uiMode === 'THEATER' || !data.mc_action) {
+        if (currentMode === 'THEATER' || !data.mc_action) {
+            POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel HIDING BUTTON. (Reason: Theater or NoAction)`);
             btn.style.display = 'none';
             return;
         }
 
-        // それ以外（IDLE）なら最新データを反映
+        // それ以外（IDLE、またはBUSYかつManual）なら最新データを反映
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel SHOWING BUTTON. Label=[${data.mc_action.label}]`);
+        
         btn.style.display = 'block';
         btn.innerText = data.mc_action.label;
         btn.disabled = data.mc_action.disabled || false;
