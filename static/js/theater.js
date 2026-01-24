@@ -45,19 +45,25 @@ const POG_Theater = {
         document.getElementById('t_mother').innerText = data.mother || master.mother_name || '---';
         // 馬名と性別の反映
         const horseEl = document.getElementById('t_horse');
-        horseEl.innerText = data.horse || '---';
+        const sexEl = document.getElementById('t_sex');
         
-        const sex = data.sex || master.sex || '';
-        const sexEl = document.getElementById('t_sex'); // 事前にHTML側へ追加が必要
+        // データの汚染源対策：確実に性別データを取得する
+        const sex = data.sex || (data.horse_info && data.horse_info.sex) || '';
+        
+        horseEl.innerText = data.horse_name || data.horse || '---';
+
         if (sexEl) {
             if (sex === '牡') {
-                sexEl.innerText = ' ♂';
-                sexEl.style.color = '#42a5f5'; // 青系
+                sexEl.innerText = '♂'; // 余計なスペースはCSSのgapで制御
+                sexEl.style.color = '#42a5f5';
+                sexEl.style.display = 'inline-block';
             } else if (sex === '牝') {
-                sexEl.innerText = ' ♀';
-                sexEl.style.color = '#ef5350'; // 赤系
+                sexEl.innerText = '♀';
+                sexEl.style.color = '#ef5350';
+                sexEl.style.display = 'inline-block';
             } else {
                 sexEl.innerText = '';
+                sexEl.style.display = 'none';
             }
         }
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;

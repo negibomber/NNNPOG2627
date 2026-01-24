@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6
    ========================================================================== */
-const APP_VERSION = "0.6.16";
+const APP_VERSION = "0.6.17";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -222,8 +222,8 @@ async function searchHorses() {
                 // 性別の記号と色を決定
                 let sexMarker = "";
                 let sexColor = "inherit";
-                if (h.sex === '牡') { sexMarker = " ♂"; sexColor = "#42a5f5"; }
-                else if (h.sex === '牝') { sexMarker = " ♀"; sexColor = "#ef5350"; }
+                if (h.sex === '牡') { sexMarker = "♂"; sexColor = "#42a5f5"; }
+                else if (h.sex === '牝') { sexMarker = "♀"; sexColor = "#ef5350"; }
 
                 card.innerHTML = `
                     <div class="search-horse-name">

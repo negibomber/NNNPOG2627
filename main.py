@@ -136,7 +136,7 @@ async def status():
         # 必要な馬情報だけをピンポイントで取得
         # strip() 済みのリストを渡すことで照合を確実にし、負荷を抑える
         clean_names = [n.strip() for n in relevant_h_names if n]
-        h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name, stable, breeder").in_("horse_name", clean_names).execute()
+        h_info_res = supabase.table("horses").select("horse_name, father_name, mother_name, stable, breeder, sex").in_("horse_name", clean_names).execute()
         h_map = {h['horse_name'].strip(): h for h in h_info_res.data} if h_info_res.data else {}
 
     for n in all_noms_data:

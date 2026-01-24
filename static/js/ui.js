@@ -105,13 +105,15 @@ const POG_UI = {
             let multiHtml = '<div class="summary-section"><h4 class="summary-label-danger">【重複・抽選対象】</h4>';
             let hasMulti = false, hasSingle = false;
             Object.keys(horseGroups).forEach(h => {
-                const pts = horseGroups[h];
-                if (pts.length > 1) {
+                const group = horseGroups[h];
+                if (group.pts.length > 1) {
                     hasMulti = true;
-                    multiHtml += `<div class="summary-card-danger"><div class="summary-horse-name">${h}</div><div class="summary-participants">指名者: ${pts.join(' / ')}</div></div>`;
+                    // 馬名の横に sexMark を追加
+                    multiHtml += `<div class="summary-card-danger"><div class="summary-horse-name">${h}${group.sexMark}</div><div class="summary-participants">指名者: ${group.pts.join(' / ')}</div></div>`;
                 } else {
                     hasSingle = true;
-                    singleHtml += `<div class="summary-item-success"><strong>${h}</strong> <span class="summary-item-sub">(${pts[0]})</span></div>`;
+                    // 馬名の横に sexMark を追加
+                    singleHtml += `<div class="summary-item-success"><strong>${h}${group.sexMark}</strong> <span class="summary-item-sub">(${group.pts[0]})</span></div>`;
                 }
             });
             listEl.innerHTML = (hasMulti ? multiHtml + '</div>' : "") + (hasSingle ? singleHtml + '</div></div>' : "");

@@ -714,9 +714,10 @@ header {
 /* セレクタを一段強くして、ガタつきを物理的に排除します */
 #t_horse_area .draft-value {
     display: flex !important;
-    align-items: baseline !important; /* 漢字の底辺に記号の高さを合わせる */
-    justify-content: center !important;
-    width: 100%;
+    align-items: baseline !important; 
+    justify-content: flex-start !important; /* 左揃えにする */
+    width: fit-content;                     /* 幅を内容に合わせる */
+    margin: 0 auto;                          /* 親が中央揃えならこれで塊として中央、左揃えなら不要 */
 }
 
 /* 演出画面の性別記号専用スタイル */
