@@ -1,4 +1,4 @@
-/* theater.js (Ver.0.4.7) - 右寄せ・ガタつき防止反映版 */
+/* theater.js (Ver.0.6.16) - 右寄せ・ガタつき防止反映版 */
 const POG_Theater = {
     async playReveal(data) {
         // クラス状態を可視化する内部ヘルパー
