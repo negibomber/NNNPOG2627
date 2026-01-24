@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6 (Refactored)
    ========================================================================== */
-const APP_VERSION = "0.6.1";
+const APP_VERSION = "0.6.2";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -30,6 +30,10 @@ window.AppState = {
     },
 
     setMode(newMode, caller) {
+        // 証拠：意図しないモード変更（例：演出中にIDLEへ強制変更など）を監視
+        if (this.uiMode === 'THEATER' && newMode !== 'IDLE') {
+            POG_Log.e(`ILLEGAL_MODE_TRANSITION: Attempted ${this.uiMode} -> ${newMode} by ${caller}`);
+        }
         POG_Log.d(`STATE_CHANGE: ${this.uiMode} -> ${newMode} (by ${caller})`);
         this.uiMode = newMode;
     }
@@ -98,58 +102,69 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null, force = false) {
-    if (window.AppState.isUpdating && !force) return; 
+    if (window.AppState.isUpdating && !force) {
+        POG_Log.d(`UPDATE_LOCKED: isUpdating=${window.AppState.isUpdating}, force=${force}`);
+        return; 
+    }
     window.AppState.isUpdating = true;
     
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
-        if (!data) return;
+        if (!data) {
+            POG_Log.e("DATA_EMPTY: fetchStatus returned null");
+            return;
+        }
 
-        // データ受領（メモリ更新のみ）
         window.AppState.latestData = data;
-        POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}`);
+        POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}, force=${force}`);
 
-        // --- 1. 演出判定 (Logic) ---
+        // --- 1. 演出判定 ---
         const isNewReveal = (data.phase === 'reveal' && data.reveal_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const isNewLottery = (data.phase === 'lottery_reveal' && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const willStartTheater = isNewReveal || isNewLottery;
 
-        // --- 2. 状態遷移の確定 (State Commit) ---
+        // --- 2. 状態遷移の確定 (証拠ログ強化) ---
         if (willStartTheater) {
+            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: isNewReveal=${isNewReveal}, isNewLottery=${isNewLottery}, lastIdx=${window.AppState.lastPlayedIdx} -> newIdx=${data.reveal_index})`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
         } else {
             const isTheaterOpen = document.getElementById('theater_layer').style.display === 'flex';
             const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(data.phase);
+            
             if (isTheaterOpen && !isTheaterPhase) {
+                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: Theater is open but Phase is [${data.phase}])`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
                 window.AppState.setMode('IDLE', 'updateStatus_close');
             }
         }
 
-        // --- 3. 演出実行 (Theater Launch) ---
-        // 証拠：演出が必要な場合は、描画ガード(return)の前に必ず着火させる
+        // --- 3. 演出実行 ---
         if (willStartTheater) {
-            POG_Log.i(`Theater START: Round=${data.round}, Index=${data.reveal_index}`);
-            // 演出開始直前のボタン状態を証拠として記録
+            POG_Log.i(`THEATER_LAUNCH_EXEC: Calling playReveal (Index=${data.reveal_index})`);
             const currentBtnText = document.getElementById('mc_main_btn')?.innerText;
-            POG_Log.d(`THEATER_START_TRACE: BtnText="${currentBtnText}", DataPhase=${data.phase}`);
-            
+            POG_Log.d(`THEATER_PRE_CHECK: BtnText before animation="${currentBtnText}"`);
             POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         }
 
-        // --- 4. 描画指示 (UI Sync) ---
-        // 統治：演出中(THEATER)や通信中(BUSY)なら、これ以降の描画（syncAllUI）は一切せず中断する
-        if (!window.AppState.canUpdateUI() && !force) {
-            POG_Log.d(`UI_SYNC_HALT: Mode is ${window.AppState.uiMode}. Skipping syncAllUI.`);
+        // --- 4. 描画ガード（統治権の行使） ---
+        const canDraw = window.AppState.canUpdateUI();
+        // force が true でも、THEATER モードなら描画させないよう論理を強化
+        const shouldSkipSync = (!canDraw && !force) || (window.AppState.uiMode === 'THEATER');
+
+        POG_Log.d(`DRAW_GATE_CHECK: canUpdateUI=${canDraw}, mode=${window.AppState.uiMode}, force=${force}, shouldSkipSync=${shouldSkipSync}`);
+
+        if (shouldSkipSync) {
+            POG_Log.d(`UI_SYNC_HALT: 🛑 Blocked syncAllUI because mode is [${window.AppState.uiMode}]`);
             return;
         }
 
-        // IDLE時のみ実行される正規の描画フロー
+        // --- 5. 正規描画 ---
         syncAllUI(data, force);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
+            POG_Log.i(`PAGE_RELOAD_TRIGGERED: ${window.AppState.lastPhase} -> ${data.phase}`);
             window.AppState.lastPhase = data.phase;
             location.reload();
             return;
@@ -160,6 +175,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_Log.e("Status update error", e);
     } finally {
         window.AppState.isUpdating = false;
+        POG_Log.d(`UPDATE_FINISHED: isUpdating=false`);
     }
 }
 
@@ -202,10 +218,19 @@ async function searchHorses() {
     const m = mInput.value;
     const currentQuery = `f=${f}&m=${m}`;
 
-    if (currentQuery === window.AppState.lastSearchQuery || !window.AppState.canUpdateUI()) return;
+    // 証拠：ガードされた理由を明確にする
+    if (currentQuery === window.AppState.lastSearchQuery) {
+        POG_Log.d(`SEARCH_SKIP: Query unchanged (${currentQuery})`);
+        return;
+    }
+    if (!window.AppState.canUpdateUI()) {
+        POG_Log.d(`SEARCH_SKIP: UI Busy (Mode=${window.AppState.uiMode})`);
+        return;
+    }
 
     window.AppState.lastSearchQuery = currentQuery;
     window.AppState.setMode('BUSY', 'searchHorses');
+    POG_Log.i(`SEARCH_START: query=[${currentQuery}]`);
     resultsEl.innerHTML = '<div class="search-loading">サーバー通信中...</div>';
 
     try {
@@ -248,8 +273,16 @@ async function searchHorses() {
 }
 
 window.doNominate = async function(name, mother) {
+    window.doNominate = async function(name, mother) {
+    POG_Log.i(`NOMINATE_ATTEMPT: horse="${name}"`);
     if (window.searchController) window.searchController.abort();
-    window.AppState.setMode('BUSY', 'doNominate');
+    
+    if (!confirm(`${name} を指名しますか？`)) {
+        POG_Log.i(`NOMINATE_CANCEL: User clicked cancel for "${name}"`);
+        return;
+    }
+
+    window.AppState.setMode('BUSY', 'doNominate_start');
 
     if (window.statusTimer) { 
         clearInterval(window.statusTimer); 
@@ -259,6 +292,7 @@ window.doNominate = async function(name, mother) {
         if (!confirm(`${name} を指名しますか？`)) return;
 
         const result = await POG_API.postNomination(name, mother);
+        POG_Log.d(`NOMINATE_RESPONSE:`, result);
         const data = JSON.parse(result.text);
         if (data.status === 'success') {
             alert("指名完了");
