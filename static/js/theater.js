@@ -41,25 +41,13 @@ const POG_Theater = {
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
         // 4. ボタンの準備（文字の更新のみ。is-visible はまだ付けない）
-        POG_Log.d(`DEBUG_EVIDENCE: BEFORE MAKE BTN : [${getVisibleStatus()}]`);
-        const btn = document.getElementById('t_next_btn');
-        POG_Log.d(`DEBUG_EVIDENCE: AFTER MAKE BTN : [${getVisibleStatus()}]`);
-        const latestMC = window.AppState.latestData?.mc_action;
-        if (btn && latestMC) {
-            POG_Log.d(`DEBUG_EVIDENCE: Setting Theater Button Text. Label=[${latestMC.label}]`);
-            POG_Log.d(`DEBUG_EVIDENCE: BEFORE MAKE BTN : [${getVisibleStatus()}]`);
-            btn.innerText = latestMC.label;
-            POG_Log.d(`DEBUG_EVIDENCE: AFTER innerText : [${getVisibleStatus()}]`);
-            btn.disabled = latestMC.disabled || false;
-            POG_Log.d(`DEBUG_EVIDENCE: AFTER disabled : [${getVisibleStatus()}]`);
-        }
-        const wait = (ms) => new Promise(res => setTimeout(res, ms));
-        POG_Log.d(`DEBUG_EVIDENCE: AFTER wait : [${getVisibleStatus()}]`);
+        POG_Log.d(`DEBUG_EVIDENCE: Deferred button text update to FINISHED state.`);
 
         // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
         POG_Log.d(`DEBUG_EVIDENCE: Theater Sequence: START : [${getVisibleStatus()}]`);
         await wait(1000);
+        POG_Log.d(`DEBUG_EVIDENCE: AFTER await wait(1000) : [${getVisibleStatus()}]`);
         document.getElementById('t_player_area').classList.add('is-visible');
         POG_Log.d("DEBUG_EVIDENCE: player_area VISIBLE");
         await wait(2000); 
@@ -78,8 +66,14 @@ const POG_Theater = {
 
         // 6. MCパネル表示
         await wait(2000); 
-        if (window.AppState.latestData?.mc_action) {
-            POG_Log.d("DEBUG_EVIDENCE: Showing MC control panel");
+        const finalMC = window.AppState.latestData?.mc_action;
+        if (finalMC) {
+            const tBtn = document.getElementById('t_next_btn');
+            if (tBtn) {
+                tBtn.innerText = finalMC.label;
+                tBtn.disabled = finalMC.disabled || false;
+            }
+            POG_Log.d(`DEBUG_EVIDENCE: Showing MC control panel with label: ${finalMC.label}`);
             document.getElementById('t_mc_ctrl').classList.add('is-visible');
         }
     },

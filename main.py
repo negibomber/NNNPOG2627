@@ -194,7 +194,7 @@ async def status():
         if lottery_idx + 1 < len(lottery_queue):
             mc_action = {"label": "次の抽選へ ≫", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
-            mc_action = {"label": "再指名へ ≫）", "endpoint": "/mc/next_round", "class": "btn-success"}
+            mc_action = {"label": "再指名へ ≫", "endpoint": "/mc/next_round", "class": "btn-success"}
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
