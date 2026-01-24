@@ -41,17 +41,24 @@ const POG_Theater = {
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
         // 4. ボタンの準備（文字の更新のみ。is-visible はまだ付けない）
+        POG_Log.d(`DEBUG_EVIDENCE: BEFORE MAKE BTN : [${getVisibleStatus()}]`);
         const btn = document.getElementById('t_next_btn');
+        POG_Log.d(`DEBUG_EVIDENCE: AFTER MAKE BTN : [${getVisibleStatus()}]`);
         const latestMC = window.AppState.latestData?.mc_action;
         if (btn && latestMC) {
             POG_Log.d(`DEBUG_EVIDENCE: Setting Theater Button Text. Label=[${latestMC.label}]`);
+            POG_Log.d(`DEBUG_EVIDENCE: BEFORE MAKE BTN : [${getVisibleStatus()}]`);
             btn.innerText = latestMC.label;
+            POG_Log.d(`DEBUG_EVIDENCE: AFTER innerText : [${getVisibleStatus()}]`);
             btn.disabled = latestMC.disabled || false;
+            POG_Log.d(`DEBUG_EVIDENCE: AFTER disabled : [${getVisibleStatus()}]`);
         }
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
+        POG_Log.d(`DEBUG_EVIDENCE: AFTER wait : [${getVisibleStatus()}]`);
 
         // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
+        POG_Log.d(`DEBUG_EVIDENCE: Theater Sequence: START : [${getVisibleStatus()}]`);
         await wait(1000);
         document.getElementById('t_player_area').classList.add('is-visible');
         POG_Log.d("DEBUG_EVIDENCE: player_area VISIBLE");
