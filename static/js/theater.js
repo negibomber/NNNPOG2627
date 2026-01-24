@@ -40,8 +40,11 @@ const POG_Theater = {
         document.getElementById('t_horse').innerText = data.horse || '---';
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
-        // 4. ボタンの準備（文字の更新のみ。is-visible はまだ付けない）
+        // 4. ボタンの準備（ここではテキストを入れず、演出終了まで待機する）
         POG_Log.d(`DEBUG_EVIDENCE: Deferred button text update to FINISHED state.`);
+        
+        // 必須：演出を待機させるための道具（これを消してしまったのがエラーの原因）
+        const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
         // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
