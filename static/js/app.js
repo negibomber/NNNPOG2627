@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
-const APP_VERSION = "0.5.10";
+const APP_VERSION = "0.5.11";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -155,13 +155,13 @@ async function updateStatus(preFetchedData = null, force = false) {
             }
         }
 
-
         // --- 4. MCボタンの描画 (UI Layer Finalize) ---
-        // 状態が確定した後に呼ぶ。
-        // ・THEATERになった場合 -> ui.js側で `style.display = 'none'` される (チラつき防止完了)
-        // ・IDLEになった場合 -> ボタンが表示される
-        POG_UI.renderMCPanel(data, isManual);
-
+        // 証拠：これから演出が始まる（willStartTheater）なら、一瞬でもボタンを出さないよう描画自体をスキップする
+        if (!willStartTheater) {
+            POG_UI.renderMCPanel(data, isManual);
+        } else {
+            POG_Log.d("renderMCPanel SKIPPED: Theater transition in progress.");
+        }
 
         // --- 5. 演出実行 ---
         if (willStartTheater) {
