@@ -43,7 +43,7 @@ window.statusTimer = null;
    1. [Core] App Initialization
    ========================================================================== */
 (function() {
-    const APP_VERSION = "0.5.8";
+    const APP_VERSION = "0.5.9";
     console.log(`--- POG APP START (Ver.${APP_VERSION}) ---`);
 
     const init = () => {
@@ -90,62 +90,83 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null, force = false) {
+    const caller = force ? "MC_ACTION" : (preFetchedData ? "PRE_FETCHED" : "AUTO_TIMER");
+    const isManual = force || (preFetchedData === null && !window.statusTimer);
+    
     // 証拠：強制更新(force)以外は、フラグが立っている間は物理的に即座にリターンする
-    if (window.AppState.isUpdating && !force) return;
+    if (window.AppState.isUpdating && !force) {
+        return; 
+    }
     window.AppState.isUpdating = true;
     
-    // POG_Log.d(`updateStatus START: force=${force}`); // 必要ならコメントアウト解除
-
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
         if (!data) return;
 
         window.AppState.latestData = data;
 
-        // --- 1. 演出判定の絶対基準 ---
-        // ここで「次に演出が始まるかどうか」を確定させる
+        // MC操作(MC_ACTION)時は、ボタンの状態を確定させるために描画を許可する必要がある。
+        if (caller === "AUTO_TIMER" && !window.AppState.canUpdateUI()) {
+            return;
+        }
+        
+        if (data.phase === undefined && DEBUG_MODE) {
+            POG_Log.e("汚染データの流入を検知（phase未定義）", data);
+        }
+
+        // --- 1. 演出判定 ---
         const isNewReveal = (data.phase === 'reveal' && data.reveal_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const isNewLottery = (data.phase === 'lottery_reveal' && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const willStartTheater = isNewReveal || isNewLottery;
 
-        // --- 2. 描画フェーズ（統治権の行使） ---
-        // BUSY（通信中）は描画させない。
-        // ただし、強制実行(force)時、あるいはIDLE時、あるいは「これから演出が始まる直前」は描画を許可する。
-        if (window.AppState.uiMode !== 'BUSY' || force) {
-            POG_UI.updateText('round_display', data.round);
-            const phaseMap = {
-                'nomination': '指名受付中', 'reveal': '指名公開中', 
-                'summary': '重複確認', 'lottery_reveal': '抽選実施中', 'lottery': '抽選終了'
-            };
-            POG_UI.updatePhaseLabel(data.phase, phaseMap);
+        // --- 2. 背景UIの描画 ---
+        // メインのボタン以外（カードやフェーズ表示）は先に更新しておく
+        POG_UI.updateText('round_display', data.round);
+        const phaseMap = {
+            'nomination': '指名受付中', 'reveal': '指名公開中', 
+            'summary': '重複確認', 'lottery_reveal': '抽選実施中', 'lottery': '抽選終了'
+        };
+        POG_UI.updatePhaseLabel(data.phase, phaseMap);
+        POG_UI.renderStatusCounter(data);
+        POG_UI.renderPhaseUI(data);
+        
+        // 注意: BUSY時は renderPlayerCards がスキップされる仕様だが、背景更新としては正しい挙動
+        POG_UI.renderPlayerCards(data);
 
-            POG_UI.renderStatusCounter(data);
-            POG_UI.renderPlayerCards(data);
-            POG_UI.renderPhaseUI(data);
 
-            // 証拠：ここでボタンを「次の演出」用に描き変える（処理中... から 次の指名≫ へ）。
-            // 直後にTHEATERへ遷移するため、この描画が「演出中のボタン」の初期状態となる。
-            POG_UI.renderMCPanel(data, force);
-        }
-
-        // --- 3. 状態遷移と演出実行 ---
+        // --- 3. 状態遷移 (State Commit) ---
+        // 【重要】ボタンを描画する「前」に、次のモードを確定させる。
+        // これにより、直後の renderMCPanel が「THEATERだから隠す」のか「IDLEだから出す」のかを正しく判断できる。
         if (willStartTheater) {
-            POG_Log.i(`New Index detected: ${data.reveal_index}. Starting Theater Mode.`);
+            POG_Log.i(`Theater transition detected: ${window.AppState.lastPlayedIdx} -> ${data.reveal_index}`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
-            POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         } else {
-            // 演出対象外のフェーズ、かつ演出レイヤーが開いている場合は閉じる
-            // (THEATERモードの解除もここで行う)
-            if (document.getElementById('theater_layer').style.display === 'flex') {
+            // 演出終了判定
+            const isTheaterOpen = document.getElementById('theater_layer').style.display === 'flex';
+            const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(data.phase);
+            
+            if (isTheaterOpen && !isTheaterPhase) {
                 POG_Log.i(`Phase changed (${data.phase}). Closing theater.`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
+                // ここでIDLEに戻すことで、直後のrenderMCPanelでボタンが正しく再表示される
                 window.AppState.setMode('IDLE', 'updateStatus_close');
-            } else if (window.AppState.uiMode === 'THEATER') {
-                // 万が一レイヤーが閉じていてモードだけTHEATERの場合の復帰
-                window.AppState.setMode('IDLE', 'updateStatus_restore');
             }
+        }
+
+
+        // --- 4. MCボタンの描画 (UI Layer Finalize) ---
+        // 状態が確定した後に呼ぶ。
+        // ・THEATERになった場合 -> ui.js側で `style.display = 'none'` される (チラつき防止完了)
+        // ・IDLEになった場合 -> ボタンが表示される
+        POG_UI.renderMCPanel(data, isManual);
+
+
+        // --- 5. 演出実行 ---
+        if (willStartTheater) {
+            POG_Log.d(`Starting Theater Animation`);
+            POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         }
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
@@ -154,10 +175,11 @@ async function updateStatus(preFetchedData = null, force = false) {
             return;
         }
         window.AppState.lastPhase = data.phase;
+
     } catch (e) {
         POG_Log.e("Status update error", e);
     } finally {
-        window.AppState.isUpdating = false; // 必ずロックを解除
+        window.AppState.isUpdating = false;
     }
 }
 
