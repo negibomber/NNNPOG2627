@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6
    ========================================================================== */
-const APP_VERSION = "0.6.4";
+const APP_VERSION = "0.6.5";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -141,16 +141,21 @@ async function updateStatus(preFetchedData = null, force = false) {
             POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         }
 
+        // --- 統治権の厳格化: AND条件による許可制描画 ---
         const isTheaterActive = (window.AppState.uiMode === 'THEATER');
-        const shouldSkipSync = (!window.AppState.canUpdateUI() && !force) || isTheaterActive;
+        const canUpdate = window.AppState.canUpdateUI();
 
-        POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, skip=${shouldSkipSync}`);
+        // 許可条件: 「演出中でない」 かつ 「(待機中である または 強制フラグがある)」
+        const isAllowedToDraw = (!isTheaterActive) && (canUpdate || force);
 
-        if (shouldSkipSync) {
-            POG_Log.d(`UI_SYNC_HALT: 🛑 Stopped syncAllUI to protect Theater layer. (Mode: ${window.AppState.uiMode})`);
+        POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, allow=${isAllowedToDraw}`);
+
+        if (!isAllowedToDraw) {
+            POG_Log.d(`UI_SYNC_HALT: 🛑 PROTECTION ACTIVE: (Theater=${isTheaterActive}, canUpdate=${canUpdate}, force=${force})`);
             return;
         }
 
+        // --- 許可された場合のみ描画実行 ---
         syncAllUI(data, force);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
@@ -167,7 +172,6 @@ async function updateStatus(preFetchedData = null, force = false) {
         window.AppState.isUpdating = false;
     }
 }
-
 function syncAllUI(data, isManual = false) {
     POG_Log.d("syncAllUI: Executing IDLE draw");
     POG_UI.updateText('round_display', data.round);
