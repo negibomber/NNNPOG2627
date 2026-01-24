@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
-const APP_VERSION = "0.5.13";
+const APP_VERSION = "0.5.14";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -126,7 +126,9 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, reveal_index=${data.reveal_index}, label=${incomingLabel}, uiMode=${window.AppState.uiMode}`);
 
         // MC操作(MC_ACTION)時は、ボタンの状態を確定させるために描画を許可する必要がある。
-        if (caller === "AUTO_TIMER" && !window.AppState.canUpdateUI()) {
+        // 統治の徹底：BUSY（通信中）または THEATER（演出中）であれば、メモリ更新のみ行い、描画（これ以降）は一切せず中断する
+        if (!window.AppState.canUpdateUI()) {
+            POG_Log.d(`updateStatus HALT: Data cached, but UI update skipped during ${window.AppState.uiMode}`);
             return;
         }
         
