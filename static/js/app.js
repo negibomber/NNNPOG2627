@@ -1,7 +1,7 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.6.0 (Refactored)
+   POG Main Application Module (app.js) - Ver.0.6 (Refactored)
    ========================================================================== */
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.6.1";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -105,7 +105,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         let data = preFetchedData || await POG_API.fetchStatus();
         if (!data) return;
 
-        // データ受領（メモリ更新のみ、まだ描画しない）
+        // データ受領（メモリ更新のみ）
         window.AppState.latestData = data;
         POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}`);
 
@@ -128,18 +128,25 @@ async function updateStatus(preFetchedData = null, force = false) {
             }
         }
 
-        // --- 3. 描画指示 (UI Sync) ---
-        // 通信中(BUSY)または演出開始直前(THEATER)なら、描画フェーズに入らず終了
+        // --- 3. 演出実行 (Theater Launch) ---
+        // 証拠：演出が必要な場合は、描画ガード(return)の前に必ず着火させる
+        if (willStartTheater) {
+            POG_Log.i(`Theater START: Round=${data.round}, Index=${data.reveal_index}`);
+            // 演出開始直前のボタン状態を証拠として記録
+            const currentBtnText = document.getElementById('mc_main_btn')?.innerText;
+            POG_Log.d(`THEATER_START_TRACE: BtnText="${currentBtnText}", DataPhase=${data.phase}`);
+            
+            POG_Theater.playReveal(data.reveal_data || data.lottery_data);
+        }
+
+        // --- 4. 描画指示 (UI Sync) ---
+        // 統治：演出中(THEATER)や通信中(BUSY)なら、これ以降の描画（syncAllUI）は一切せず中断する
         if (!window.AppState.canUpdateUI() && !force) {
-            // 演出開始時のみ、シアターエンジンの起動を許可
-            if (willStartTheater) {
-                POG_Log.i(`Theater START: Round=${data.round}`);
-                POG_Theater.playReveal(data.reveal_data || data.lottery_data);
-            }
+            POG_Log.d(`UI_SYNC_HALT: Mode is ${window.AppState.uiMode}. Skipping syncAllUI.`);
             return;
         }
 
-        // IDLE時のみ実行される「正規の描画フロー」
+        // IDLE時のみ実行される正規の描画フロー
         syncAllUI(data, force);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
