@@ -2,10 +2,18 @@
 const POG_Theater = {
     async playReveal(data) {
         POG_Log.i(`Theater PLAY_START: Round=${data.round}, Index=${window.AppState.lastPlayedIdx}`);
+        POG_Log.d(`DEBUG_EVIDENCE: Theater START: [${getVisibleStatus()}]`);
 
         const layer = document.getElementById('theater_layer');
-        // 証拠：実行時のレイヤー表示状態
         POG_Log.d(`DEBUG_EVIDENCE: layer_display=[${layer.style.display}]`);
+
+        // --- 証拠収集：初期状態の検問 ---
+        const getVisibleStatus = () => {
+            return ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl']
+                .map(id => `${id.replace('t_', '')}:${document.getElementById(id)?.classList.contains('is-visible')}`)
+                .join(', ');
+        };
+        POG_Log.d(`DEBUG_EVIDENCE: BEFORE_RESET: [${getVisibleStatus()}]`);
 
         const master = data.horses || {};
         
@@ -17,13 +25,17 @@ const POG_Theater = {
         document.getElementById('t_horse').innerText = data.horse || '---';
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
-        // 2. 初期化（ここが消える犯人かどうかの証拠を取る）
+        // 2. 初期化
         POG_Log.d("DEBUG_EVIDENCE: Resetting 'is-visible' classes...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             document.getElementById(id)?.classList.remove('is-visible');
         });
+
+        // --- 証拠収集：リセット後の検問 ---
+        POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
         
         // 3. ボタンの初期化
+        const btn = document.getElementById('t_next_btn');
         const btn = document.getElementById('t_next_btn');
         const latestMC = window.AppState.latestData?.mc_action;
         if (btn && latestMC) {
