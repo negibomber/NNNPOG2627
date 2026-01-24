@@ -18,8 +18,18 @@ const POG_Theater = {
         // 1. 【核心】レイヤーを表示する前に「先行リセット」を実行し、物理的な隙を消す
         POG_Log.d("DEBUG_EVIDENCE: Resetting 'is-visible' classes before layer display...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
-            document.getElementById(id)?.classList.remove('is-visible');
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('is-visible'); // 演出状態をリセット
+            if (id === 't_mc_ctrl') el.style.display = 'none'; // ガワを物理的に消す
         });
+
+        // 追加：前回の「更新中…」を物理的に消し去り、ボタンを無効化
+        const ctrl = document.getElementById('t_mc_ctrl');
+        if (ctrl) {
+            ctrl.style.display = 'block'; // 物理的に戻す
+            ctrl.classList.add('is-visible');
+        }
         
         // リセット直後の状態記録（この時点で mc_ctrl:false であることが絶対条件）
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
