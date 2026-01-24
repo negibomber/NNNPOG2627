@@ -144,7 +144,7 @@ async def status():
         h_info = h_map.get(h_key, {})
         n['horses'] = {
             "father_name": str(h_info.get('father_name') or "-"),
-            "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-")
+            "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-"),
             "sex": str(h_info.get('sex') or "")
         }
     is_all_nominated = len(current_noms) >= len(active_players)
