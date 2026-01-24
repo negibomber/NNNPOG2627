@@ -21,15 +21,8 @@ const POG_Theater = {
             const el = document.getElementById(id);
             if (!el) return;
             el.classList.remove('is-visible');
-            if (id === 't_mc_ctrl') el.style.display = 'none';
+            if (id === 't_mc_ctrl') el.style.setProperty('display', 'none', 'important');
         });
-
-        // 追加：前回の「更新中…」を物理的に消し去り、ボタンを無効化
-        const ctrl = document.getElementById('t_mc_ctrl');
-        if (ctrl) {
-            ctrl.style.display = 'block'; // 物理的に戻す
-            ctrl.classList.add('is-visible');
-        }
         
         // リセット直後の状態記録（この時点で mc_ctrl:false であることが絶対条件）
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
@@ -89,7 +82,7 @@ const POG_Theater = {
             POG_Log.d(`DEBUG_EVIDENCE: Showing MC control panel with label: ${finalMC.label}`);
             const ctrl = document.getElementById('t_mc_ctrl');
             if (ctrl) {
-                ctrl.style.display = 'block'; // ここで封印を解く
+                ctrl.style.setProperty('display', 'flex', 'important'); // 本来のflexで復元
                 ctrl.classList.add('is-visible');
             }
         }
