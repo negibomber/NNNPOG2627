@@ -150,11 +150,10 @@ const POG_UI = {
         const btn = document.getElementById('mc_main_btn');
 
         try {
-            // 1. 通信開始: 自ら BUSY を宣言し、この瞬間に描画を物理ロックする
+            // 1. 通信開始: 自ら BUSY を宣言し、描画を物理ロックする
             window.AppState.setMode('BUSY', 'executeMCAction');
             
             if (btn) {
-                btn.dataset.originalText = btn.innerText;
                 btn.innerText = "処理中...";
                 btn.disabled = true;
             }
@@ -167,38 +166,27 @@ const POG_UI = {
 
             const res = await POG_API.postMCAction(data.mc_action.endpoint);
             
-            // 2. 通信完了後: 即座に IDLE に戻さず、updateStatus に次の判断を委ねる。
-            // これにより「通信完了 -> データ取得 -> (演出なら)THEATER移行」のフローが繋がる。
+            // 2. 通信完了後: updateStatus に次の判断を委ねる
             if (res && typeof updateStatus === 'function') {
                 await updateStatus(null, true);
             }
 
         } catch (error) {
             POG_Log.e("MCAction Error", error);
-            // エラー時は復帰しないと詰むため例外的にIDLEへ
             window.AppState.setMode('IDLE', 'executeMCAction_error');
             throw error;
         } finally {
-            // 3. 統治権の確認 [重要]
-            // updateStatus の結果、THEATER（演出中）になっていたら、ここは何もしない。
-            // 「BUSY」のまま残っている（＝演出遷移しなかった）場合のみ、IDLEに戻してボタンを復元する。
+            // 3. 統治権の確認
+            // updateStatus の結果、THEATER（演出中）になっていなければ IDLE に戻す
             if (window.AppState.uiMode === 'BUSY') {
                 window.AppState.setMode('IDLE', 'executeMCAction_finally');
                 
                 if (!window.statusTimer) {
                     window.statusTimer = setInterval(updateStatus, 3000);
                 }
-                // ボタンの復元は renderMCPanel が最新データに基づいて行うため、ここでは明示的に触らない
-                // (BUSY解除後に renderMCPanel が呼ばれるか、次の定期更新で直る)
-                if (btn) {
-                    POG_Log.d(`DEBUG_EVIDENCE: executeMCAction_finally DIRECT_DOM_TOUCH. mode=${window.AppState.uiMode}, label=${window.AppState.latestData?.mc_action?.label}`);
-                    // 念のためテキストだけ戻しておくが、表示制御は renderMCPanel に任せる
-                    const latest = window.AppState.latestData?.mc_action;
-                    btn.innerText = latest?.label || btn.dataset.originalText || "MC操作";
-                    btn.disabled = false;
-                }
+                // 重要：古い変数を直接触らず、必ず正規の描画関数を通して最新データを反映する
+                this.renderMCPanel(window.AppState.latestData);
             }
-            // THEATER の場合は、「何もしない」のが正解。ボタンを隠す等の処理も renderMCPanel に任せる。
         }
     },
 
