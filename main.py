@@ -182,7 +182,7 @@ async def status():
             mc_action = {"label": "指名待ち...", "endpoint": None, "class": "btn-secondary", "disabled": True}
     elif phase == "reveal":
         if rev_idx < len(active_players) - 1:
-            mc_action = {"label": "次の指名 ≫", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
+            mc_action = {"label": "次の指名公開 ≫", "endpoint": "/mc/next_reveal", "class": "btn-primary"}
         else:
             mc_action = {"label": "指名結果確認 ≫", "endpoint": "/mc/run_lottery", "class": "btn-primary"} 
     elif phase == "summary":

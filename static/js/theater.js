@@ -15,13 +15,13 @@ const POG_Theater = {
         // 修正：冒頭での状態記録
         POG_Log.d(`DEBUG_EVIDENCE: Theater START: [${getVisibleStatus()}]`);
 
-        // 1. 【核心】レイヤーを表示する前に「先行リセット」を実行し、物理的な隙を消す
-        POG_Log.d("DEBUG_EVIDENCE: Resetting 'is-visible' classes before layer display...");
+        // 1. 【核心】レイヤーを表示する前に「先行リセット」を実行
+        POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
-            el.classList.remove('is-visible'); // 演出状態をリセット
-            if (id === 't_mc_ctrl') el.style.display = 'none'; // ガワを物理的に消す
+            el.classList.remove('is-visible');
+            if (id === 't_mc_ctrl') el.style.display = 'none';
         });
 
         // 追加：前回の「更新中…」を物理的に消し去り、ボタンを無効化
@@ -87,7 +87,11 @@ const POG_Theater = {
                 tBtn.disabled = finalMC.disabled || false;
             }
             POG_Log.d(`DEBUG_EVIDENCE: Showing MC control panel with label: ${finalMC.label}`);
-            document.getElementById('t_mc_ctrl').classList.add('is-visible');
+            const ctrl = document.getElementById('t_mc_ctrl');
+            if (ctrl) {
+                ctrl.style.display = 'block'; // ここで封印を解く
+                ctrl.classList.add('is-visible');
+            }
         }
     },
 
