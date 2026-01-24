@@ -147,17 +147,16 @@ const POG_UI = {
     async executeMCAction() {
         const data = window.AppState.latestData;
         if (!data || !data.mc_action) return;
-        const action = data.mc_action;
         const btn = document.getElementById('mc_main_btn');
 
         try {
+            // 1. 通信開始: 自ら BUSY を宣言し、この瞬間に描画を物理ロックする
             window.AppState.setMode('BUSY', 'executeMCAction');
+            
             if (btn) {
-                // 証拠：一時停止中のテキストを確実に保持
                 btn.dataset.originalText = btn.innerText;
                 btn.innerText = "処理中...";
                 btn.disabled = true;
-                POG_Log.d(`executeMCAction UI_LOCK: label="${btn.dataset.originalText}"`);
             }
 
             // タイマー停止
@@ -166,79 +165,63 @@ const POG_UI = {
                 window.statusTimer = null;
             }
 
-            const res = await POG_API.postMCAction(action.endpoint);
-            if (res) {
-                const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(res.phase);
-
-                if (isTheaterPhase) {
-                    // 【真のあるべき姿：先行統治】
-                    // サーバーが演出フェーズだと答えたなら、この瞬間に THEATER モードを確立する。
-                    // これにより、直後の finally ブロックによる「不要なボタン復元」を論理的に封鎖する。
-                    POG_Log.i("Theater mode detected in API response. Pre-locking THEATER mode.");
-                    window.AppState.setMode('THEATER', 'executeMCAction_api_res');
-                } else if (typeof updateStatus === 'function') {
-                    // 演出がない場合のみ、従来通りの安全な待機と更新を行います。
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await updateStatus(null, true);
-                }
+            const res = await POG_API.postMCAction(data.mc_action.endpoint);
+            
+            // 2. 通信完了後: 即座に IDLE に戻さず、updateStatus に次の判断を委ねる。
+            // これにより「通信完了 -> データ取得 -> (演出なら)THEATER移行」のフローが繋がる。
+            if (res && typeof updateStatus === 'function') {
+                await updateStatus(null, true);
             }
+
         } catch (error) {
             POG_Log.e("MCAction Error", error);
+            // エラー時は復帰しないと詰むため例外的にIDLEへ
+            window.AppState.setMode('IDLE', 'executeMCAction_error');
             throw error;
         } finally {
-            POG_Log.d(`MCAction FINALLY: Current status before IDLE check`);
-            // 証拠：通信の結果「演出（THEATER）」が開始された場合は、IDLEに戻さず統治権を委譲する
-            if (window.AppState.uiMode !== 'THEATER') {
+            // 3. 統治権の確認 [重要]
+            // updateStatus の結果、THEATER（演出中）になっていたら、ここは何もしない。
+            // 「BUSY」のまま残っている（＝演出遷移しなかった）場合のみ、IDLEに戻してボタンを復元する。
+            if (window.AppState.uiMode === 'BUSY') {
                 window.AppState.setMode('IDLE', 'executeMCAction_finally');
                 
-                // 【あるべき姿：権限の限定】
-                // 演出に移行しなかった場合のみ、自身の管理下にあるタイマーとボタンを復元する。
                 if (!window.statusTimer) {
                     window.statusTimer = setInterval(updateStatus, 3000);
                 }
+                // ボタンの復元は renderMCPanel が最新データに基づいて行うため、ここでは明示的に触らない
+                // (BUSY解除後に renderMCPanel が呼ばれるか、次の定期更新で直る)
                 if (btn) {
-                    const latestLabel = window.AppState.latestData?.mc_action?.label;
-                    btn.innerText = latestLabel || btn.dataset.originalText || "MC操作";
+                    // 念のためテキストだけ戻しておくが、表示制御は renderMCPanel に任せる
+                    const latest = window.AppState.latestData?.mc_action;
+                    btn.innerText = latest?.label || btn.dataset.originalText || "MC操作";
                     btn.disabled = false;
                 }
-            } else {
-                // 演出に移行した場合は、ボタンの復元すら行わず、すべてを演出エンジンに委ねる。
-                POG_Log.i("Theater mode active. MC action controller yields all UI control.");
             }
+            // THEATER の場合は、「何もしない」のが正解。ボタンを隠す等の処理も renderMCPanel に任せる。
         }
     },
 
     renderMCPanel(data, isManual = false) {
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel entry - mode=${window.AppState.uiMode}, isManual=${isManual}`);
-
-        // 【真の案C: UI描画の許可制】
-        // 状態が IDLE 以外（THEATER/BUSY）であれば、誰の命令であっても「描画拒否」を貫く。
-        if (!window.AppState.canUpdateUI()) {
-            POG_Log.d(`renderMCPanel ABORT: UI status [${window.AppState.uiMode}] takes absolute precedence.`);
+        // 【案Cの鉄則】BUSY（通信中）の間は、誰が何と言おうとボタンを上書きさせない
+        if (window.AppState.uiMode === 'BUSY' && !isManual) {
             return;
         }
 
         const btn = document.getElementById('mc_main_btn');
         if (!btn) return;
 
-        if (!data.mc_action) {
-            POG_Log.d("DEBUG_EVIDENCE: renderMCPanel - Hiding button (no action)");
+        // 演出中(THEATER)、またはアクションデータがない場合はボタンを消す
+        if (window.AppState.uiMode === 'THEATER' || !data.mc_action) {
             btn.style.display = 'none';
             return;
         }
 
-        // 証拠：ここから下の「プロパティ書き換え」がチラつきの物理的な原因かどうかを特定する
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel - WRITING PROPERTIES. mode=${window.AppState.uiMode}`);
+        // それ以外（IDLE）なら最新データを反映
+        btn.style.display = 'block';
+        btn.innerText = data.mc_action.label;
+        btn.disabled = data.mc_action.disabled || false;
+        btn.className = 'mc_main_btn ' + (data.mc_action.class || '');
 
-        const action = data.mc_action;
-        btn.innerText = action.label;
-        btn.disabled = action.disabled || false;
-        
-        // 証拠：クラス名変更による暗黙的な表示発生を追跡
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel - Setting className: ${action.class || 'default'}`);
-        btn.className = 'mc_main_btn ' + (action.class || '');
-
-        // 共通メソッドを呼び出す
         btn.onclick = () => {
             this.executeMCAction().catch(() => alert("操作に失敗しました。"));
         };
