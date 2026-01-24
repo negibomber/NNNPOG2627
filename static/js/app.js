@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6 (Refactored)
    ========================================================================== */
-const APP_VERSION = "0.6.2";
+const APP_VERSION = "0.6.3";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -20,19 +20,19 @@ window.POG_Log = {
 
 // --- [State Management] アプリケーションの状態を一括管理 ---
 window.AppState = {
-    uiMode: 'IDLE',      // 'IDLE', 'BUSY' (通信中), 'THEATER' (演出中)
-    latestData: null,    // 唯一のデータソース
-    lastPlayedIdx: -1,   // 演出重複防止
-    isUpdating: false,   // 通信ロック
+    uiMode: 'IDLE',      // 'IDLE', 'BUSY', 'THEATER'
+    latestData: null,
+    lastPlayedIdx: -1,
+    isUpdating: false,
 
     canUpdateUI() {
         return this.uiMode === 'IDLE';
     },
 
     setMode(newMode, caller) {
-        // 証拠：意図しないモード変更（例：演出中にIDLEへ強制変更など）を監視
-        if (this.uiMode === 'THEATER' && newMode !== 'IDLE') {
-            POG_Log.e(`ILLEGAL_MODE_TRANSITION: Attempted ${this.uiMode} -> ${newMode} by ${caller}`);
+        // 証拠：演出中の不正なモード遷移を検知
+        if (this.uiMode === 'THEATER' && newMode === 'BUSY') {
+            POG_Log.d(`STATE_LOCKED: Theater is running. Entry to BUSY allowed only for Action.`);
         }
         POG_Log.d(`STATE_CHANGE: ${this.uiMode} -> ${newMode} (by ${caller})`);
         this.uiMode = newMode;
@@ -123,9 +123,9 @@ async function updateStatus(preFetchedData = null, force = false) {
         const isNewLottery = (data.phase === 'lottery_reveal' && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const willStartTheater = isNewReveal || isNewLottery;
 
-        // --- 2. 状態遷移の確定 (証拠ログ強化) ---
+        // --- 2. 状態遷移の確定 (証拠ログ) ---
         if (willStartTheater) {
-            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: isNewReveal=${isNewReveal}, isNewLottery=${isNewLottery}, lastIdx=${window.AppState.lastPlayedIdx} -> newIdx=${data.reveal_index})`);
+            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: New Data for Idx ${data.reveal_index})`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
         } else {
@@ -133,7 +133,7 @@ async function updateStatus(preFetchedData = null, force = false) {
             const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(data.phase);
             
             if (isTheaterOpen && !isTheaterPhase) {
-                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: Theater is open but Phase is [${data.phase}])`);
+                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: Phase [${data.phase}] is not for Theater)`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
                 window.AppState.setMode('IDLE', 'updateStatus_close');
@@ -142,29 +142,28 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // --- 3. 演出実行 ---
         if (willStartTheater) {
-            POG_Log.i(`THEATER_LAUNCH_EXEC: Calling playReveal (Index=${data.reveal_index})`);
-            const currentBtnText = document.getElementById('mc_main_btn')?.innerText;
-            POG_Log.d(`THEATER_PRE_CHECK: BtnText before animation="${currentBtnText}"`);
+            POG_Log.i(`THEATER_LAUNCH: Calling playReveal`);
             POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         }
 
         // --- 4. 描画ガード（統治権の行使） ---
-        const canDraw = window.AppState.canUpdateUI();
-        // force が true でも、THEATER モードなら描画させないよう論理を強化
-        const shouldSkipSync = (!canDraw && !force) || (window.AppState.uiMode === 'THEATER');
+        // 鉄壁：演出中(THEATER)は、たとえ force(MC操作)であっても syncAllUI を絶対に踏ませない
+        const isTheaterActive = (window.AppState.uiMode === 'THEATER');
+        const shouldSkipSync = (!window.AppState.canUpdateUI() && !force) || isTheaterActive;
 
-        POG_Log.d(`DRAW_GATE_CHECK: canUpdateUI=${canDraw}, mode=${window.AppState.uiMode}, force=${force}, shouldSkipSync=${shouldSkipSync}`);
+        POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, skip=${shouldSkipSync}`);
 
         if (shouldSkipSync) {
-            POG_Log.d(`UI_SYNC_HALT: 🛑 Blocked syncAllUI because mode is [${window.AppState.uiMode}]`);
+            // 演出中の syncAllUI 呼び出しをここで物理的に遮断する
+            POG_Log.d(`UI_SYNC_HALT: 🛑 Stopped syncAllUI to protect Theater layer. (Mode: ${window.AppState.uiMode})`);
             return;
         }
 
-        // --- 5. 正規描画 ---
+        // --- 5. 正規描画 (IDLE時のみ) ---
         syncAllUI(data, force);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
-            POG_Log.i(`PAGE_RELOAD_TRIGGERED: ${window.AppState.lastPhase} -> ${data.phase}`);
+            POG_Log.i(`PAGE_RELOAD: ${window.AppState.lastPhase} -> ${data.phase}`);
             window.AppState.lastPhase = data.phase;
             location.reload();
             return;
@@ -175,7 +174,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_Log.e("Status update error", e);
     } finally {
         window.AppState.isUpdating = false;
-        POG_Log.d(`UPDATE_FINISHED: isUpdating=false`);
+        POG_Log.d(`UPDATE_FINISHED`);
     }
 }
 
