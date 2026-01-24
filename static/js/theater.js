@@ -1,4 +1,4 @@
-/* theater.js (Ver.0.4.4-DEBUG) - 証拠収集用 */
+/* theater.js (Ver.0.4.7) - 右寄せ・ガタつき防止反映版 */
 const POG_Theater = {
     async playReveal(data) {
         // クラス状態を可視化する内部ヘルパー
@@ -12,30 +12,33 @@ const POG_Theater = {
         };
 
         POG_Log.i(`Theater PLAY_START: Round=${data.round}, Index=${window.AppState.lastPlayedIdx}`);
-        // 修正：冒頭での状態記録
         POG_Log.d(`DEBUG_EVIDENCE: Theater START: [${getVisibleStatus()}]`);
 
-        // 1. 【核心】レイヤーを表示する前に「先行リセット」を実行
-        POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components...");
+        // 1. 【核心】先行リセット：場所を確保しつつ透明化（ガタつき防止）
+        POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components with layout preservation...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
             el.classList.remove('is-visible');
-            if (id === 't_mc_ctrl') el.style.setProperty('display', 'none', 'important');
+            
+            // ボタンエリア特有の制御：右寄せを維持したまま、物理的な場所（flex）は消さずに隠す
+            if (id === 't_mc_ctrl') {
+                el.style.setProperty('display', 'flex', 'important');
+                el.style.setProperty('align-items', 'flex-end', 'important'); // 右寄せ
+                el.style.setProperty('opacity', '0', 'important');           // 透明化
+                el.style.setProperty('visibility', 'hidden', 'important');    // 隠蔽
+                el.style.setProperty('pointer-events', 'none', 'important');  // 誤クリック防止
+            }
         });
         
-        // リセット直後の状態記録（この時点で mc_ctrl:false であることが絶対条件）
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
 
         const layer = document.getElementById('theater_layer');
-        POG_Log.d(`DEBUG_EVIDENCE: layer_display=[${layer.style.display}] -> Setting to flex`);
-        
-        // 2. 真っ白（ボタンなし）が保証された状態でレイヤーを表示
         layer.style.display = 'flex';
 
         const master = data.horses || {};
         
-        // 3. データ流し込み（裏側で実行）
+        // 3. データ流し込み
         document.getElementById('t_title').innerText = `第 ${data.round || '?'} 巡 選択希望競走馬`;
         document.getElementById('t_player').innerText = data.player || '---';
         document.getElementById('t_father').innerText = data.father || master.father_name || '---';
@@ -43,34 +46,23 @@ const POG_Theater = {
         document.getElementById('t_horse').innerText = data.horse || '---';
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
-        // 4. ボタンの準備（ここではテキストを入れず、演出終了まで待機する）
-        POG_Log.d(`DEBUG_EVIDENCE: Deferred button text update to FINISHED state.`);
-        
-        // 必須：演出を待機させるための道具（これを消してしまったのがエラーの原因）
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
         // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
-        POG_Log.d(`DEBUG_EVIDENCE: Theater Sequence: START : [${getVisibleStatus()}]`);
         await wait(1000);
-        POG_Log.d(`DEBUG_EVIDENCE: AFTER await wait(1000) : [${getVisibleStatus()}]`);
         document.getElementById('t_player_area').classList.add('is-visible');
-        POG_Log.d("DEBUG_EVIDENCE: player_area VISIBLE");
         await wait(2000); 
         document.getElementById('t_father_area').classList.add('is-visible');
-        POG_Log.d("DEBUG_EVIDENCE: father_area VISIBLE");
         await wait(2500);
         document.getElementById('t_mother_area').classList.add('is-visible');
-        POG_Log.d("DEBUG_EVIDENCE: mother_area VISIBLE");
         await wait(1000);
         document.getElementById('t_horse_area').classList.add('is-visible');
-        POG_Log.d("DEBUG_EVIDENCE: horse_area VISIBLE");
         await wait(1000);
         document.getElementById('t_stable_area').classList.add('is-visible');
-        POG_Log.d("DEBUG_EVIDENCE: stable_area VISIBLE");
         POG_Log.d("Theater Sequence: FINISHED");
 
-        // 6. MCパネル表示
+        // 6. MCパネル表示：場所を動かさず、透明度だけを戻す
         await wait(2000); 
         const finalMC = window.AppState.latestData?.mc_action;
         if (finalMC) {
@@ -79,10 +71,12 @@ const POG_Theater = {
                 tBtn.innerText = finalMC.label;
                 tBtn.disabled = finalMC.disabled || false;
             }
-            POG_Log.d(`DEBUG_EVIDENCE: Showing MC control panel with label: ${finalMC.label}`);
             const ctrl = document.getElementById('t_mc_ctrl');
             if (ctrl) {
-                ctrl.style.setProperty('display', 'flex', 'important'); // 本来のflexで復元
+                // 透明封印を解き、右寄せのまま表示
+                ctrl.style.setProperty('opacity', '1', 'important');
+                ctrl.style.setProperty('visibility', 'visible', 'important');
+                ctrl.style.setProperty('pointer-events', 'auto', 'important');
                 ctrl.classList.add('is-visible');
             }
         }
@@ -93,13 +87,11 @@ const POG_Theater = {
         if (!btn || btn.disabled) return;
         
         POG_Log.i(`triggerNext START: current="${btn.innerText}"`);
-        
         btn.disabled = true;
         btn.innerText = "更新中...";
 
         try {
             await POG_UI.executeMCAction();
-            POG_Log.d("triggerNext MCAction COMPLETED.");
         } catch (e) {
             POG_Log.e("MC Action Error in Theater", e);
             alert("更新に失敗しました。");
