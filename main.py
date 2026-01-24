@@ -145,6 +145,7 @@ async def status():
         n['horses'] = {
             "father_name": str(h_info.get('father_name') or "-"),
             "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-")
+            "sex": str(h_info.get('sex') or "")
         }
     is_all_nominated = len(current_noms) >= len(active_players)
     
@@ -165,7 +166,8 @@ async def status():
                 "mother": res[0]['mother_name'], 
                 "father": str(h_d.get('father_name') or "データなし"),
                 "stable": str(h_d.get('stable') or "未登録"),
-                "breeder": str(h_d.get('breeder') or "未登録")
+                "breeder": str(h_d.get('breeder') or "未登録"),
+                "sex": str(h_d.get('sex') or "")
             }
 
     # --- 演出用データの取得 ---

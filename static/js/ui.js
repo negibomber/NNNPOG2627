@@ -48,9 +48,18 @@ const POG_UI = {
                         } else if (['summary', 'lottery_reveal'].includes(data.phase)) { shouldHide = true; hideMsg = '??? (抽選待ち)'; }
                     }
                     const hName = shouldHide ? hideMsg : n.horse_name;
+                    
+                    // 性別の取得と装飾
+                    let sexMarker = "";
+                    if (!shouldHide && n.horses?.sex) {
+                        const s = n.horses.sex;
+                        const sColor = s === '牡' ? '#42a5f5' : (s === '牝' ? '#ef5350' : 'inherit');
+                        sexMarker = `<span style="color:${sColor}; font-weight:bold; margin-left:4px;">${s === '牡' ? '♂' : (s === '牝' ? '♀' : '')}</span>`;
+                    }
+
                     const father = n.horses?.father_name || '-', mother = n.horses?.mother_name || n.mother_name || '-';
                     const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
-                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div>${hName}</div>`;
+                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div>${hName}${sexMarker}</div>`;
                     if (!shouldHide) html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
                     html += `</td></tr>`;
                 });
@@ -80,8 +89,17 @@ const POG_UI = {
             const listEl = document.getElementById('lottery_summary_list');
             const horseGroups = {};
             data.all_nominations.filter(n => n.round === data.round && n.is_winner === 0).forEach(n => {
-                if (!horseGroups[n.horse_name]) horseGroups[n.horse_name] = [];
-                horseGroups[n.horse_name].push(n.player_name);
+                if (!horseGroups[n.horse_name]) {
+                    // 馬名と性別をセットで保持
+                    let sexMark = "";
+                    if (n.horses?.sex) {
+                        const s = n.horses.sex;
+                        const sColor = s === '牡' ? '#42a5f5' : (s === '牝' ? '#ef5350' : 'inherit');
+                        sexMark = `<span style="color:${sColor}; font-size:0.9em; margin-left:4px;">${s === '牡' ? '♂' : (s === '牝' ? '♀' : '')}</span>`;
+                    }
+                    horseGroups[n.horse_name] = { pts: [], sexMark: sexMark };
+                }
+                horseGroups[n.horse_name].pts.push(n.player_name);
             });
             let singleHtml = '<div class="summary-section"><h4 class="summary-label-success">【単独確定】</h4><div class="summary-list-success">';
             let multiHtml = '<div class="summary-section"><h4 class="summary-label-danger">【重複・抽選対象】</h4>';

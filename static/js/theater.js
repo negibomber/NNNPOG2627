@@ -43,7 +43,23 @@ const POG_Theater = {
         document.getElementById('t_player').innerText = data.player || '---';
         document.getElementById('t_father').innerText = data.father || master.father_name || '---';
         document.getElementById('t_mother').innerText = data.mother || master.mother_name || '---';
-        document.getElementById('t_horse').innerText = data.horse || '---';
+        // 馬名と性別の反映
+        const horseEl = document.getElementById('t_horse');
+        horseEl.innerText = data.horse || '---';
+        
+        const sex = data.sex || master.sex || '';
+        const sexEl = document.getElementById('t_sex'); // 事前にHTML側へ追加が必要
+        if (sexEl) {
+            if (sex === '牡') {
+                sexEl.innerText = ' ♂';
+                sexEl.style.color = '#42a5f5'; // 青系
+            } else if (sex === '牝') {
+                sexEl.innerText = ' ♀';
+                sexEl.style.color = '#ef5350'; // 赤系
+            } else {
+                sexEl.innerText = '';
+            }
+        }
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
         const wait = (ms) => new Promise(res => setTimeout(res, ms));

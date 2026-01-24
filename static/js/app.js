@@ -219,7 +219,18 @@ async function searchHorses() {
             horses.forEach(h => {
                 const card = document.createElement('div');
                 card.className = "search-item-card card";
-                card.innerHTML = `<div class="search-horse-name">${h.horse_name}</div><div class="search-horse-info">父: ${h.father_name} / 母: ${h.mother_name}</div>`;
+                // 性別の記号と色を決定
+                let sexMarker = "";
+                let sexColor = "inherit";
+                if (h.sex === '牡') { sexMarker = " ♂"; sexColor = "#42a5f5"; }
+                else if (h.sex === '牝') { sexMarker = " ♀"; sexColor = "#ef5350"; }
+
+                card.innerHTML = `
+                    <div class="search-horse-name">
+                        ${h.horse_name}<span style="color: ${sexColor}; font-weight: bold;">${sexMarker}</span>
+                    </div>
+                    <div class="search-horse-info">父: ${h.father_name} / 母: ${h.mother_name}</div>
+                `;
                 const btn = document.createElement('button');
                 btn.type = "button";
                 if (isMeWinner) { btn.textContent = "指名確定済み"; btn.disabled = true; btn.className = "btn-search-action is-disabled"; }

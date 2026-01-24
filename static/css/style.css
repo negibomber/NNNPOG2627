@@ -694,3 +694,41 @@ header {
 .btn-mc-next:active {
     transform: scale(0.95);
 }
+/* --- 15. 性別表示（♂/♀）および演出画面の整合性調整 (Ver.0.4.3) --- */
+
+/* 15.1 リスト・検索結果用：馬名の横に表示されるスタイル */
+.sex-m { 
+    color: #3b82f6; /* 牡：システム共通の青 */
+    font-weight: bold; 
+    margin-left: 5px; 
+    font-size: 0.9em;
+}
+.sex-f { 
+    color: #ef4444; /* 牝：システム共通の赤 */
+    font-weight: bold; 
+    margin-left: 5px; 
+    font-size: 0.9em;
+}
+
+/* 15.2 演出画面（Theater）用：馬名と性別を美しく並べる設定 */
+/* セレクタを一段強くして、ガタつきを物理的に排除します */
+#t_horse_area .draft-value {
+    display: flex !important;
+    align-items: baseline !important; /* 漢字の底辺に記号の高さを合わせる */
+    justify-content: center !important;
+    width: 100%;
+}
+
+/* 演出画面の性別記号専用スタイル */
+#t_sex {
+    font-size: 2.2rem !important; 
+    margin-left: 15px !important;
+    text-shadow: none !important;      /* 金色の光彩を消して視認性を優先 */
+    font-family: sans-serif !important; /* 記号の形を安定させる */
+    display: inline-block;
+}
+
+/* スマホ等で画面が小さい時の微調整 */
+@media (max-height: 700px) {
+    #t_sex { font-size: 1.5rem !important; }
+}
