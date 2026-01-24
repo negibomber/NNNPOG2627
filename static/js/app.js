@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.5
    ========================================================================== */
-const APP_VERSION = "0.5.11";
+const APP_VERSION = "0.5.13";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -65,6 +65,24 @@ window.statusTimer = null;
             fInput.addEventListener('input', handleInput);
             mInput.addEventListener('input', handleInput);
         }
+        // 監視カメラ：MCボタンの属性変化を監視し、犯人を特定する
+        const mcBtn = document.getElementById('mc_main_btn');
+        if (mcBtn) {
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.attributeName === 'style' || mutation.attributeName === 'class') {
+                        POG_Log.d(`MC_BTN_DETECTED: style=${mcBtn.style.display}, class=${mcBtn.className}`);
+                        console.trace(); // ここで「誰が呼び出したか」の証拠をすべて出す
+                    }
+                });
+            });
+            observer.observe(mcBtn, { 
+                attributes: true, 
+                childList: true, 
+                characterData: true, 
+                subtree: true 
+            });
+        }
     };
 
     if (document.readyState === 'loading') {
@@ -104,6 +122,8 @@ async function updateStatus(preFetchedData = null, force = false) {
         if (!data) return;
 
         window.AppState.latestData = data;
+        const incomingLabel = data.mc_action?.label || "no_label";
+        POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, reveal_index=${data.reveal_index}, label=${incomingLabel}, uiMode=${window.AppState.uiMode}`);
 
         // MC操作(MC_ACTION)時は、ボタンの状態を確定させるために描画を許可する必要がある。
         if (caller === "AUTO_TIMER" && !window.AppState.canUpdateUI()) {
@@ -157,7 +177,9 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // --- 4. MCボタンの描画 (UI Layer Finalize) ---
         // 証拠：これから演出が始まる（willStartTheater）なら、一瞬でもボタンを出さないよう描画自体をスキップする
+        POG_Log.d(`RENDER_CHECK: willStartTheater=${willStartTheater}, isUpdating=${window.AppState.isUpdating}`);
         if (!willStartTheater) {
+            POG_Log.d(`RENDER_MC_EXEC: phase=${data.phase}, next_msg=${data.mc_button_text || 'none'}`);
             POG_UI.renderMCPanel(data, isManual);
         } else {
             POG_Log.d("renderMCPanel SKIPPED: Theater transition in progress.");
@@ -165,6 +187,10 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // --- 5. 演出実行 ---
         if (willStartTheater) {
+            // 決定的な証拠：演出開始のまさにその瞬間、MCボタンに何が書かれているか？
+            const currentBtnText = document.getElementById('mc_main_btn')?.innerText;
+            POG_Log.i(`THEATER_START_TRACE: BtnText="${currentBtnText}", DataPhase=${data.phase}, LastIdx=${window.AppState.lastPlayedIdx}`);
+            
             POG_Log.d(`Starting Theater Animation`);
             POG_Theater.playReveal(data.reveal_data || data.lottery_data);
         }

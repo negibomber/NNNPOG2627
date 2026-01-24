@@ -191,6 +191,7 @@ const POG_UI = {
                 // ボタンの復元は renderMCPanel が最新データに基づいて行うため、ここでは明示的に触らない
                 // (BUSY解除後に renderMCPanel が呼ばれるか、次の定期更新で直る)
                 if (btn) {
+                    POG_Log.d(`DEBUG_EVIDENCE: executeMCAction_finally DIRECT_DOM_TOUCH. mode=${window.AppState.uiMode}, label=${window.AppState.latestData?.mc_action?.label}`);
                     // 念のためテキストだけ戻しておくが、表示制御は renderMCPanel に任せる
                     const latest = window.AppState.latestData?.mc_action;
                     btn.innerText = latest?.label || btn.dataset.originalText || "MC操作";
@@ -204,7 +205,13 @@ const POG_UI = {
     renderMCPanel(data, isManual = false) {
         // 証拠：この関数が呼ばれた瞬間の「モード」と「強制フラグ」を記録する
         const currentMode = window.AppState.uiMode;
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel CALLED. mode=[${currentMode}], isManual=[${isManual}]`);
+        const targetLabel = data?.mc_action?.label || "null";
+        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel CALLED. mode=[${currentMode}], isManual=[${isManual}], label=[${targetLabel}]`);
+
+        if (currentMode !== 'IDLE') {
+            POG_Log.e(`CRITICAL_EVIDENCE: Unexpected Render during ${currentMode}! tracing caller...`);
+            console.trace(); // 「誰が」呼んだかの証拠
+        }
 
         // 【案Cの鉄則】BUSY（通信中）の間は、誰が何と言おうとボタンを上書きさせない
         if (currentMode === 'BUSY' && !isManual) {
