@@ -15,12 +15,24 @@ const POG_Theater = {
         // 修正：冒頭での状態記録
         POG_Log.d(`DEBUG_EVIDENCE: Theater START: [${getVisibleStatus()}]`);
 
+        // 1. 【核心】レイヤーを表示する前に「先行リセット」を実行し、物理的な隙を消す
+        POG_Log.d("DEBUG_EVIDENCE: Resetting 'is-visible' classes before layer display...");
+        ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
+            document.getElementById(id)?.classList.remove('is-visible');
+        });
+        
+        // リセット直後の状態記録（この時点で mc_ctrl:false であることが絶対条件）
+        POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
+
         const layer = document.getElementById('theater_layer');
-        POG_Log.d(`DEBUG_EVIDENCE: layer_display=[${layer.style.display}]`);
+        POG_Log.d(`DEBUG_EVIDENCE: layer_display=[${layer.style.display}] -> Setting to flex`);
+        
+        // 2. 真っ白（ボタンなし）が保証された状態でレイヤーを表示
+        layer.style.display = 'flex';
 
         const master = data.horses || {};
         
-        // 1. データ流し込み
+        // 3. データ流し込み（裏側で実行）
         document.getElementById('t_title').innerText = `第 ${data.round || '?'} 巡 選択希望競走馬`;
         document.getElementById('t_player').innerText = data.player || '---';
         document.getElementById('t_father').innerText = data.father || master.father_name || '---';
@@ -28,28 +40,17 @@ const POG_Theater = {
         document.getElementById('t_horse').innerText = data.horse || '---';
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
-        // 2. 初期化（リセット実行）
-        POG_Log.d("DEBUG_EVIDENCE: Resetting 'is-visible' classes...");
-        ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
-            document.getElementById(id)?.classList.remove('is-visible');
-        });
-        
-        // リセット直後の状態記録
-        POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
-
-        // 3. ボタンの初期化
+        // 4. ボタンの準備（文字の更新のみ。is-visible はまだ付けない）
         const btn = document.getElementById('t_next_btn');
         const latestMC = window.AppState.latestData?.mc_action;
         if (btn && latestMC) {
-            POG_Log.d(`DEBUG_EVIDENCE: Setting Theater Button. Label=[${latestMC.label}]`);
+            POG_Log.d(`DEBUG_EVIDENCE: Setting Theater Button Text. Label=[${latestMC.label}]`);
             btn.innerText = latestMC.label;
             btn.disabled = latestMC.disabled || false;
         }
-
-        layer.style.display = 'flex';
         const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
-        // 4. 演出シーケンス
+        // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
         await wait(1000);
         document.getElementById('t_player_area').classList.add('is-visible');
@@ -68,7 +69,7 @@ const POG_Theater = {
         POG_Log.d("DEBUG_EVIDENCE: stable_area VISIBLE");
         POG_Log.d("Theater Sequence: FINISHED");
 
-        // 5. MCパネル表示
+        // 6. MCパネル表示
         await wait(2000); 
         if (window.AppState.latestData?.mc_action) {
             POG_Log.d("DEBUG_EVIDENCE: Showing MC control panel");
