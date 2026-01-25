@@ -288,18 +288,15 @@ async def run_lottery():
     
     for h_name, participants in horse_groups.items():
         if len(participants) > 1:
-            # 重複：抽選を行う
+            # 重複：抽選を行い、即座にDBへ反映
             winner = random.choice(participants)
             lottery_queue.append(h_name)
-            lottery_results[h_name] = {
-                "winner_name": winner['player_name'],
-                "winner_id": winner['id'],
-                "participants": [p['player_name'] for p in participants]
-            }
+            # 当選者を1、それ以外を-1に
+            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+            supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner['id']).execute()
         else:
-            # 単独：即確定（演出用に結果には入れるがキューには入れない等調整可）
-            # 今回は「単独確定」として扱う
-            pass
+            # 単独：即確定（その場でDBを更新）
+            supabase.table("draft_results").update({"is_winner": 1}).eq("id", participants[0]['id']).execute()
 
     # 演出用データを保存
     update_setting("lottery_queue", json.dumps(lottery_queue))
@@ -331,18 +328,6 @@ async def next_round():
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # 【追加】まだ確定（is_winner=1）していない指名がある場合、確定処理を実行
-    # 抽選結果（lottery_results）がある場合は、それを反映
-    results_str = get_setting("lottery_results")
-    if results_str and results_str != "{}":
-        results = json.loads(results_str)
-        for h_name, res in results.items():
-            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            supabase.table("draft_results").update({"is_winner": 1}).eq("id", res["winner_id"]).execute()
-    
-    # 単独指名分を確定
-    supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
-
     # --- 以降、次巡遷移および落選データ掃除の義務（あるべき姿） ---
     # 証拠収集：今巡で落選（is_winner = -1）したデータが存在するか確認
     losers_res = supabase.table("draft_results").select("id", count="exact").eq("round", round_now).eq("is_winner", -1).execute()
