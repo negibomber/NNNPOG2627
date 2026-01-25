@@ -285,7 +285,7 @@ const POG_UI = {
                 }
             }
 
-            const cardClass = n ? (n.is_winner === 1 ? 'is-winner' : (n.is_winner === -1 ? 'is-loser' : '')) : 'is-pending';
+            const cardClass = n ? (Number(n.is_winner) === 1 ? 'is-winner' : (Number(n.is_winner) === -1 ? 'is-loser' : '')) : 'is-pending';
             
             html += `<div class="draft-item-card ${cardClass}">`;
             html += `<div class="draft-item-player">${playerName}</div>`;

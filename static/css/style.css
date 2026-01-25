@@ -729,19 +729,16 @@ header {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;      /* 画面の高さに固定 */
-    background: rgba(0, 0, 0, 0.9);
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
     z-index: 5000;
     display: none;      /* JSでflexに切り替え */
     flex-direction: column;
     align-items: center;
-    
-    /* スクロールをここで受け持つ */
-    overflow-y: auto;   
-    -webkit-overflow-scrolling: touch; /* iOS用 */
-    
+    overflow-y: auto;   /* スクロールを有効化 */
+    -webkit-overflow-scrolling: touch;
     padding-top: 40px;
-    padding-bottom: 120px; /* ボタンと被らないための十分なマージン */
+    padding-bottom: 150px; /* MCボタンを避ける十分な余白 */
     box-sizing: border-box;
 }
 
@@ -765,27 +762,30 @@ header {
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
 }
 
-/* ボード内のカードは白背景だと眩しいため、少し落ち着かせます */
-.board-layer .draft-panel-container {
+/* ボード内のグリッド：IDをJS(board_grid_container)に合わせ、2列固定に修正 */
+#board_grid_container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 25px;
+    grid-template-columns: repeat(2, 1fr); /* 強制2列 */
+    gap: 40px;
     padding: 20px;
+    width: 85%;
+    max-width: 1000px;
     justify-content: center;
 }
 
 .board-layer .draft-item-card {
-    /* パネルの基本構造 */
-    min-height: 220px;
+    position: relative;
+    height: 320px;      /* パネルサイズを完全に統一 */
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 30px;
     border-radius: 12px;
     text-align: center;
     transition: all 0.3s ease;
     box-sizing: border-box;
+    overflow: hidden;   /* スタンプのはみ出しカット */
 
-    /* 背景と浮き上がり（黒背景でも視認可能に） */
+    /* 背景と浮き上がり */
     background: linear-gradient(145deg, #1e293b, #0f172a); 
     border: 1px solid #475569; 
     box-shadow: 
@@ -793,46 +793,44 @@ header {
         0 4px 20px rgba(71, 85, 105, 0.2);
 }
 
-/* 指名者セクション：高さを固定して境界線を水平に揃える */
+/* 指名者セクション：幅を絞り、境界線を水平に揃える */
 .board-layer .draft-item-player {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #94a3b8;
-    
-    min-height: 45px;      /* 高さを45pxに固定 */
+    width: 70%;         
+    min-height: 50px;   /* 高さを固定して線を揃える */
+    margin: 0 auto 20px auto;
     display: flex;
-    align-items: center;   /* 垂直中央 */
-    justify-content: center; /* 水平中央 */
-    
-    margin-bottom: 15px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #334155; /* セクション区切り線 */
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #cbd5e1;
+    border-bottom: 2px solid #334155;
 }
 
-/* 馬名セクション：ドラフト掲示板らしい堂々とした文字 */
+/* 馬名セクション */
 .board-layer .draft-item-horse {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 800;
     color: #f8fafc;
     margin-bottom: 15px;
     text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-/* 血統情報：開始位置（左）を揃えつつ、全体をパネル中央へ */
+/* 血統情報：開始位置（左）を揃えつつ中央寄せ */
 .board-layer .draft-item-pedigree {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: #94a3b8;
     line-height: 1.6;
     text-align: left; 
     width: 100%;
-    max-width: 220px; /* カタマリの幅を制限 */
-    margin: 0 auto;   /* 制限した幅の中で中央に置く */
+    max-width: 240px;
+    margin: 0 auto;
 }
 
-/* ラベル（父・母）の幅を固定して垂直に揃える */
+/* ラベル（父・母）の幅を固定 */
 .board-layer .label-tag {
     display: inline-block;
-    width: 25px;      /* ラベル幅固定 */
+    width: 25px;
     text-align: center;
     font-size: 0.75rem;
     background: #334155;
@@ -842,33 +840,32 @@ header {
     margin-right: 12px;
 }
 
-/* 当選（指名確定）パネルの特別演出 */
+/* 当選（指名確定）パネルの演出 */
 .board-layer .draft-item-card.is-winner {
-    position: relative; 
-    overflow: hidden;    
-    background: linear-gradient(145deg, #064e3b, #022c22);
-    border-color: #10b981;
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+    background: linear-gradient(145deg, #064e3b, #022c22) !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
     transform: scale(1.02);
     z-index: 5;
 }
 
 /* 指名確定スタンプ */
 .board-layer .draft-item-card.is-winner::after {
-    content: "指名確定";
+    content: "指名確定" !important;
     position: absolute;
-    top: 15px;
-    right: -20px;
-    width: 120px;
-    height: 28px;
+    top: 20px;
+    right: -25px;
+    width: 130px;
+    height: 32px;
     background: #ef4444;
     color: white;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: bold;
     transform: rotate(35deg);
+    z-index: 100;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     border: 1px dashed rgba(255,255,255,0.8);
     pointer-events: none;
