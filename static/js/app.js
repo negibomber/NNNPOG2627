@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6
    ========================================================================== */
-const APP_VERSION = "0.6.18";
+const APP_VERSION = "0.6.19";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -215,6 +215,8 @@ async function searchHorses() {
             const d = window.AppState.latestData || {};
             const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
             const isMeWinner = !!myNomination;
+
+            const template = document.getElementById('temp-search-card');
 
             horses.forEach(h => {
                 const clone = template.content.cloneNode(true);
