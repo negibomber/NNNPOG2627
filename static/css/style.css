@@ -247,18 +247,20 @@ header {
 
 /* --- 6. MC操作パネル (最下部固定) --- */
 #mc_panel {
-    position: fixed;
+    position: fixed; /* 画面に対して固定 */
     bottom: 0;
+    left: 0;
     width: 100%;
-    height: 80px; /* 高さを固定して計算しやすく */
+    height: 80px;
     background: #1e293b;
     color: white;
     padding: 12px;
     box-sizing: border-box;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.4);
-    z-index: 6000;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+    z-index: 6000; /* ボード(5000)より必ず上 */
     display: flex;
     align-items: center;
+    justify-content: center;
 }
 
 .mc_main_btn {
@@ -727,17 +729,20 @@ header {
     top: 0;
     left: 0;
     width: 100%;
-    min-height: 100vh;
-    overflow-y: visible; /* 2重スクロール防止：親のスクロールに任せる */
-    padding-bottom: 100px; /* MCパネルと被らないための余白 */
-    background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
-    z-index: 5000; /* 通常タブ(100)より上で、Theater(9999)より下 */
-    display: none; /* JSで flex に切り替え */
+    height: 100vh;      /* 画面の高さに固定 */
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 5000;
+    display: none;      /* JSでflexに切り替え */
     flex-direction: column;
-    padding: 20px;
+    align-items: center;
+    
+    /* スクロールをここで受け持つ */
+    overflow-y: auto;   
+    -webkit-overflow-scrolling: touch; /* iOS用 */
+    
+    padding-top: 40px;
+    padding-bottom: 120px; /* ボタンと被らないための十分なマージン */
     box-sizing: border-box;
-    overflow-y: auto;
-    color: white;
 }
 
 .board-header {
