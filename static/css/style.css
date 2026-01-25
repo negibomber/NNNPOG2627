@@ -718,3 +718,61 @@ header {
 @media (max-height: 700px) {
     #t_sex { font-size: 2.8rem !important; }
 }
+/* --- 17. ボードレイヤー（全画面演出用） --- */
+.board-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+    z-index: 5000; /* 通常タブ(100)より上で、Theater(9999)より下 */
+    display: none; /* JSで flex に切り替え */
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    color: white;
+}
+
+.board-header {
+    text-align: center;
+    margin-bottom: 25px;
+    border-bottom: 2px double #d4af37;
+    padding-bottom: 15px;
+}
+
+.board-round-title {
+    font-size: 1.2rem;
+    color: #94a3b8;
+    letter-spacing: 0.2rem;
+}
+
+.board-main-title {
+    font-size: 2rem;
+    color: #d4af37;
+    margin: 5px 0;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+/* ボード内のカードは白背景だと眩しいため、少し落ち着かせます */
+.board-layer .draft-item-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #f8fafc;
+}
+
+.board-layer .draft-item-player {
+    color: #94a3b8;
+    border-bottom-color: #334155;
+}
+
+.board-layer .draft-item-horse {
+    color: #e2e8f0;
+}
+
+.board-layer .draft-item-card.is-winner {
+    background: #064e3b;
+    border-color: #10b981;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}

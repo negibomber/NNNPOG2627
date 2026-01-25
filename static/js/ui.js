@@ -72,6 +72,18 @@ const POG_UI = {
     // --- [UI Renderer] フェーズ別表示エリアの制御 ---
     renderPhaseUI(data) {
         const summaryArea = document.getElementById('lottery_summary_area');
+        const boardLayer = document.getElementById('board_layer');
+        // 公開(reveal)・確認(summary)・抽選演出(lottery_reveal)の間はボードを表示
+        const isEventPhase = ['reveal', 'summary', 'lottery_reveal'].includes(data.phase);
+
+        if (boardLayer) {
+            if (isEventPhase) {
+                boardLayer.style.display = 'flex';
+                this.renderDraftPanel(data); // ボードの中身を更新
+            } else {
+                boardLayer.style.display = 'none';
+            }
+        }
         const lotRevealArea = document.getElementById('lottery_reveal_area');
         const revealArea = document.getElementById('reveal_area');
 
@@ -248,5 +260,58 @@ const POG_UI = {
         btn.onclick = () => {
             this.executeMCAction().catch(() => alert("操作に失敗しました。"));
         };
+    },
+    renderDraftPanel(data) {
+        const boardContainer = document.getElementById('board_grid_container');
+        const roundLabel = document.getElementById('board_round_label');
+        if (!boardContainer || !data.all_players) return;
+
+        if (roundLabel) roundLabel.innerText = `第 ${data.round} 巡`;
+
+        let html = '';
+        const me = decodeURIComponent((typeof getCookie === 'function' ? getCookie('pog_user') : "") || "").replace(/\+/g, ' ');
+
+        data.all_players.forEach(playerName => {
+            const n = data.all_nominations.find(nom => nom.player_name === playerName && nom.round === data.round);
+            const isMe = (playerName === me);
+            const isUnconfirmed = n ? (n.is_winner === 0) : true;
+            
+            let shouldHide = false, hideMsg = '検討中...';
+            if (n) {
+                if (!isMe && isUnconfirmed) {
+                    if (data.phase === 'nomination') { shouldHide = true; hideMsg = '指名済み'; }
+                    else if (data.phase === 'reveal') {
+                        const playerIdx = data.all_players.indexOf(playerName);
+                        if (playerIdx > data.reveal_index) { shouldHide = true; hideMsg = '公開待ち'; }
+                    } else if (['summary', 'lottery_reveal'].includes(data.phase)) {
+                        shouldHide = true; hideMsg = '抽選待ち';
+                    }
+                }
+            }
+
+            const cardClass = n ? (n.is_winner === 1 ? 'is-winner' : (n.is_winner === -1 ? 'is-loser' : '')) : 'is-pending';
+            
+            html += `<div class="draft-item-card ${cardClass}">`;
+            html += `<div class="draft-item-player">${playerName}</div>`;
+            
+            if (n) {
+                const hName = shouldHide ? hideMsg : n.horse_name;
+                let sexMarker = "";
+                if (!shouldHide && n.horses?.sex) {
+                    const s = n.horses.sex;
+                    sexMarker = `<span class="${s === '牡' ? 'sex-m' : 'sex-f'}">${s}</span>`;
+                }
+                html += `<div class="draft-item-horse">${hName}${sexMarker}</div>`;
+                if (!shouldHide) {
+                    const father = n.horses?.father_name || '-';
+                    const mother = n.horses?.mother_name || n.mother_name || '-';
+                    html += `<div class="draft-item-pedigree">${father}<br>${mother}</div>`;
+                }
+            } else {
+                html += `<div class="draft-item-horse">${hideMsg}</div>`;
+            }
+            html += `</div>`;
+        });
+        boardContainer.innerHTML = html;
     }
 };
