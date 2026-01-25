@@ -42,10 +42,9 @@ const POG_UI = {
                     let shouldHide = false, hideMsg = '??? (未公開)';
                     if (!isMe && isCurrentRound && isUnconfirmed) {
                         if (data.phase === 'nomination') { shouldHide = true; hideMsg = '??? (指名済み)'; }
-                        else if (data.phase === 'reveal') {
-                            const playerIdx = data.all_players.indexOf(playerName);
-                            if (playerIdx > data.reveal_index) { shouldHide = true; hideMsg = '??? (公開待ち)'; }
-                        } else if (['summary', 'lottery_reveal'].includes(data.phase)) { shouldHide = true; hideMsg = '??? (抽選待ち)'; }
+                        else if (data.phase === 'reveal' && data.all_players.indexOf(playerName) > data.reveal_index) {
+                            shouldHide = true; hideMsg = '??? (公開待ち)';
+                        }
                     }
                     const hName = shouldHide ? hideMsg : n.horse_name;
                     
@@ -274,17 +273,14 @@ const POG_UI = {
         data.all_players.forEach(playerName => {
             const n = data.all_nominations.find(nom => nom.player_name === playerName && nom.round === data.round);
             const isMe = (playerName === me);
-            const isUnconfirmed = n ? (n.is_winner === 0) : true;
             
             let shouldHide = false, hideMsg = '検討中...';
             if (n) {
-                if (!isMe && isUnconfirmed) {
-                    if (data.phase === 'nomination') { shouldHide = true; hideMsg = '指名済み'; }
-                    else if (data.phase === 'reveal') {
-                        const playerIdx = data.all_players.indexOf(playerName);
-                        if (playerIdx > data.reveal_index) { shouldHide = true; hideMsg = '公開待ち'; }
-                    } else if (['summary', 'lottery_reveal'].includes(data.phase)) {
-                        shouldHide = true; hideMsg = '抽選待ち';
+                // 公開フェーズ(reveal)でのみ、まだの順番の人を隠す
+                if (data.phase === 'reveal' && !isMe) {
+                    const playerIdx = data.all_players.indexOf(playerName);
+                    if (playerIdx > data.reveal_index) {
+                        shouldHide = true; hideMsg = '公開待ち';
                     }
                 }
             }
@@ -299,16 +295,20 @@ const POG_UI = {
                 let sexMarker = "";
                 if (!shouldHide && n.horses?.sex) {
                     const s = n.horses.sex;
-                    sexMarker = `<span class="${s === '牡' ? 'sex-m' : 'sex-f'}">${s}</span>`;
+                    sexMarker = `<span class="${s === '牡' ? 'sex-m' : 'sex-f'}" style="margin-left:8px;">${s}</span>`;
                 }
                 html += `<div class="draft-item-horse">${hName}${sexMarker}</div>`;
+                
                 if (!shouldHide) {
                     const father = n.horses?.father_name || '-';
                     const mother = n.horses?.mother_name || n.mother_name || '-';
-                    html += `<div class="draft-item-pedigree">${father}<br>${mother}</div>`;
+                    html += `<div class="draft-item-pedigree">`;
+                    html += `<div><span class="label-tag">父</span>${father}</div>`;
+                    html += `<div><span class="label-tag">母</span>${mother}</div>`;
+                    html += `</div>`;
                 }
             } else {
-                html += `<div class="draft-item-horse">${hideMsg}</div>`;
+                html += `<div class="draft-item-horse" style="color:#475569;">${hideMsg}</div>`;
             }
             html += `</div>`;
         });
