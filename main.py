@@ -343,23 +343,27 @@ async def next_round():
     # 単独指名分を確定
     supabase.table("draft_results").update({"is_winner": 1}).eq("round", round_now).eq("is_winner", 0).execute()
 
-    # --- 以降、既存の次巡遷移ロジック ---
-    losers = supabase.table("draft_results").select("id", count="exact").eq("is_winner", -1).execute()
-    if losers.count > 0:
-        supabase.table("draft_results").delete().eq("is_winner", -1).execute()
+    # --- 以降、次巡遷移および落選データ掃除の義務（あるべき姿） ---
+    # 証拠収集：今巡で落選（is_winner = -1）したデータが存在するか確認
+    losers_res = supabase.table("draft_results").select("id", count="exact").eq("round", round_now).eq("is_winner", -1).execute()
+    has_losers = (losers_res.count is not None and losers_res.count > 0)
+
+    if has_losers:
+        # 現行犯逮捕：再指名が必要なため、今巡の落選データのみを物理削除して「データの汚染」を防ぐ
+        supabase.table("draft_results").delete().eq("round", round_now).eq("is_winner", -1).execute()
+        print(f"[SERVER_EVIDENCE] Round {round_now}: Deleted {losers_res.count} loser records for re-nomination.")
     else:
-        # 10巡目完了時は、巡目を増やさずにフェーズだけ終了させる
+        # 落選者がいない＝全員当選確定の場合のみ、次の巡目へ進む
         if round_now < 10:
             update_setting("current_round", str(round_now + 1))
         else:
-            # 10巡目完了時は確実に10で固定する
             update_setting("current_round", "10")
     
     # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
     # 【改修】10巡目完了かつ残り落選者がいないなら、完全に終了状態(finished)へ移行
-    is_done = (round_now >= 10 and losers.count == 0)
+    is_done = (round_now >= 10 and not has_losers)
     update_setting("phase", "finished" if is_done else "nomination")
     return await status()
 

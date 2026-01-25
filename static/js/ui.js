@@ -285,7 +285,17 @@ const POG_UI = {
                 }
             }
 
-            const cardClass = n ? (Number(n.is_winner) === 1 ? 'is-winner' : (Number(n.is_winner) === -1 ? 'is-loser' : '')) : 'is-pending';
+            const winVal = n ? Number(n.is_winner) : 0;
+            let cardClass = 'is-pending'; // デフォルト：未指名
+            if (n) {
+                if (winVal === 1) {
+                    cardClass = 'is-winner'; // 当選
+                } else if (winVal === -1) {
+                    cardClass = 'is-loser';  // 落選
+                } else {
+                    cardClass = 'is-normal'; // 抽選待ち
+                }
+            }
             
             html += `<div class="draft-item-card ${cardClass}">`;
             html += `<div class="draft-item-player">${playerName}</div>`;
