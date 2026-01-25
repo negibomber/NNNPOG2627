@@ -701,35 +701,22 @@ header {
     color: #3b82f6; /* 牡：システム共通の青 */
     font-weight: bold; 
     margin-left: 5px; 
-    font-size: 0.9em;
 }
 .sex-f { 
     color: #ef4444; /* 牝：システム共通の赤 */
     font-weight: bold; 
     margin-left: 5px; 
-    font-size: 0.9em;
-}
-
-/* 15.2 演出画面（Theater）用：馬名と性別を美しく並べる設定 */
-/* セレクタを一段強くして、ガタつきを物理的に排除します */
-#t_horse_area .draft-value {
-    display: flex !important;
-    align-items: baseline !important; 
-    justify-content: flex-start !important; /* 左揃えにする */
-    width: fit-content;                     /* 幅を内容に合わせる */
-    margin: 0 auto;                          /* 親が中央揃えならこれで塊として中央、左揃えなら不要 */
 }
 
 /* 演出画面の性別記号専用スタイル */
 #t_sex {
-    font-size: 2.2rem !important; 
+    font-size: 4rem !important; 
     margin-left: 15px !important;
-    text-shadow: none !important;      /* 金色の光彩を消して視認性を優先 */
+    text-shadow: none !important;      /* 光彩を消して視認性を優先 */
     font-family: sans-serif !important; /* 記号の形を安定させる */
-    display: inline-block;
 }
 
 /* スマホ等で画面が小さい時の微調整 */
 @media (max-height: 700px) {
-    #t_sex { font-size: 1.5rem !important; }
+    #t_sex { font-size: 2.8rem !important; }
 }

@@ -382,7 +382,7 @@ async def search_horses(f: str = "", m: str = ""):
     won = supabase.table("draft_results").select("horse_name").eq("is_winner", 1).execute()
     won_list = [w['horse_name'] for w in won.data]
     
-    query = supabase.table("horses").select("horse_name, father_name, mother_name")
+    query = supabase.table("horses").select("horse_name, father_name, mother_name, sex")
     if f: query = query.ilike("father_name", f"%{f}%")
     if m: query = query.ilike("mother_name", f"%{m}%")
     

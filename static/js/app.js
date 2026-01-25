@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.6
    ========================================================================== */
-const APP_VERSION = "0.6.17";
+const APP_VERSION = "0.6.18";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -217,27 +217,32 @@ async function searchHorses() {
             const isMeWinner = !!myNomination;
 
             horses.forEach(h => {
-                const card = document.createElement('div');
-                card.className = "search-item-card card";
-                // 性別の記号と色を決定
-                let sexMarker = "";
-                let sexColor = "inherit";
-                if (h.sex === '牡') { sexMarker = "♂"; sexColor = "#42a5f5"; }
-                else if (h.sex === '牝') { sexMarker = "♀"; sexColor = "#ef5350"; }
+                const clone = template.content.cloneNode(true);
+                
+                // 馬名と性別（牡牝）の設定：innerHTMLを排除し安全に反映
+                clone.querySelector('.js-name').textContent = h.horse_name;
+                const sexEl = clone.querySelector('.js-sex');
+                sexEl.textContent = h.sex; 
+                sexEl.className = h.sex === '牡' ? 'sex-m' : (h.sex === '牝' ? 'sex-f' : '');
 
-                card.innerHTML = `
-                    <div class="search-horse-name">
-                        ${h.horse_name}<span style="color: ${sexColor}; font-weight: bold;">${sexMarker}</span>
-                    </div>
-                    <div class="search-horse-info">父: ${h.father_name} / 母: ${h.mother_name}</div>
-                `;
-                const btn = document.createElement('button');
-                btn.type = "button";
-                if (isMeWinner) { btn.textContent = "指名確定済み"; btn.disabled = true; btn.className = "btn-search-action is-disabled"; }
-                else { btn.textContent = "指名する"; btn.className = "btn-search-action active"; }
-                btn.setAttribute('onclick', `event.preventDefault(); window.doNominate("${h.horse_name.replace(/"/g, '&quot;')}", "${h.mother_name.replace(/"/g, '&quot;')}")`);
-                card.appendChild(btn);
-                resultsEl.appendChild(card);
+                // 血統情報
+                clone.querySelector('.search-horse-info').textContent = `父: ${h.father_name} / 母: ${h.mother_name}`;
+
+                // ボタン制御
+                const btn = clone.querySelector('.btn-search-action');
+                if (isMeWinner) {
+                    btn.textContent = "指名確定済み";
+                    btn.disabled = true;
+                    btn.classList.add('is-disabled');
+                } else {
+                    btn.textContent = "指名する";
+                    btn.classList.add('active');
+                    btn.onclick = (e) => {
+                        e.preventDefault();
+                        window.doNominate(h.horse_name, h.mother_name);
+                    };
+                }
+                resultsEl.appendChild(clone);
             });
         }
     } catch (e) {

@@ -49,12 +49,12 @@ const POG_UI = {
                     }
                     const hName = shouldHide ? hideMsg : n.horse_name;
                     
-                    // 性別の取得と装飾
+                    // 性別の取得
                     let sexMarker = "";
                     if (!shouldHide && n.horses?.sex) {
                         const s = n.horses.sex;
-                        const sColor = s === '牡' ? '#42a5f5' : (s === '牝' ? '#ef5350' : 'inherit');
-                        sexMarker = `<span style="color:${sColor}; font-weight:bold; margin-left:4px;">${s === '牡' ? '♂' : (s === '牝' ? '♀' : '')}</span>`;
+                        const sClass = s === '牡' ? 'sex-m' : (s === '牝' ? 'sex-f' : '');
+                        sexMarker = `<span class="${sClass}">${s}</span>`;
                     }
 
                     const father = n.horses?.father_name || '-', mother = n.horses?.mother_name || n.mother_name || '-';
@@ -94,8 +94,8 @@ const POG_UI = {
                     let sexMark = "";
                     if (n.horses?.sex) {
                         const s = n.horses.sex;
-                        const sColor = s === '牡' ? '#42a5f5' : (s === '牝' ? '#ef5350' : 'inherit');
-                        sexMark = `<span style="color:${sColor}; font-size:0.9em; margin-left:4px;">${s === '牡' ? '♂' : (s === '牝' ? '♀' : '')}</span>`;
+                        const sClass = s === '牡' ? 'sex-m' : (s === '牝' ? 'sex-f' : '');
+                        sexMark = `<span class="${sClass}">${s}</span>`;
                     }
                     horseGroups[n.horse_name] = { pts: [], sexMark: sexMark };
                 }

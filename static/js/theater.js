@@ -53,18 +53,17 @@ const POG_Theater = {
         horseEl.innerText = data.horse_name || data.horse || '---';
 
         if (sexEl) {
-            if (sex === '牡') {
-                sexEl.innerText = '♂'; // 余計なスペースはCSSのgapで制御
-                sexEl.style.color = '#42a5f5';
-                sexEl.style.display = 'inline-block';
-            } else if (sex === '牝') {
-                sexEl.innerText = '♀';
-                sexEl.style.color = '#ef5350';
+            // 性別データの正規化と表示反映
+            if (sex === '牡' || sex === '牝') {
+                sexEl.innerText = sex; // 記号を廃止し、データ通りの「牡」「牝」を表示
+                sexEl.className = sex === '牡' ? 'sex-m' : 'sex-f'; // CSSクラスに委譲
                 sexEl.style.display = 'inline-block';
             } else {
                 sexEl.innerText = '';
+                sexEl.className = '';
                 sexEl.style.display = 'none';
             }
+            sexEl.style.removeProperty('color');
         }
         document.getElementById('t_stable').innerText = `${data.stable || master.stable_name || '未定'} / ${data.breeder || master.breeder_name || '---'}`;
 
