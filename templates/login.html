@@ -48,6 +48,15 @@
             transform: scale(0.96); 
             box-shadow: none;
         }
+        /* ログイン済みユーザーのスタイル：グレーアウトして操作不能に */
+        .user-btn:disabled {
+            background: #e5e7eb;
+            border-color: #d1d5db;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -56,7 +65,10 @@
         {% for p in participants %}
         <form action="/login" method="post" class="user-form">
             <input type="hidden" name="user" value="{{ p.name }}">
-            <button type="submit" class="user-btn">{{ p.name }}</button>
+            <button type="submit" class="user-btn" 
+                    {% if p.is_online %}disabled title="入室済み"{% endif %}>
+                {{ p.name }}{% if p.is_online %} (入室済){% endif %}
+            </button>
         </form>
         {% endfor %}
     </div>

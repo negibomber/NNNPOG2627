@@ -88,7 +88,7 @@ async def index(request: Request):
         return RedirectResponse(url="/setup", status_code=303)
     
     if not user:
-        pts = supabase.table("participants").select("name").order("name").execute()
+        pts = supabase.table("participants").select("name, is_online").order("name").execute()
         return templates.TemplateResponse("login.html", {"request": request, "participants": pts.data}, media_type="text/html")
     
     round_now = int(get_setting("current_round") or 1)
@@ -365,12 +365,33 @@ async def next_round():
 
 @app.post("/login")
 async def login(user: str = Form(...)):
+    # 1. 証拠の確認：選ばれたユーザーが現在入室中(is_online)かチェック
+    res = supabase.table("participants").select("is_online").eq("name", user).execute()
+    
+    if res.data and res.data[0].get("is_online"):
+        # すでに入室済みの場合は、アラートを出して戻す（同時押し対策）
+        return HTMLResponse(content=f"""
+            <script>
+                alert("エラー：『{user}』さんは既に入室済みです。別の名前を選択してください。");
+                window.location.href = "/";
+            </script>
+        """, status_code=400)
+
+    # 2. 入室状態に更新（早い者勝ちの確定）
+    supabase.table("participants").update({"is_online": True, "last_seen": "now()"}).eq("name", user).execute()
+
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="pog_user", value=urllib.parse.quote(user), max_age=86400)
     return response
 
 @app.get("/logout")
-async def logout():
+async def logout(request: Request):
+    raw_user = request.cookies.get("pog_user")
+    if raw_user:
+        user = urllib.parse.unquote(raw_user)
+        # 退出時に is_online を False に戻す
+        supabase.table("participants").update({"is_online": False}).eq("name", user).execute()
+
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("pog_user")
     return response
