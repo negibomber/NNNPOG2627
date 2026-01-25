@@ -128,7 +128,7 @@ async def status():
     all_noms_data = noms_res.data or []
 
     # 馬マスターからのマッピング（現在の巡に関連する馬のみに限定して負荷軽減）
-    current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') == 0]
+    current_noms = [n for n in all_noms_data if n.get('round') == round_now]
     relevant_h_names = list(set([n['horse_name'].strip() for n in all_noms_data if n.get('horse_name')]))
     
     h_map = {}
