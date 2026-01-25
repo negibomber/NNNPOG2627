@@ -250,12 +250,15 @@ header {
     position: fixed;
     bottom: 0;
     width: 100%;
+    height: 80px; /* 高さを固定して計算しやすく */
     background: #1e293b;
     color: white;
-    padding: 10px;
+    padding: 12px;
     box-sizing: border-box;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
-    z-index: 6000; /* ボード(5000)より上に配置 */
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.4);
+    z-index: 6000;
+    display: flex;
+    align-items: center;
 }
 
 .mc_main_btn {
@@ -724,7 +727,9 @@ header {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;
+    min-height: 100vh;
+    overflow-y: visible; /* 2重スクロール防止：親のスクロールに任せる */
+    padding-bottom: 100px; /* MCパネルと被らないための余白 */
     background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
     z-index: 5000; /* 通常タブ(100)より上で、Theater(9999)より下 */
     display: none; /* JSで flex に切り替え */
@@ -765,62 +770,85 @@ header {
 }
 
 .board-layer .draft-item-card {
+    /* パネルの基本構造 */
+    min-height: 220px;
     display: flex;
     flex-direction: column;
-    align-items: center; /* センタリング */
-    justify-content: center;
+    padding: 20px;
+    border-radius: 12px;
     text-align: center;
-    padding: 25px;
-    border-radius: 8px;
-    background: linear-gradient(145deg, #1e293b, #0f172a);
-    border: 1px solid #334155;
-    color: #f8fafc;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
-    min-height: 180px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+
+    /* 背景と浮き上がり（黒背景でも視認可能に） */
+    background: linear-gradient(145deg, #1e293b, #0f172a); 
+    border: 1px solid #475569; 
+    box-shadow: 
+        0 10px 15px -3px rgba(0, 0, 0, 0.5),
+        0 4px 20px rgba(71, 85, 105, 0.2);
 }
 
+/* 指名者セクション：高さを固定して境界線を水平に揃える */
 .board-layer .draft-item-player {
     font-size: 1.1rem;
-    color: #d4af37; /* 金文字 */
-    margin-bottom: 12px;
-    border-bottom: 1px solid #334155;
-    width: 85%;
-    padding-bottom: 8px;
-}
-
-.board-layer .draft-item-horse {
-    font-size: 1.8rem;
     font-weight: bold;
-    color: #ffffff;
-    margin: 10px 0;
+    color: #94a3b8;
+    
+    min-height: 45px;      /* 高さを45pxに固定 */
+    display: flex;
+    align-items: center;   /* 垂直中央 */
+    justify-content: center; /* 水平中央 */
+    
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #334155; /* セクション区切り線 */
 }
 
+/* 馬名セクション：ドラフト掲示板らしい堂々とした文字 */
+.board-layer .draft-item-horse {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 血統情報：開始位置（左）を揃えつつ、全体をパネル中央へ */
 .board-layer .draft-item-pedigree {
     font-size: 0.9rem;
     color: #94a3b8;
     line-height: 1.6;
+    text-align: left; 
+    width: 100%;
+    max-width: 220px; /* カタマリの幅を制限 */
+    margin: 0 auto;   /* 制限した幅の中で中央に置く */
 }
 
+/* ラベル（父・母）の幅を固定して垂直に揃える */
 .board-layer .label-tag {
+    display: inline-block;
+    width: 25px;      /* ラベル幅固定 */
+    text-align: center;
     font-size: 0.75rem;
     background: #334155;
     color: #cbd5e1;
-    padding: 2px 6px;
+    padding: 2px 4px;
     border-radius: 4px;
-    margin-right: 8px;
+    margin-right: 12px;
 }
 
+/* 当選（指名確定）パネルの特別演出 */
 .board-layer .draft-item-card.is-winner {
-    position: relative; /* スタンプの配置基準 */
-    overflow: hidden;    /* スタンプのはみ出しをカット */
-    background: linear-gradient(145deg, #064e3b, #022c22); /* 深いエメラルド */
+    position: relative; 
+    overflow: hidden;    
+    background: linear-gradient(145deg, #064e3b, #022c22);
     border-color: #10b981;
-    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
-    transform: scale(1.02); /* 当選パネルをわずかに大きく */
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+    transform: scale(1.02);
     z-index: 5;
 }
 
-/* 確定スタンプ：右上にガシャンと押されたイメージ */
+/* 指名確定スタンプ */
 .board-layer .draft-item-card.is-winner::after {
     content: "指名確定";
     position: absolute;
@@ -828,7 +856,7 @@ header {
     right: -20px;
     width: 120px;
     height: 28px;
-    background: #ef4444; /* 鮮やかな赤 */
+    background: #ef4444;
     color: white;
     display: flex;
     justify-content: center;
@@ -839,4 +867,11 @@ header {
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     border: 1px dashed rgba(255,255,255,0.8);
     pointer-events: none;
+}
+
+/* 抽選に外れたパネル */
+.board-layer .draft-item-card.is-loser {
+    opacity: 0.6;
+    filter: grayscale(0.5);
+    border-color: #451a1a;
 }
