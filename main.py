@@ -288,14 +288,10 @@ async def run_lottery():
     
     for h_name, participants in horse_groups.items():
         if len(participants) > 1:
-            # 重複：抽選を行い、即座にDBへ反映
-            winner = random.choice(participants)
+            # 重複：ここではキューに入れるだけ
             lottery_queue.append(h_name)
-            # 当選者を1、それ以外を-1に
-            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner['id']).execute()
         else:
-            # 単独：即確定（その場でDBを更新）
+            # 単独：この瞬間に確定（正しい即時更新）
             supabase.table("draft_results").update({"is_winner": 1}).eq("id", participants[0]['id']).execute()
 
     # 演出用データを保存
@@ -312,15 +308,39 @@ async def run_lottery():
 async def advance_lottery():
     import json
     phase = get_setting("phase")
+    round_now = int(get_setting("current_round") or 1)
+    queue = json.loads(get_setting("lottery_queue") or "[]")
+    results = json.loads(get_setting("lottery_results") or "{}")
+    idx = int(get_setting("lottery_idx") or 0)
+
+    # 抽選ロジックの実行（ボタンが押された瞬間に決定する）
+    def perform_lottery(target_idx):
+        h_name = queue[target_idx]
+        # その馬を指名している人を再取得
+        noms = supabase.table("draft_results").select("*").eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+        if noms.data:
+            winner = random.choice(noms.data)
+            # 1. 演出用データの更新
+            results[h_name] = {
+                "winner_name": winner['player_name'],
+                "winner_id": winner['id'],
+                "participants": [p['player_name'] for p in noms.data]
+            }
+            update_setting("lottery_results", json.dumps(results))
+            # 2. DBの更新（即時反映）
+            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+            supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner['id']).execute()
+
     if phase == "summary":
-        queue = json.loads(get_setting("lottery_queue") or "[]")
         if queue:
+            perform_lottery(0) # 最初の抽選を実行
             update_setting("phase", "lottery_reveal")
     elif phase == "lottery_reveal":
-        queue = json.loads(get_setting("lottery_queue") or "[]")
-        idx = int(get_setting("lottery_idx") or 0)
         if idx + 1 < len(queue):
-            update_setting("lottery_idx", str(idx + 1))
+            new_idx = idx + 1
+            perform_lottery(new_idx) # 次の抽選を実行
+            update_setting("lottery_idx", str(new_idx))
+            
     return await status()
 
 @app.post("/mc/next_round")
