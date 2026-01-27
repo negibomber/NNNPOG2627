@@ -33,7 +33,7 @@ const POG_UI = {
         data.all_players.forEach(playerName => {
             html += `<div class="card"><h3 class="card-title-border">${playerName}</h3>`;
             html += `<table class="status-table"><thead><tr><th>巡</th><th>馬名 / 血統</th></tr></thead>`;
-            const playerNoms = data.all_nominations.filter(n => n.player_name === playerName).sort((a, b) => a.round - b.round);
+            const playerNoms = data.all_nominations.filter(n => n.player_name === playerName).sort((a, b) => (a.round - b.round) || (a.is_winner - b.is_winner));
             if (playerNoms.length === 0) {
                 html += `<tr><td colspan="2" class="status-empty-msg">まだ指名がありません</td></tr>`;
             } else {
@@ -58,7 +58,9 @@ const POG_UI = {
 
                     const father = n.horses?.father_name || '-', mother = n.horses?.mother_name || n.mother_name || '-';
                     const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
-                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div>${hName}${sexMarker}</div>`;
+                    // 修正：落選馬（-1）の場合は取り消し線スタイルを適用して表示
+                    const nameStyle = (n.is_winner === -1) ? 'text-decoration:line-through; opacity:0.8;' : '';
+                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div style="${nameStyle}">${hName}${sexMarker}</div>`;
                     if (!shouldHide) html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
                     html += `</td></tr>`;
                 });
@@ -274,7 +276,10 @@ const POG_UI = {
             const n = data.all_nominations.find(nom => nom.player_name === playerName && nom.round === data.round);
             const isMe = (playerName === me);
             
-            let shouldHide = false, hideMsg = '検討中...';
+            let shouldHide = false;
+            // 役割を分離：公開隠蔽用と、データ欠如時の表示用
+            const maskMsg = '公開待ち';
+            const emptyMsg = (data.phase === 'nomination') ? '検討中...' : '再指名へ';
             if (n) {
                 // 公開フェーズ(reveal)でのみ、まだの順番の人を隠す
                 if (data.phase === 'reveal' && !isMe) {
@@ -301,7 +306,8 @@ const POG_UI = {
             html += `<div class="draft-item-player">${playerName}</div>`;
             
             if (n) {
-                const hName = shouldHide ? hideMsg : n.horse_name;
+                // 役割分離：隠す必要があればマスク、そうでなければ当選状態を確認
+                const hName = shouldHide ? maskMsg : (n.is_winner === -1 ? '再指名へ' : n.horse_name);
                 let sexMarker = "";
                 if (!shouldHide && n.horses?.sex) {
                     const s = n.horses.sex;
@@ -318,7 +324,7 @@ const POG_UI = {
                     html += `</div>`;
                 }
             } else {
-                html += `<div class="draft-item-horse" style="color:#475569;">${hideMsg}</div>`;
+                html += `<div class="draft-item-horse" style="color:#475569;">${emptyMsg}</div>`;
             }
             html += `</div>`;
         });

@@ -122,13 +122,12 @@ async def status():
     past_winner_names = list(set([w['player_name'] for w in past_winners_res.data]))
     active_players = [p for p in all_players_list if p not in past_winner_names]
     
-    # 【高速化】データ取得を最小限に。現在の巡の指名(0)と、全巡の当選確定分(1)のみを取得
-    # 落選分(-1)や不要な過去データは取得しない
-    noms_res = supabase.table("draft_results").select("*").in_("is_winner", [0, 1]).execute()
+    # 役割変更：履歴保存のため全データを取得。UI側のfindが最新の指名を優先するようID降順でソート。
+    noms_res = supabase.table("draft_results").select("*").order("id", desc=True).execute()
     all_noms_data = noms_res.data or []
 
-    # 馬マスターからのマッピング（現在の巡に関連する馬のみに限定して負荷軽減）
-    current_noms = [n for n in all_noms_data if n.get('round') == round_now]
+    # 修正：履歴（-1）を除外し、現在有効な指名（0または1）のみをカウント対象とする
+    current_noms = [n for n in all_noms_data if n.get('round') == round_now and n.get('is_winner') in [0, 1]]
     relevant_h_names = list(set([n['horse_name'].strip() for n in all_noms_data if n.get('horse_name')]))
     
     h_map = {}
@@ -354,8 +353,7 @@ async def next_round():
     has_losers = (losers_res.count is not None and losers_res.count > 0)
 
     if has_losers:
-        # 現行犯逮捕：再指名が必要なため、今巡の落選データのみを物理削除して「データの汚染」を防ぐ
-        supabase.table("draft_results").delete().eq("round", round_now).eq("is_winner", -1).execute()
+
         print(f"[SERVER_EVIDENCE] Round {round_now}: Deleted {losers_res.count} loser records for re-nomination.")
     else:
         # 落選者がいない＝全員当選確定の場合のみ、次の巡目へ進む
