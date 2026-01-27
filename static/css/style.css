@@ -584,14 +584,13 @@ header {
     align-items: center;
     color: #f8fafc;
     font-family: 'serif';
-    overflow: hidden; /* スクロール禁止 */
 }
 
 /* 演出カード：画面の高さに合わせて要素を等間隔に配置 */
 .theater-card {
     width: 90%;
     max-width: 900px;
-    height: 85vh; /* 画面高の85%を使用して上下に余白を確保 */
+    min-height: 80vh; /* 最小高さを確保し、内容は可変に */
     display: flex;
     flex-direction: column;
     justify-content: space-between; /* 要素を上下いっぱいに分散 */
@@ -658,16 +657,16 @@ header {
     flex: 1.5; /* 他のエリアより少し広く取る */
 }
 #t_horse_area .draft-value {
-    font-size: 4rem; /* 馬名を最大化 */
+    font-size: 2.8rem; /* 馬名を最大化 */
     color: #d4af37;
     text-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
 }
 
 /* スマホ対応：画面が小さい場合はフォントサイズを調整 */
-@media (max-height: 700px) {
-    .draft-value { font-size: 2rem; }
-    #t_horse_area .draft-value { font-size: 2.8rem; }
-    .theater-card { height: 95vh; padding: 20px 0; }
+@media (max-width: 600px), (max-height: 700px) {
+    .draft-value { font-size: 1.6rem; }
+    #t_horse_area .draft-value { font-size: 1.8rem; }
+    .theater-card { min-height: 90vh; padding: 10px 0; justify-content: flex-start; gap: 15px; }
 }
 /* アニメーション用：フェードイン */
 .theater-animate-in {
@@ -765,8 +764,8 @@ header {
 /* ボード内のグリッド：IDをJS(board_grid_container)に合わせ、2列固定に修正 */
 #board_grid_container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* 強制2列 */
-    gap: 40px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* スマホでは1列、広ければ2列 */
+    gap: 20px;
     padding: 20px;
     width: 85%;
     max-width: 1000px;
@@ -775,7 +774,7 @@ header {
 
 .board-layer .draft-item-card {
     position: relative !important; /* スタンプの基準位置を強制固定 */
-    height: 320px;      /* パネルサイズを完全に統一 */
+    min-height: 200px;   /* 固定長を廃止し、内容に合わせる */
     display: flex;
     flex-direction: column;
     padding: 30px;
@@ -815,7 +814,7 @@ header {
 
 /* 馬名セクション */
 .board-layer .draft-item-horse {
-    font-size: 1.8rem;
+    font-size: 1.4rem; /* パネル内での折り返しを防ぐため縮小 */
     font-weight: 800;
     color: #f8fafc;
     margin-bottom: 15px;

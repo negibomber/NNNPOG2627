@@ -349,16 +349,16 @@ async def next_round():
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # --- 以降、次巡遷移および落選データ掃除の義務（あるべき姿） ---
-    # 証拠収集：今巡で落選（is_winner = -1）したデータが存在するか確認
-    losers_res = supabase.table("draft_results").select("id", count="exact").eq("round", round_now).eq("is_winner", -1).execute()
-    has_losers = (losers_res.count is not None and losers_res.count > 0)
+    # 修正：落選データの有無ではなく、「その巡の当選者数 == 参加人数」で判定する
+    # 修正：落選データの有無ではなく、「その巡の当選者数 < 参加人数」で判定する
+    winners_res = supabase.table("draft_results").select("id", count="exact").eq("round", round_now).eq("is_winner", 1).execute()
+    players_res = supabase.table("participants").select("id", count="exact").execute()
+    is_incomplete = (winners_res.count or 0) < (players_res.count or 0)
 
-    if has_losers:
-
-        print(f"[SERVER_EVIDENCE] Round {round_now}: Deleted {losers_res.count} loser records for re-nomination.")
+    if is_incomplete:
+        print(f"[SERVER_EVIDENCE] Round {round_now}: Re-nomination required.")
     else:
-        # 落選者がいない＝全員当選確定の場合のみ、次の巡目へ進む
+        # 全員が当選確定した時のみ、次の巡目へ進む
         if round_now < 10:
             update_setting("current_round", str(round_now + 1))
         else:
@@ -367,8 +367,9 @@ async def next_round():
     # 抽選データをクリアして次へ
     update_setting("lottery_queue", "[]")
     update_setting("lottery_results", "{}")
-    # 【改修】10巡目完了かつ残り落選者がいないなら、完全に終了状態(finished)へ移行
-    is_done = (round_now >= 10 and not has_losers)
+
+    # 10巡目完了かつ、その巡で未確定者がいなければ終了
+    is_done = (round_now >= 10 and not is_incomplete)
     update_setting("phase", "finished" if is_done else "nomination")
     return await status()
 
