@@ -309,13 +309,17 @@ const POG_UI = {
                 // 役割分離：隠す必要があればマスク、そうでなければ当選状態を確認
                 const hName = shouldHide ? maskMsg : (n.is_winner === -1 ? '再指名へ' : n.horse_name);
                 let sexMarker = "";
-                if (!shouldHide && n.horses?.sex) {
+                
+                // 修正：落選時(-1)は性別や父母情報を表示しない
+                const showDetails = !shouldHide && n.is_winner !== -1;
+
+                if (showDetails && n.horses?.sex) {
                     const s = n.horses.sex;
                     sexMarker = `<span class="${s === '牡' ? 'sex-m' : 'sex-f'}" style="margin-left:8px;">${s}</span>`;
                 }
                 html += `<div class="draft-item-horse">${hName}${sexMarker}</div>`;
                 
-                if (!shouldHide) {
+                if (showDetails) {
                     const father = n.horses?.father_name || '-';
                     const mother = n.horses?.mother_name || n.mother_name || '-';
                     html += `<div class="draft-item-pedigree">`;

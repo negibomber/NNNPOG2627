@@ -146,7 +146,9 @@ async def status():
             "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-"),
             "sex": str(h_info.get('sex') or "")
         }
-    is_all_nominated = len(current_noms) >= len(active_players)
+    # 修正：指名(0)または当選(1)を出したユニーク人数が、全参加者数と一致するかで判定
+    unique_nominated_count = len(set([n['player_name'] for n in current_noms]))
+    is_all_nominated = (unique_nominated_count >= len(all_players_list) and len(all_players_list) > 0)
     
     horse_names = [n['horse_name'] for n in current_noms]
     has_duplicates = len(horse_names) != len(set(horse_names))

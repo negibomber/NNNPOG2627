@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.8
    ========================================================================== */
-const APP_VERSION = "0.8.8";
+const APP_VERSION = "0.8.9";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -213,8 +213,9 @@ async function searchHorses() {
         if (horses && horses.length > 0) {
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
             const d = window.AppState.latestData || {};
-            const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner === 1) : null;
-            const isMeWinner = !!myNomination;
+            // 修正：落選(-1)以外のレコード（0:未確定 or 1:当選）がある場合に「指名済み」とする
+            const myNomination = (d.all_nominations) ? d.all_nominations.find(n => n.player_name === me && parseInt(n.round) === d.round && n.is_winner !== -1) : null;
+            const isMeConfirmed = !!myNomination;
 
             const template = document.getElementById('temp-search-card');
 
@@ -232,7 +233,7 @@ async function searchHorses() {
 
                 // ボタン制御
                 const btn = clone.querySelector('.btn-search-action');
-                if (isMeWinner) {
+                if (isMeConfirmed) {
                     btn.textContent = "指名確定済み";
                     btn.disabled = true;
                     btn.classList.add('is-disabled');
