@@ -712,15 +712,16 @@ header {
 
 /* 演出画面の性別記号専用スタイル */
 #t_sex {
-    font-size: 2.2rem !important; 
+    font-size: 2.8rem !important; /* 馬名と同じサイズへ */
     margin-left: 15px !important;
-    text-shadow: none !important;      /* 光彩を消して視認性を優先 */
-    font-family: sans-serif !important; /* 記号の形を安定させる */
+    text-shadow: none !important;
+    font-family: inherit !important; /* 明朝体(serif)を継承させて高さを統一 */
+    vertical-align: baseline !important; /* 下端を馬名と揃える */
 }
 
 /* スマホ等で画面が小さい時の微調整 */
 @media (max-height: 700px) {
-    #t_sex { font-size: 2.8rem !important; }
+    #t_sex { font-size: 1.8rem !important; }
 }
 /* --- 17. ボードレイヤー（全画面演出用） --- */
 .board-layer {
