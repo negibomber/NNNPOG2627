@@ -712,7 +712,7 @@ header {
 
 /* 演出画面の性別記号専用スタイル */
 #t_sex {
-    font-size: 4rem !important; 
+    font-size: 2.2rem !important; 
     margin-left: 15px !important;
     text-shadow: none !important;      /* 光彩を消して視認性を優先 */
     font-family: sans-serif !important; /* 記号の形を安定させる */

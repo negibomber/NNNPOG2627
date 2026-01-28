@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.8
    ========================================================================== */
-const APP_VERSION = "0.8.10";
+const APP_VERSION = "0.8.11";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -278,3 +278,60 @@ function getCookie(name) {
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop().split(';').shift();
 }
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// --- [Utility] CSV Export Logic ---
+window.downloadCSV = function() {
+    const data = window.AppState.latestData;
+    if (!data || !data.all_nominations) {
+        alert("保存するデータがありません。");
+        return;
+    }
+
+    // 当選確定データ（is_winner: 1）のみを抽出してソート
+    const winners = data.all_nominations
+        .filter(n => n.is_winner === 1)
+        .sort((a, b) => (parseInt(a.round) - parseInt(b.round)) || a.player_name.localeCompare(b.player_name));
+
+    if (winners.length === 0) {
+        alert("当選確定した指名がまだありません。");
+        return;
+    }
+
+    // CSVヘッダーとコンテンツの構築
+    let csvContent = "巡目,指名者,馬名,性別,父,母,厩舎,生産者\n";
+    winners.forEach(n => {
+        const row = [
+            n.round,
+            n.player_name,
+            n.horse_name,
+            n.horses?.sex || "",
+            n.horses?.father_name || "",
+            n.horses?.mother_name || n.mother_name || "",
+            n.horses?.stable || "",
+            n.horses?.breeder || ""
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
+        csvContent += row + "\n";
+    });
+
+    // Excelでの文字化け防止のためBOMを付与してダウンロード
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `pog_results_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    POG_Log.i("CSV_DOWNLOAD_SUCCESS", { count: winners.length });
+};
