@@ -212,10 +212,10 @@ async def status():
     }
 
 @app.post("/nominate")
-async def nominate(request: Request, horse_name: str = Form(None), mother_name: str = Form(None), horse_id: str = Form(None)):
+async def nominate(request: Request, horse_name: str = Form(None), mother_name: str = Form(None), horse_id: str = Form(None), father_name: str = Form(None), sex: str = Form(None)):
     import traceback
     print(f"\n[SERVER_TRACE] === Nominate Process Start ===")
-    print(f"[SERVER_TRACE] Received: horse_name='{horse_name}', mother='{mother_name}', horse_id='{horse_id}'")
+    print(f"[SERVER_TRACE] Received: horse_name='{horse_name}', mother='{mother_name}', father='{father_name}', sex='{sex}'")
     try:
         raw_user = request.cookies.get("pog_user")
         user = urllib.parse.unquote(raw_user) if raw_user else None
@@ -239,9 +239,20 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         supabase.table("draft_results").delete().eq("player_name", user).eq("round", round_now).eq("is_winner", 0).execute()
         
         print(f"[SERVER_TRACE] Executing INSERT (new nomination)...")
-        # 【修正】horse_idを除去し、自動採番のidには干渉しないように挿入
+        
+        # 手動指名判定：馬名が空なら母名から生成
+        is_manual = not bool(horse_name)
+        final_horse_name = horse_name if horse_name else f"{mother_name}の2024"
+
         res = supabase.table("draft_results").insert({
-            "player_name": user, "horse_name": horse_name, "mother_name": mother_name, "round": round_now
+            "player_name": user, 
+            "horse_name": final_horse_name, 
+            "mother_name": mother_name, 
+            "father_name": father_name,
+            "sex": sex,
+            "round": round_now,
+            "is_manual": is_manual,
+            "is_winner": 0
         }).execute()
         
         print(f"[SERVER_TRACE] Process Completed Successfully")

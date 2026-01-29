@@ -1,7 +1,7 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.8
+   POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.8.12";
+const APP_VERSION = "0.9.0";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -210,6 +210,19 @@ async function searchHorses() {
     try {
         const horses = await POG_API.search(f, m, window.searchController.signal);
         resultsEl.innerHTML = ""; 
+
+        if ((!horses || horses.length === 0) && (f || m)) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'search-no-result card';
+            emptyDiv.innerHTML = `
+                <p>該当する馬が見つかりません</p>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary" style="flex:1;" onclick="doNominate('', '${m}', '${f}', '牡')">この父母で指名(牡)</button>
+                    <button class="btn btn-danger" style="flex:1;" onclick="doNominate('', '${m}', '${f}', '牝')">この父母で指名(牝)</button>
+                </div>`;
+            resultsEl.appendChild(emptyDiv);
+        }
+
         if (horses && horses.length > 0) {
             const me = decodeURIComponent(getCookie('pog_user') || "").replace(/\+/g, ' ');
             const d = window.AppState.latestData || {};
@@ -255,11 +268,12 @@ async function searchHorses() {
     }
 }
 
-window.doNominate = async function(name, mother) {
-    if (!confirm(`${name} を指名しますか？`)) return;
+window.doNominate = async function(name, mother, father = '', sex = '') {
+    const dispName = name || `${mother}の2024 (${sex})`;
+    if (!confirm(`${dispName} を指名しますか？`)) return;
     window.AppState.setMode('BUSY', 'doNominate');
     try {
-        const result = await POG_API.postNomination(name, mother);
+        const result = await POG_API.postNomination(name, mother, father, sex);
         const data = JSON.parse(result.text);
         if (data.status === 'success') {
             location.reload();

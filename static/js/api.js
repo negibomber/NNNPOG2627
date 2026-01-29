@@ -12,10 +12,12 @@ const POG_API = {
         if (!res.ok) throw new Error("検索リクエストに失敗しました");
         return await res.json();
     },
-    async postNomination(name, mother) {
+    async postNomination(name, mother, father = '', sex = '') {
         const formData = new URLSearchParams();
         formData.append('horse_name', name || "");
         formData.append('mother_name', mother || "");
+        formData.append('father_name', father || "");
+        formData.append('sex', sex || "");
         const res = await fetch('/nominate', { method: 'POST', body: formData });
         return { status: res.status, text: await res.text() };
     },
