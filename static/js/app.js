@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.9.1";
+const APP_VERSION = "0.9.2";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -269,8 +269,19 @@ async function searchHorses() {
 }
 
 window.doNominate = async function(name, mother, father = '', sex = '') {
-    const dispName = name || `${mother}の2024 (${sex})`;
+    // 証拠の収集：手動入力（name空）の場合、入力欄から最新の値を取得
+    const finalMother = name ? mother : (mother || document.getElementById('s_mother')?.value || '').trim();
+    const finalFather = name ? father : (father || document.getElementById('s_father')?.value || '').trim();
+
+    // バリデーション：未登録馬の場合の必須チェック
+    if (!name && (!finalMother || !finalFather)) {
+        alert("未登録馬の指名には、父名と母名の両方が必要です。");
+        return;
+    }
+
+    const dispName = name || `${finalMother}の2024 (${sex})`;
     if (!confirm(`${dispName} を指名しますか？`)) return;
+
     window.AppState.setMode('BUSY', 'doNominate');
     try {
         const result = await POG_API.postNomination(name, mother, father, sex);

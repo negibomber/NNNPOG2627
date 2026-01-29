@@ -242,14 +242,28 @@ async def nominate(request: Request, horse_name: str = Form(None), mother_name: 
         
         # 手動指名判定：馬名が空なら母名から生成
         is_manual = not bool(horse_name)
+        
+        # バリデーション：手動指名は父・母必須
+        if is_manual and (not mother_name or not father_name):
+            return {"status": "error", "message": "未登録馬の指名には、父名と母名の両方が必須です"}
+
         final_horse_name = horse_name if horse_name else f"{mother_name}の2024"
+        
+        # データ補完：既存馬指名で父・性別が空の場合、マスタから補填する
+        final_father = father_name
+        final_sex = sex
+        if not is_manual and (not final_father or not final_sex):
+            h_master = supabase.table("horses").select("father_name, sex").eq("horse_name", horse_name).execute()
+            if h_master.data:
+                final_father = final_father or h_master.data[0]['father_name']
+                final_sex = final_sex or h_master.data[0]['sex']
 
         res = supabase.table("draft_results").insert({
             "player_name": user, 
             "horse_name": final_horse_name, 
             "mother_name": mother_name, 
-            "father_name": father_name,
-            "sex": sex,
+            "father_name": final_father,
+            "sex": final_sex,
             "round": round_now,
             "is_manual": is_manual,
             "is_winner": 0
