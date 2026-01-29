@@ -142,9 +142,9 @@ async def status():
         h_key = n.get('horse_name', "").strip()
         h_info = h_map.get(h_key, {})
         n['horses'] = {
-            "father_name": str(h_info.get('father_name') or "-"),
+            "father_name": str(h_info.get('father_name') or n.get('father_name') or "-"),
             "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-"),
-            "sex": str(h_info.get('sex') or "")
+            "sex": str(h_info.get('sex') or n.get('sex') or "")
         }
     # 修正：指名(0)または当選(1)を出したユニーク人数が、全参加者数と一致するかで判定
     unique_nominated_count = len(set([n['player_name'] for n in current_noms]))
@@ -165,10 +165,10 @@ async def status():
                 "player": target, 
                 "horse": h_name, 
                 "mother": res[0]['mother_name'], 
-                "father": str(h_d.get('father_name') or "データなし"),
+                "father": str(h_d.get('father_name') or res[0].get('father_name') or "データなし"),
                 "stable": str(h_d.get('stable') or "未登録"),
                 "breeder": str(h_d.get('breeder') or "未登録"),
-                "sex": str(h_d.get('sex') or "")
+                "sex": str(h_d.get('sex') or res[0].get('sex') or "")
             }
 
     # --- 演出用データの取得 ---

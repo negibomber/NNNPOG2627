@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.9.0";
+const APP_VERSION = "0.9.1";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -217,8 +217,8 @@ async function searchHorses() {
             emptyDiv.innerHTML = `
                 <p>該当する馬が見つかりません</p>
                 <div style="display:flex; gap:10px;">
-                    <button class="btn btn-primary" style="flex:1;" onclick="doNominate('', '${m}', '${f}', '牡')">この父母で指名(牡)</button>
-                    <button class="btn btn-danger" style="flex:1;" onclick="doNominate('', '${m}', '${f}', '牝')">この父母で指名(牝)</button>
+                    <button class="btn btn-primary" style="flex:1;" onclick="doNominate('', document.getElementById('s_mother').value, document.getElementById('s_father').value, '牡')">この父母で指名(牡)</button>
+                    <button class="btn btn-danger" style="flex:1;" onclick="doNominate('', document.getElementById('s_mother').value, document.getElementById('s_father').value, '牝')">この父母で指名(牝)</button>
                 </div>`;
             resultsEl.appendChild(emptyDiv);
         }
