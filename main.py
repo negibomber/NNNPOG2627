@@ -144,7 +144,9 @@ async def status():
         n['horses'] = {
             "father_name": str(h_info.get('father_name') or n.get('father_name') or "-"),
             "mother_name": str(h_info.get('mother_name') or n.get('mother_name') or "-"),
-            "sex": str(h_info.get('sex') or n.get('sex') or "")
+            "sex": str(h_info.get('sex') or n.get('sex') or ""),
+            "stable": str(h_info.get('stable') or "-"),
+            "breeder": str(h_info.get('breeder') or "-")
         }
     # 修正：指名(0)または当選(1)を出したユニーク人数が、全参加者数と一致するかで判定
     unique_nominated_count = len(set([n['player_name'] for n in current_noms]))
