@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.10
    ========================================================================== */
-const APP_VERSION = "0.10.4";
+const APP_VERSION = "0.10.5";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -137,8 +137,17 @@ async function updateStatus(preFetchedData = null, force = false) {
         }
 
         if (willStartTheater) {
-            POG_Log.i(`THEATER_LAUNCH: Calling playReveal`);
-            POG_Theater.playReveal(data.reveal_data || data.lottery_data);
+            POG_Log.i(`THEATER_LAUNCH: Dispatching Theater for phase: ${data.phase}`);
+            
+            // 修正：フェーズに応じて適切なメソッドへ振り分ける（Router機能）
+            if (data.phase === 'lottery_select') {
+                POG_Theater.playLotterySelect(data.lottery_data);
+            } else if (data.phase === 'lottery_result') {
+                POG_Theater.playLotteryResult(data.lottery_data);
+            } else {
+                // デフォルトは通常の指名公開
+                POG_Theater.playReveal(data.reveal_data);
+            }
         }
 
         // --- 統治権の厳格化: AND条件による許可制描画 ---

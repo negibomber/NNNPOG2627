@@ -198,6 +198,7 @@ display: none;
 
 /* 抽選エリア */
 .lottery-box {
+    display: none; /* 証拠：ここも物理封印しないとタブ下に透明な空間が残る */
     opacity: 0;
     visibility: hidden;
     transition: all 0.5s ease;

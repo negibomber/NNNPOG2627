@@ -99,7 +99,8 @@ const POG_UI = {
         };
 
         toggleArea(summaryArea, data.phase === 'summary');
-        // lottery_reveal ではなく lottery_select / lottery_result になる
+        // 証拠：抽選エリアもtoggleAreaで管理し、必要な時以外は物理的に消す
+        toggleArea(lotRevealArea, data.phase === 'lottery_reveal');
         toggleArea(revealArea, data.phase === 'reveal' && !!data.reveal_data);
 
         // 抽選演出への委譲
