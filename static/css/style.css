@@ -670,7 +670,7 @@ display: none;
 
 /* 馬名：一番目立たせる（重み付け） */
 #t_horse_area {
-    flex: 1.5; /* 他のエリアより少し広く取る */
+    flex: 1.0; /* 他のエリアより少し広く取る */
 }
 #t_horse_area .draft-value {
     font-size: 2.8rem; /* 馬名を最大化 */
@@ -934,16 +934,17 @@ display: none;
 /* --- 抽選演出用 --- */
 /* 封筒配置エリアを横並びに */
 .envelope-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-    padding: 20px;
-    width: 100%;
+    /* 証拠：指名一覧(ボード)と完全に同じグリッド配置を適用 */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 12px;
+    padding: 15px;
 }
 .envelope {
-    width: 110px;
-    height: 150px;
+    /* 証拠：ボードの横幅に合わせつつ、縦を200pxにして「縦長の封筒」を再現 */
+    width: 100%;
+    max-width: 160px;
+    height: 200px;
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     border: 1px solid #94a3b8;
     border-radius: 4px;

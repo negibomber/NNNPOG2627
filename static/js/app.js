@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.10
    ========================================================================== */
-const APP_VERSION = "0.10.5";
+const APP_VERSION = "0.10.6";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -127,7 +127,7 @@ async function updateStatus(preFetchedData = null, force = false) {
             window.AppState.lastPlayedIdx = data.reveal_index;
         } else {
             const isTheaterOpen = document.getElementById('theater_layer').style.display === 'flex';
-            const isTheaterPhase = ['reveal', 'lottery_reveal'].includes(data.phase);
+            const isTheaterPhase = ['reveal', 'lottery_reveal', 'lottery_select', 'lottery_result'].includes(data.phase);
             if (isTheaterOpen && !isTheaterPhase) {
                 POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: Phase [${data.phase}] is not for Theater)`);
                 POG_Theater.close();
@@ -154,8 +154,8 @@ async function updateStatus(preFetchedData = null, force = false) {
         const isTheaterActive = (window.AppState.uiMode === 'THEATER');
         const canUpdate = window.AppState.canUpdateUI();
 
-        // 許可条件: 「演出中でない」 かつ 「(待機中である または 強制フラグがある)」
-        const isAllowedToDraw = (!isTheaterActive) && (canUpdate || force);
+        // 証拠：演出中であっても選択フェーズ(lottery_select)のみ描画許可を与え、リアタイ更新を可能にする
+        const isAllowedToDraw = (!isTheaterActive || data.phase === 'lottery_select') && (canUpdate || force);
 
         POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, allow=${isAllowedToDraw}`);
 
