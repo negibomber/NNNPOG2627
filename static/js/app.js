@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.9.5";
+const APP_VERSION = "0.9.6";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -299,34 +299,27 @@ window.doNominate = async function(name, mother, father = '', sex = '') {
 };
 
 // MC専用：指名情報の修正（血統必須・存在チェック付）
-window.editNominationByMC = async function(playerName, round, currentHorse) {
-    const newName = prompt(`【MC修正】${playerName} の第${round}巡指名を変更します。\n新しい馬名を入力してください:`, currentHorse);
-    if (!newName) return;
-
-    const newFather = prompt("【必須】父名を入力してください:", "");
-    if (!newFather) { alert("父名は必須です。"); return; }
+window.editNominationByMC = async function(playerName, round) {
+    const newFather = prompt(`【MC修正】${playerName} (第${round}巡)\n父名を入力してください:`, "");
+    if (!newFather) return;
     
-    const newMother = prompt("【必須】母名を入力してください:", "");
-    if (!newMother) { alert("母名は必須です。"); return; }
+    const newMother = prompt("母名を入力してください:", "");
+    if (!newMother) return;
     
-    const newSex = prompt("【必須】性別を入力してください（牡/牝）:", "");
+    const newSex = prompt("性別を入力してください（牡/牝）:", "");
     if (!['牡', '牝'].includes(newSex)) { alert("性別は「牡」または「牝」で入力してください。"); return; }
 
     window.AppState.setMode('BUSY', 'editNominationByMC');
     try {
-        // horsesテーブルに存在するか証拠を照合
+        // horsesテーブルに存在するか証拠を照合（馬名特定のため）
         const horses = await POG_API.search(newFather, newMother);
-        const matched = horses.find(h => h.horse_name === newName);
+        const matched = (horses && horses.length > 0) ? horses[0] : null; 
         
         let isManual = !matched;
-        let confirmMsg = "";
-
-        if (matched) {
-            confirmMsg = `【登録済みデータと一致】\n${matched.horse_name} (父:${matched.father_name} 母:${matched.mother_name})\nとして修正しますか？`;
-        } else {
-            // あるべき姿：未登録馬の場合の二重の注意喚起
-            confirmMsg = `【⚠️警告：マスタ未登録】\nこの馬はマスタ(horses)に登録されていません。\n未登録馬(is_manual=TRUE)として修正を強行しますか？\n\n馬名: ${newName}\n血統: ${newFather} × ${newMother}`;
-        }
+        let finalName = matched ? matched.horse_name : `${newMother}の2024`;
+        let confirmMsg = matched 
+            ? `【マスタ一致】\n馬名: ${finalName}\nとして修正しますか？`
+            : `【マスタ未登録】\n馬名: ${finalName}\nとして修正（is_manual=TRUE）しますか？`;
 
         if (!confirm(confirmMsg)) {
             window.AppState.setMode('IDLE', 'editNominationByMC_cancel');
@@ -336,7 +329,7 @@ window.editNominationByMC = async function(playerName, round, currentHorse) {
         const formData = new URLSearchParams();
         formData.append('target_player', playerName);
         formData.append('target_round', round);
-        formData.append('horse_name', newName);
+        formData.append('horse_name', finalName); // 自動決定した名前を送信
         formData.append('mother_name', newMother);
         formData.append('father_name', newFather);
         formData.append('sex', newSex);

@@ -417,23 +417,19 @@ async def update_nomination(request: Request,
         if not role_row.data or role_row.data[0]['role'] != 'MC':
             return {"status": "error", "message": "MC権限が必要です"}
 
-        # 2. 論理整合性：マスタ判定の結果を数値として評価
+        # 2. 論理整合性：証拠に基づきフラグを再評価
+        # フロント（app.js）から送られた is_manual ("1" or "0") を bool に変換
         bool_is_manual = (is_manual == "1")
-        
-        # 馬名が未入力（母名指名）の場合は強制的にis_manual=TRUE
-        final_horse_name = horse_name if horse_name else f"{mother_name}の2024"
-        if not horse_name:
-            bool_is_manual = True
 
         # 3. DB更新
-        # あるべき姿：MC入力情報を最優先し、is_manualフラグを適切に設定する
+        # あるべき姿：当選確定済み(is_winner=1)のレコードを、MCが入力した最新情報で上書きする
         supabase.table("draft_results").update({
-            "horse_name": final_horse_name,
+            "horse_name": horse_name,
             "mother_name": mother_name,
             "father_name": father_name,
             "sex": sex,
             "is_manual": bool_is_manual
-        }).eq("player_name", target_player).eq("round", target_round).in_("is_winner", [0, 1]).execute()
+        }).eq("player_name", target_player).eq("round", target_round).eq("is_winner", 1).execute()
 
         return {"status": "success"}
     except Exception as e:

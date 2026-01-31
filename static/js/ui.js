@@ -62,7 +62,7 @@ const POG_UI = {
                     const nameStyle = (n.is_winner === -1) ? 'text-decoration:line-through; opacity:0.8;' : '';
 
                     // 権限証拠（window.IS_MC）に基づき修正ボタンを生成
-                    const editBtn = window.IS_MC ? `<button class="btn-edit-mini" onclick="event.stopPropagation(); window.editNominationByMC('${playerName}', ${n.round}, '${n.horse_name}')">修正</button>` : '';
+                    const editBtn = (window.IS_MC && n.is_winner === 1) ? `<button class="btn-edit-mini" onclick="event.stopPropagation(); window.editNominationByMC('${playerName}', ${n.round})">修正</button>` : '';
 
                     html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div style="${nameStyle}">${hName}${sexMarker}${editBtn}</div>`;
                     if (!shouldHide) html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
