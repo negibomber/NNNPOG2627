@@ -107,10 +107,22 @@ const POG_UI = {
             POG_Theater.playLotterySelect(data.lottery_data);
             window.AppState.setMode('THEATER', 'lottery_select');
         } else if (data.phase === 'lottery_result') {
-            // 一度だけ呼び出す制御が必要だが、Theater側で上書き再描画しても問題ない作りにする
-            POG_Theater.playLotteryResult(data.lottery_data);
-            window.AppState.setMode('THEATER', 'lottery_result');
-        }
+            if (window.AppState.lastProcessedPhase !== 'lottery_result_done') {
+                POG_Theater.playLotteryResult(data.lottery_data);
+                window.AppState.setMode('THEATER', 'lottery_result');
+                window.AppState.lastProcessedPhase = 'lottery_result_done';
+                
+                // 3秒後に自動で次へ進める
+                setTimeout(async () => {
+                    if (window.IS_MC) {
+                        await POG_API.postMCAction('/mc/confirm_lottery');
+                    }
+                }, 3000);
+            }
+        } else {
+            // 他のフェーズに移ったらフラグをリセット
+            window.AppState.lastProcessedPhase = null;
+        }   
 
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');

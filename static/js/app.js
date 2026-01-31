@@ -1,7 +1,7 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.9
+   POG Main Application Module (app.js) - Ver.0.10
    ========================================================================== */
-const APP_VERSION = "0.10.0";
+const APP_VERSION = "0.10.1";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {

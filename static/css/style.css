@@ -103,6 +103,7 @@ header {
     display: flex;
     background: white;
     border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 5px !important;
 }
 
 .tab-btn {
@@ -580,7 +581,10 @@ header {
     z-index: 9999;
     display: none; /* JSでflexに切り替え */
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding-top: 20px;
+    padding-bottom: 150px;
     align-items: center;
     color: #f8fafc;
     font-family: 'serif';
