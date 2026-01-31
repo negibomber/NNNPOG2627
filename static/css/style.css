@@ -11,7 +11,7 @@ body {
 }
 
 .container {
-    padding: 15px;
+    padding: 0 15px 15px 15px;
 }
 
 /* --- 2. ヘッダーエリア --- */
@@ -56,13 +56,13 @@ header {
 }
 
 .waiting-bar {
-    display: none;
-    padding: 6px 15px;
+display: none;
+    padding: 2px 15px;
     background: #f0f9ff;
     color: #0369a1;
     font-size: 0.75rem;
     border-top: 1px solid #e0f2fe;
-    line-height: 1.4;
+    line-height: 1.2;
 }
 
 /* --- 3. 共通コンポーネント --- */
@@ -103,7 +103,7 @@ header {
     display: flex;
     background: white;
     border-bottom: 1px solid #e2e8f0;
-    margin-bottom: 5px !important;
+    margin-bottom: 0 !important;
 }
 
 .tab-btn {
