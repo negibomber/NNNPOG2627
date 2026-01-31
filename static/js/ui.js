@@ -99,8 +99,18 @@ const POG_UI = {
         };
 
         toggleArea(summaryArea, data.phase === 'summary');
-        toggleArea(lotRevealArea, data.phase === 'lottery_reveal');
+        // lottery_reveal ではなく lottery_select / lottery_result になる
         toggleArea(revealArea, data.phase === 'reveal' && !!data.reveal_data);
+
+        // 抽選演出への委譲
+        if (data.phase === 'lottery_select') {
+            POG_Theater.playLotterySelect(data.lottery_data);
+            window.AppState.setMode('THEATER', 'lottery_select');
+        } else if (data.phase === 'lottery_result') {
+            // 一度だけ呼び出す制御が必要だが、Theater側で上書き再描画しても問題ない作りにする
+            POG_Theater.playLotteryResult(data.lottery_data);
+            window.AppState.setMode('THEATER', 'lottery_result');
+        }
 
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');

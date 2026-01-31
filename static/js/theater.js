@@ -1,6 +1,11 @@
-/* theater.js (Ver.0.6.16) - 右寄せ・ガタつき防止反映版 */
+/* theater.js (Ver.0.7.0) - 右寄せ・ガタつき防止完全維持 + 抽選機能追加版 */
 const POG_Theater = {
     async playReveal(data) {
+        // --- [追加] 抽選演出から復帰した際にカード表示を確実にする ---
+        if (document.getElementById('theater_lottery')) document.getElementById('theater_lottery').style.display = 'none';
+        if (document.getElementById('theater_card')) document.getElementById('theater_card').style.display = 'flex';
+
+        // --- [ここから Ver.0.6.16 のロジックを1文字も変えず維持] ---
         // クラス状態を可視化する内部ヘルパー
         const getVisibleStatus = () => {
             return ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl']
@@ -100,6 +105,123 @@ const POG_Theater = {
                 ctrl.classList.add('is-visible');
             }
         }
+        // --- [Ver.0.6.16 コピーここまで] ---
+    },
+
+    // --- [ここから抽選用に追加したメソッド] ---
+
+    async playLotterySelect(data) {
+        this.resetTheaterUI('lottery');
+        const hName = data.horse_name;
+        const participants = data.participants || [];
+        const selections = data.selections || {};
+        const turnIdx = data.turn_index || 0;
+        const currentPlayer = participants[turnIdx];
+        const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\+/g, ' ');
+
+        const horseDisplay = document.getElementById('tl_horse');
+        if (horseDisplay) horseDisplay.innerText = hName;
+        
+        const msgEl = document.getElementById('tl_message');
+        if (msgEl) {
+            if (currentPlayer === me) {
+                msgEl.innerText = "あなたの番です。封筒を選んでください。";
+                msgEl.style.color = "#fbbf24";
+            } else {
+                msgEl.innerText = `${currentPlayer} さんが選択中...`;
+                msgEl.style.color = "#fff";
+            }
+        }
+
+        const area = document.getElementById('tl_envelopes_area');
+        if (area) {
+            area.innerHTML = ''; 
+            participants.forEach((_, i) => {
+                const env = document.createElement('div');
+                env.className = 'envelope';
+                const selector = selections[String(i)];
+                if (selector) {
+                    env.classList.add('is-taken');
+                    const label = document.createElement('div');
+                    label.className = 'envelope-name';
+                    label.innerText = selector;
+                    env.appendChild(label);
+                    if (selector === me) env.classList.add('is-my-choice');
+                } else if (currentPlayer === me) {
+                    env.classList.add('is-selectable');
+                    env.onclick = () => this.selectEnvelope(i);
+                }
+                area.appendChild(env);
+            });
+        }
+
+        // 透視ボタン（参加者以外のみ表示）
+        const peekBtn = document.getElementById('tl_peek_btn');
+        if (peekBtn) {
+            const isParticipant = participants.includes(me);
+            peekBtn.style.display = !isParticipant ? 'inline-block' : 'none';
+            peekBtn.onclick = () => {
+                const target = area.children[data.winning_index];
+                if (target) target.classList.add('is-peek-winner');
+                peekBtn.style.display = 'none';
+            };
+        }
+    },
+
+    async playLotteryResult(data) {
+        this.resetTheaterUI('lottery');
+        const hName = data.horse_name;
+        const selections = data.selections || {};
+        const winIdx = data.winning_index;
+        
+        const horseDisplay = document.getElementById('tl_horse');
+        if (horseDisplay) horseDisplay.innerText = hName;
+        const msgEl = document.getElementById('tl_message');
+        if (msgEl) msgEl.innerText = "一斉開封！";
+
+        const area = document.getElementById('tl_envelopes_area');
+        if (area) {
+            area.innerHTML = '';
+            Object.keys(selections).forEach(idx => {
+                const env = document.createElement('div');
+                env.className = 'envelope';
+                const label = document.createElement('div');
+                label.className = 'envelope-name';
+                label.innerText = selections[idx];
+                env.appendChild(label);
+                area.appendChild(env);
+                
+                setTimeout(() => {
+                    if (parseInt(idx) === winIdx) env.classList.add('is-winner');
+                    else env.classList.add('is-loser');
+                    if (msgEl) msgEl.innerText = "抽選結果確定";
+                }, 1000);
+            });
+        }
+    },
+
+    async selectEnvelope(idx) {
+        if (!confirm("この封筒にしますか？")) return;
+        try {
+            const formData = new URLSearchParams();
+            formData.append('envelope_index', idx);
+            const res = await fetch('/select_envelope', { method: 'POST', body: formData });
+            const json = await res.json();
+            if (json.status === 'error') alert(json.message);
+        } catch(e) {
+            alert("通信エラーが発生しました");
+        }
+    },
+
+    resetTheaterUI(mode) {
+        const layer = document.getElementById('theater_layer');
+        if (!layer) return;
+        layer.style.display = 'flex';
+        
+        const cardDiv = document.getElementById('theater_card');
+        const lotDiv = document.getElementById('theater_lottery');
+        if (cardDiv) cardDiv.style.display = (mode === 'reveal' ? 'flex' : 'none');
+        if (lotDiv) lotDiv.style.display = (mode === 'lottery' ? 'flex' : 'none');
     },
 
     async triggerNext() {

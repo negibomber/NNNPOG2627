@@ -103,7 +103,7 @@
 <script>
     // Flaskからの権限情報をJSに継承
     window.IS_MC = ("{{ is_mc }}" === "True" || "{{ is_mc }}" === "1");
-    
+
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => { el.classList.add('is-hidden'); el.classList.remove('is-visible'); });
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -158,6 +158,31 @@
         <div id="t_mc_ctrl" class="draft-area" style="flex: 0.5;">
             <button id="t_next_btn" class="btn-mc-next" onclick="POG_Theater.triggerNext()">
                 次の指名を公開 ≫
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="theater_lottery" class="theater-card" style="display:none;">
+        <div class="draft-title" style="color:#ef4444; border-color:#ef4444;">抽選</div>
+        
+        <div class="draft-area is-visible" style="flex:0.5;">
+            <div class="draft-label">対象馬</div>
+            <div id="tl_horse" class="draft-value" style="font-size: 2.2rem; color:#ef4444;"></div>
+        </div>
+
+        <div id="tl_envelopes_area" class="draft-area is-visible" style="flex:2; width:100%; flex-direction:row; justify-content:center; gap:20px; flex-wrap:wrap;">
+            </div>
+
+        <div id="tl_message_area" class="draft-area is-visible" style="flex:0.5;">
+            <div id="tl_message" class="draft-label" style="font-size:1.2rem; color:#fff;"></div>
+            <button id="tl_peek_btn" class="btn-peek" style="display:none;">中身をこっそり見る</button>
+        </div>
+        
+        {% if is_mc %}
+        <div id="t_mc_ctrl_lottery" class="draft-area" style="display:none; flex: 0.5;">
+            <button class="btn-mc-next" onclick="POG_Theater.triggerNext()">
+                次へ ≫
             </button>
         </div>
         {% endif %}

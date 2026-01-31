@@ -173,11 +173,12 @@ async def status():
                 "sex": str(h_d.get('sex') or res[0].get('sex') or "")
             }
 
-    # --- 演出用データの取得 ---
+# --- 演出用データの取得 ---
     lottery_queue = json.loads(get_setting("lottery_queue") or "[]")
-    lottery_results = json.loads(get_setting("lottery_results") or "{}")
+    lottery_results = json.loads(get_setting("lottery_results") or "{}") # 後方互換または履歴用
     lottery_idx = int(get_setting("lottery_idx") or 0)
-
+    lottery_data = json.loads(get_setting("lottery_current_data") or "{}") # 現在進行中のデータ
+    
     # MCボタン情報の生成
     mc_action = None
     if phase == "nomination":
@@ -195,11 +196,14 @@ async def status():
             mc_action = {"label": "抽選開始 ≫", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
             mc_action = {"label": "次の巡へ ≫", "endpoint": "/mc/next_round", "class": "btn-success"}
-    elif phase == "lottery_reveal":
+    elif phase == "lottery_result": # 結果表示中：MCが次へ進める
         if lottery_idx + 1 < len(lottery_queue):
             mc_action = {"label": "次の抽選へ ≫", "endpoint": "/mc/advance_lottery", "class": "btn-danger"}
         else:
             mc_action = {"label": "再指名へ ≫", "endpoint": "/mc/next_round", "class": "btn-success"}
+    elif phase == "lottery_select": # 選択中：MCは見守るだけ（あるいはリセット機能等）
+         mc_action = {"label": "抽選進行中...", "endpoint": None, "class": "btn-secondary", "disabled": True}
+
     return {
         "phase": phase, "round": round_now, "reveal_index": rev_idx, 
         "total_players": len(active_players), "all_players": all_players_list, 
@@ -208,11 +212,12 @@ async def status():
         "has_duplicates": has_duplicates,
         "lottery_queue": lottery_queue,
         "lottery_results": lottery_results,
+        "lottery_data": lottery_data, # 追加
         "lottery_idx": lottery_idx,
+        "lottery_data": lottery_data, # フロントへ渡す
         "is_finished": (round_now >= 10 and phase == "nomination" and not current_noms and not lottery_queue),
-        "mc_action": mc_action  # ←【追加】
+        "mc_action": mc_action
     }
-
 @app.post("/nominate")
 async def nominate(request: Request, horse_name: str = Form(None), mother_name: str = Form(None), horse_id: str = Form(None), father_name: str = Form(None), sex: str = Form(None)):
     import traceback
@@ -322,10 +327,11 @@ async def run_lottery():
             # 単独：この瞬間に確定（正しい即時更新）
             supabase.table("draft_results").update({"is_winner": 1}).eq("id", participants[0]['id']).execute()
 
-    # 演出用データを保存
+# 演出用データを保存
     update_setting("lottery_queue", json.dumps(lottery_queue))
-    update_setting("lottery_results", json.dumps(lottery_results))
+    update_setting("lottery_results", "{}") # 結果は空で初期化
     update_setting("lottery_idx", "0")
+    update_setting("lottery_current_data", "{}") # 進行中のデータ(当たり場所など)
     
     # 重複の有無に関わらず、必ず「指名結果(summary)」画面へ遷移させる
     update_setting("phase", "summary")
@@ -335,41 +341,97 @@ async def run_lottery():
 @app.post("/mc/advance_lottery")
 async def advance_lottery():
     import json
+    import random
     phase = get_setting("phase")
     round_now = int(get_setting("current_round") or 1)
     queue = json.loads(get_setting("lottery_queue") or "[]")
-    results = json.loads(get_setting("lottery_results") or "{}")
     idx = int(get_setting("lottery_idx") or 0)
 
-    # 抽選ロジックの実行（ボタンが押された瞬間に決定する）
-    def perform_lottery(target_idx):
+    # 次の抽選をセットアップする関数
+    def setup_next_lottery(target_idx):
         h_name = queue[target_idx]
-        # その馬を指名している人を再取得
-        noms = supabase.table("draft_results").select("*").eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-        if noms.data:
-            winner = random.choice(noms.data)
-            # 1. 演出用データの更新
-            results[h_name] = {
-                "winner_name": winner['player_name'],
-                "winner_id": winner['id'],
-                "participants": [p['player_name'] for p in noms.data]
-            }
-            update_setting("lottery_results", json.dumps(results))
-            # 2. DBの更新（即時反映）
-            supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
-            supabase.table("draft_results").update({"is_winner": 1}).eq("id", winner['id']).execute()
+        # 参加者取得
+        noms = supabase.table("draft_results").select("player_name").eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+        participants = [n['player_name'] for n in noms.data]
+        random.shuffle(participants) # 順番をランダムに決定
+
+        # 【イカサマ防止】当たり場所をサーバー側で事前に固定する
+        winning_index = random.randint(0, len(participants) - 1)
+
+        current_data = {
+            "horse_name": h_name,
+            "participants": participants,     # 選択順リスト
+            "winning_index": winning_index,   # 当たり封筒のインデックス(0始まり)
+            "selections": {},                 # { "0": "UserA", "1": "UserB" }
+            "turn_index": 0                   # 現在選ぶ人のインデックス
+        }
+        update_setting("lottery_current_data", json.dumps(current_data))
+        update_setting("phase", "lottery_select") # 選択フェーズへ
 
     if phase == "summary":
         if queue:
-            perform_lottery(0) # 最初の抽選を実行
-            update_setting("phase", "lottery_reveal")
-    elif phase == "lottery_reveal":
+            setup_next_lottery(0)
+    elif phase == "lottery_result": # 結果表示後、次へ
         if idx + 1 < len(queue):
             new_idx = idx + 1
-            perform_lottery(new_idx) # 次の抽選を実行
             update_setting("lottery_idx", str(new_idx))
-            
+            setup_next_lottery(new_idx)
+        else:
+            # 全ての抽選が終了
+            # 完了状態として nomination に戻すが、MCが next_round を押すまでは実質待機
+            pass 
+
     return await status()
+
+@app.post("/select_envelope")
+async def select_envelope(request: Request, envelope_index: int = Form(...)):
+    import json
+    raw_user = request.cookies.get("pog_user")
+    user = urllib.parse.unquote(raw_user) if raw_user else None
+    if not user: return {"status": "error", "message": "Login required"}
+
+    current_json = get_setting("lottery_current_data")
+    if not current_json: return {"status": "error", "message": "No active lottery"}
+    
+    data = json.loads(current_json)
+    participants = data.get("participants", [])
+    selections = data.get("selections", {})
+    turn_idx = data.get("turn_index", 0)
+
+    # 1. 自分のターンか確認
+    if turn_idx >= len(participants):
+        return {"status": "error", "message": "Selection finished"}
+    
+    current_player = participants[turn_idx]
+    if current_player != user:
+        return {"status": "error", "message": f"Not your turn. Waiting for {current_player}"}
+
+    # 2. 場所が空いているか確認
+    str_idx = str(envelope_index)
+    if str_idx in selections:
+        return {"status": "error", "message": "This envelope is already taken"}
+
+    # 3. 選択を保存
+    selections[str_idx] = user
+    data["selections"] = selections
+    data["turn_index"] = turn_idx + 1
+    
+    # 4. 全員選び終わったか判定 -> 結果確定処理
+    if data["turn_index"] >= len(participants):
+        win_idx = str(data["winning_index"])
+        winner_name = selections.get(win_idx)
+        
+        # DB更新：勝者と敗者を確定
+        round_now = int(get_setting("current_round") or 1)
+        h_name = data["horse_name"]
+        
+        supabase.table("draft_results").update({"is_winner": 1}).eq("horse_name", h_name).eq("round", round_now).eq("player_name", winner_name).execute()
+        supabase.table("draft_results").update({"is_winner": -1}).eq("horse_name", h_name).eq("round", round_now).eq("is_winner", 0).execute()
+        
+        update_setting("phase", "lottery_result") # 結果フェーズへ
+    
+    update_setting("lottery_current_data", json.dumps(data))
+    return {"status": "success"}
 
 @app.post("/mc/next_round")
 async def next_round():
