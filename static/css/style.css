@@ -9,7 +9,10 @@ body {
     font-family: sans-serif;
     padding-bottom: 120px; /* MCパネル用の余白 */
 }
-
+/* 証拠：シアター演出中、メイン画面の操作ボタンを自動で物理封印する */
+body.is-theater-active #mc_main_btn {
+    display: none !important;
+}
 .container {
     padding: 0 15px 15px 15px;
 }
@@ -103,7 +106,7 @@ display: none;
     display: flex;
     background: white;
     border-bottom: 1px solid #e2e8f0;
-    margin-bottom: 0 !important;
+    margin-bottom: 0 !important; /* 余白を完全にゼロ化 */
 }
 
 .tab-btn {
@@ -248,17 +251,18 @@ display: none;
 
 /* --- 6. MC操作パネル (最下部固定) --- */
 #mc_panel {
-    position: fixed; /* 画面に対して固定 */
+    position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 80px;
-    background: #1e293b;
+    min-height: 90px; /* 余白を確保 */
+    background: rgba(30, 41, 59, 0.95); /* 背面を少し透かして質感を出す */
+    backdrop-filter: blur(8px);
     color: white;
-    padding: 12px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); /* スマホのホームバー余白 */
     box-sizing: border-box;
     box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
-    z-index: 10000; /* シアター(9999)よりも上に配置 */
+    z-index: 11000; /* シアター(9999)よりも確実に上に配置 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -650,6 +654,7 @@ display: none;
 .draft-value {
     font-size: 2.8rem; /* フォントサイズを拡大 */
     font-weight: bold;
+    color: #ffffff !important;
     text-shadow: 0 0 15px rgba(212, 175, 55, 0.3); /* 金色の光彩 */
     margin: 0;
 }
@@ -672,7 +677,7 @@ display: none;
 
 /* スマホ対応：画面が小さい場合はフォントサイズを調整 */
 @media (max-width: 600px), (max-height: 700px) {
-    .draft-value { font-size: 1.6rem; }
+    .draft-value { font-size: 1.6rem; color: #ffffff !important; }
     #t_horse_area .draft-value { font-size: 1.8rem; }
     .theater-card { min-height: 90vh; padding: 10px 0; justify-content: flex-start; gap: 15px; }
 }

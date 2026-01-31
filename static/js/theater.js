@@ -1,9 +1,21 @@
 /* theater.js (Ver.0.7.0) - 右寄せ・ガタつき防止完全維持 + 抽選機能追加版 */
 const POG_Theater = {
     async playReveal(data) {
-        // --- [追加] 抽選演出から復帰した際にカード表示を確実にする ---
-        if (document.getElementById('theater_lottery')) document.getElementById('theater_lottery').style.display = 'none';
-        if (document.getElementById('theater_card')) document.getElementById('theater_card').style.display = 'flex';
+        // 証拠：現在の演出IDを生成し、同一ステータスでの重複再生（ループ）を防止する
+        const isLottery = (data.mode === 'lottery' || data.is_lottery === true);
+        const playId = `${data.round}_${data.player}_${data.mode}_${data.turn_index || 0}`;
+        if (this.currentPlayId === playId) return; 
+        this.currentPlayId = playId;
+
+        // 証拠：ステータスに合わせて表示するコンテナを切り替え、不要な方の残像を防ぐ
+        if (document.getElementById('theater_lottery')) document.getElementById('theater_lottery').style.display = isLottery ? 'flex' : 'none';
+        if (document.getElementById('theater_card')) document.getElementById('theater_card').style.display = isLottery ? 'none' : 'flex';
+
+        // 証拠：抽選モードの場合は抽選演出へ分岐し、公開画面の処理（第？巡〜）を通さない
+        if (isLottery) {
+            this.playLotterySelect(data);
+            return;
+        }
 
         // --- [ここから Ver.0.6.16 のロジックを1文字も変えず維持] ---
         // クラス状態を可視化する内部ヘルパー
@@ -38,6 +50,8 @@ const POG_Theater = {
         
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
 
+        // 証拠：シーン「シアター演出中」を宣言。これによりCSSでメインボタンが自動消去される。
+        document.body.classList.add('is-theater-active');
         const layer = document.getElementById('theater_layer');
         layer.style.display = 'flex';
 
@@ -256,6 +270,10 @@ const POG_Theater = {
 
     close() {
         POG_Log.i("Theater CLOSE: Hiding layer.");
+        // 証拠：再生中IDをクリアし、次回の異なる演出を正しく受け入れ可能にする
+        this.currentPlayId = null;
+        // 証拠：シーンを解除。これによりCSSの制約が解け、メインボタンが自動で復活する。
+        document.body.classList.remove('is-theater-active');
         document.getElementById('theater_layer').style.display = 'none';
     }
 };
