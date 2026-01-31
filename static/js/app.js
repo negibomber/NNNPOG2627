@@ -319,7 +319,7 @@ window.editNominationByMC = async function(playerName, round) {
         let finalName = matched ? matched.horse_name : `${newMother}の2024`;
         let confirmMsg = matched 
             ? `【マスタ一致】\n馬名: ${finalName}\nとして修正しますか？`
-            : `【マスタ未登録】\n馬名: ${finalName}\nとして修正（is_manual=TRUE）しますか？`;
+            : `【マスタ未登録馬】ですが、\n馬名: ${finalName}\nとして修正しますか？`;
 
         if (!confirm(confirmMsg)) {
             window.AppState.setMode('IDLE', 'editNominationByMC_cancel');

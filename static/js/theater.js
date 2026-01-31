@@ -71,15 +71,14 @@ const POG_Theater = {
 
         // 5. 演出シーケンス
         POG_Log.d("Theater Sequence: START");
-        await wait(1000);
+        await wait(500);
         document.getElementById('t_player_area').classList.add('is-visible');
         await wait(2000); 
         document.getElementById('t_father_area').classList.add('is-visible');
-        await wait(2500);
+        await wait(2000);
         document.getElementById('t_mother_area').classList.add('is-visible');
-        await wait(1000);
+        await wait(500);
         document.getElementById('t_horse_area').classList.add('is-visible');
-        await wait(1000);
         document.getElementById('t_stable_area').classList.add('is-visible');
         POG_Log.d("Theater Sequence: FINISHED");
 
