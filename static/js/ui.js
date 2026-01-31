@@ -60,7 +60,11 @@ const POG_UI = {
                     const winStatusClass = n.is_winner === 1 ? 'winner' : (n.is_winner === -1 ? 'loser' : 'pending');
                     // 修正：落選馬（-1）の場合は取り消し線スタイルを適用して表示
                     const nameStyle = (n.is_winner === -1) ? 'text-decoration:line-through; opacity:0.8;' : '';
-                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div style="${nameStyle}">${hName}${sexMarker}</div>`;
+
+                    // 権限証拠（window.IS_MC）に基づき修正ボタンを生成
+                    const editBtn = window.IS_MC ? `<button class="btn-edit-mini" onclick="event.stopPropagation(); window.editNominationByMC('${playerName}', ${n.round}, '${n.horse_name}')">修正</button>` : '';
+
+                    html += `<tr><td class="col-round">${n.round}</td><td class="col-horse ${winStatusClass}"><div style="${nameStyle}">${hName}${sexMarker}${editBtn}</div>`;
                     if (!shouldHide) html += `<div class="col-horse-sub">${father} / ${mother}</div>`;
                     html += `</td></tr>`;
                 });

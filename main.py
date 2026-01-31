@@ -400,6 +400,48 @@ async def next_round():
     update_setting("phase", "finished" if is_done else "nomination")
     return await status()
 
+@app.post("/mc/update_nomination")
+async def update_nomination(request: Request, 
+                           target_player: str = Form(...), 
+                           target_round: int = Form(...),
+                           horse_name: str = Form(None), 
+                           mother_name: str = Form(None), 
+                           father_name: str = Form(None), 
+                           sex: str = Form(None)):
+    try:
+        # 1. MC権限チェック
+        raw_user = request.cookies.get("pog_user")
+        user = urllib.parse.unquote(raw_user) if raw_user else None
+        role_row = supabase.table("participants").select("role").eq("name", user).execute()
+        if not role_row.data or role_row.data[0]['role'] != 'MC':
+            return {"status": "error", "message": "MC権限が必要です"}
+
+        # 2. データ補完（既存のnominateロジックを流用）
+        is_manual = not bool(horse_name)
+        final_horse_name = horse_name if horse_name else f"{mother_name}の2024"
+        final_father = father_name
+        final_sex = sex
+
+        if not is_manual and (not final_father or not final_sex):
+            h_master = supabase.table("horses").select("father_name, sex").eq("horse_name", horse_name).execute()
+            if h_master.data:
+                final_father = final_father or h_master.data[0]['father_name']
+                final_sex = final_sex or h_master.data[0]['sex']
+
+        # 3. DB更新（player_name と round をキーに、最新の指名を上書き）
+        # 現在有効な指名（is_winner=0 または 1）を対象にする
+        supabase.table("draft_results").update({
+            "horse_name": final_horse_name,
+            "mother_name": mother_name,
+            "father_name": final_father,
+            "sex": final_sex,
+            "is_manual": is_manual
+        }).eq("player_name", target_player).eq("round", target_round).in_("is_winner", [0, 1]).execute()
+
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.post("/login")
 async def login(user: str = Form(...)):
     # 1. 証拠の確認：選ばれたユーザーが現在入室中(is_online)かチェック

@@ -101,6 +101,9 @@
 <script src="/static/js/theater.js?v={{ version }}"></script>
 <script src="/static/js/app.js?v={{ version }}"></script>
 <script>
+    // Flaskからの権限情報をJSに継承
+    window.IS_MC = ("{{ is_mc }}" === "True" || "{{ is_mc }}" === "1");
+    
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => { el.classList.add('is-hidden'); el.classList.remove('is-visible'); });
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));

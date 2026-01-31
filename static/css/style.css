@@ -883,3 +883,33 @@ header {
     filter: grayscale(0.5);
     border-color: #451a1a;
 }
+
+/* --- 18. MC専用修正ボタン (一覧表示用) --- */
+.btn-edit-mini {
+    margin-left: 10px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    background-color: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: all 0.2s;
+    font-weight: normal;
+}
+
+.btn-edit-mini:hover {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+/* モバイル環境での誤操作防止：少しだけ大きく */
+@media (max-width: 600px) {
+    .btn-edit-mini {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+    }
+}

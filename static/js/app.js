@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.9.3";
+const APP_VERSION = "0.9.4";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -298,11 +298,60 @@ window.doNominate = async function(name, mother, father = '', sex = '') {
     }
 };
 
-function getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
-}
+// MC専用：指名情報の修正（血統必須・存在チェック付）
+window.editNominationByMC = async function(playerName, round, currentHorse) {
+    const newName = prompt(`【MC修正】${playerName} の第${round}巡指名を変更します。\n新しい馬名を入力してください:`, currentHorse);
+    if (!newName) return;
+
+    const newFather = prompt("【必須】父名を入力してください:", "");
+    if (!newFather) { alert("父名は必須です。"); return; }
+    
+    const newMother = prompt("【必須】母名を入力してください:", "");
+    if (!newMother) { alert("母名は必須です。"); return; }
+    
+    const newSex = prompt("【必須】性別を入力してください（牡/牝）:", "");
+    if (!['牡', '牝'].includes(newSex)) { alert("性別は「牡」または「牝」で入力してください。"); return; }
+
+    window.AppState.setMode('BUSY', 'editNominationByMC');
+    try {
+        // horsesテーブルに存在するか証拠を照合
+        const horses = await POG_API.search(newFather, newMother);
+        const matched = horses.find(h => h.horse_name === newName);
+        
+        let confirmMsg = matched 
+            ? `【登録済みデータと一致】\n${matched.horse_name} (父:${matched.father_name} 母:${matched.mother_name})\nとして修正しますか？`
+            : `【未登録馬として処理】\n${newName} (父:${newFather} 母:${newMother} 性別:${newSex})\nとして修正しますか？`;
+
+        if (!confirm(confirmMsg)) {
+            window.AppState.setMode('IDLE', 'editNominationByMC_cancel');
+            return;
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('target_player', playerName);
+        formData.append('target_round', round);
+        formData.append('horse_name', newName);
+        formData.append('mother_name', newMother);
+        formData.append('father_name', newFather);
+        formData.append('sex', newSex);
+
+        const res = await fetch('/mc/update_nomination', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            await updateStatus(null, true);
+        } else {
+            alert("エラー: " + result.message);
+        }
+    } catch (e) {
+        POG_Log.e("MC Edit Error", e);
+    } finally {
+        window.AppState.setMode('IDLE', 'editNominationByMC_finally');
+    }
+};
 
 function getCookie(name) {
     const value = `; ${document.cookie}`;
