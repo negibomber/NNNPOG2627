@@ -407,7 +407,8 @@ async def update_nomination(request: Request,
                            horse_name: str = Form(None), 
                            mother_name: str = Form(None), 
                            father_name: str = Form(None), 
-                           sex: str = Form(None)):
+                           sex: str = Form(None),
+                           is_manual: str = Form("0")):
     try:
         # 1. MC権限チェック
         raw_user = request.cookies.get("pog_user")
@@ -416,30 +417,28 @@ async def update_nomination(request: Request,
         if not role_row.data or role_row.data[0]['role'] != 'MC':
             return {"status": "error", "message": "MC権限が必要です"}
 
-        # 2. データ補完（既存のnominateロジックを流用）
-        is_manual = not bool(horse_name)
+        # 2. 論理整合性：マスタ判定の結果を数値として評価
+        bool_is_manual = (is_manual == "1")
+        
+        # 馬名が未入力（母名指名）の場合は強制的にis_manual=TRUE
         final_horse_name = horse_name if horse_name else f"{mother_name}の2024"
-        final_father = father_name
-        final_sex = sex
+        if not horse_name:
+            bool_is_manual = True
 
-        if not is_manual and (not final_father or not final_sex):
-            h_master = supabase.table("horses").select("father_name, sex").eq("horse_name", horse_name).execute()
-            if h_master.data:
-                final_father = final_father or h_master.data[0]['father_name']
-                final_sex = final_sex or h_master.data[0]['sex']
-
-        # 3. DB更新（player_name と round をキーに、最新の指名を上書き）
-        # 現在有効な指名（is_winner=0 または 1）を対象にする
+        # 3. DB更新
+        # あるべき姿：MC入力情報を最優先し、is_manualフラグを適切に設定する
         supabase.table("draft_results").update({
             "horse_name": final_horse_name,
             "mother_name": mother_name,
-            "father_name": final_father,
-            "sex": final_sex,
-            "is_manual": is_manual
+            "father_name": father_name,
+            "sex": sex,
+            "is_manual": bool_is_manual
         }).eq("player_name", target_player).eq("round", target_round).in_("is_winner", [0, 1]).execute()
 
         return {"status": "success"}
     except Exception as e:
+        import traceback
+        print(f"[MC_UPDATE_ERROR] {traceback.format_exc()}")
         return {"status": "error", "message": str(e)}
 
 @app.post("/login")

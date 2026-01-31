@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.9
    ========================================================================== */
-const APP_VERSION = "0.9.4";
+const APP_VERSION = "0.9.5";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -318,9 +318,15 @@ window.editNominationByMC = async function(playerName, round, currentHorse) {
         const horses = await POG_API.search(newFather, newMother);
         const matched = horses.find(h => h.horse_name === newName);
         
-        let confirmMsg = matched 
-            ? `【登録済みデータと一致】\n${matched.horse_name} (父:${matched.father_name} 母:${matched.mother_name})\nとして修正しますか？`
-            : `【未登録馬として処理】\n${newName} (父:${newFather} 母:${newMother} 性別:${newSex})\nとして修正しますか？`;
+        let isManual = !matched;
+        let confirmMsg = "";
+
+        if (matched) {
+            confirmMsg = `【登録済みデータと一致】\n${matched.horse_name} (父:${matched.father_name} 母:${matched.mother_name})\nとして修正しますか？`;
+        } else {
+            // あるべき姿：未登録馬の場合の二重の注意喚起
+            confirmMsg = `【⚠️警告：マスタ未登録】\nこの馬はマスタ(horses)に登録されていません。\n未登録馬(is_manual=TRUE)として修正を強行しますか？\n\n馬名: ${newName}\n血統: ${newFather} × ${newMother}`;
+        }
 
         if (!confirm(confirmMsg)) {
             window.AppState.setMode('IDLE', 'editNominationByMC_cancel');
@@ -334,6 +340,7 @@ window.editNominationByMC = async function(playerName, round, currentHorse) {
         formData.append('mother_name', newMother);
         formData.append('father_name', newFather);
         formData.append('sex', newSex);
+        formData.append('is_manual', isManual ? "1" : "0");
 
         const res = await fetch('/mc/update_nomination', {
             method: 'POST',
