@@ -10,7 +10,7 @@ body {
     padding-bottom: 120px; /* MCパネル用の余白 */
 }
 /* 証拠：シアター演出中、メイン画面の操作ボタンを自動で物理封印する */
-body.is-theater-active #mc_main_btn {
+body.is-theater-active #mc_panel {
     display: none !important;
 }
 .container {
@@ -180,6 +180,7 @@ display: none;
 /* --- 5. 演出エリア --- */
 /* 公開エリア */
 .reveal-card {
+    display: none; /* 証拠：演出時以外は物理的に消去してタブ下の隙間を詰める */
     opacity: 0;
     visibility: hidden;
     transition: all 0.5s ease;
@@ -217,6 +218,7 @@ display: none;
 }
 /* --- 5.2 抽選・結果エリアの追加装飾 --- */
 .summary-area {
+    display: none; /* 証拠：指名結果が出るまでは隙間を作らせない */
     margin-top: 20px;
     padding: 15px;
     background: white;
@@ -807,7 +809,8 @@ display: none;
 }
 
 /* 抽選待ち（まだ当選も落選も決まっていない）状態の見た目 */
-.board-layer .draft-item-card.is-normal {
+.board-layer .draft-item-card.is-normal,
+.board-layer .draft-item-card.is-pending {
     border-color: #f59e0b !important; /* 抽選対象は枠をオレンジに */
     box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
 }

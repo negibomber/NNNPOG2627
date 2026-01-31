@@ -109,6 +109,8 @@ const POG_Theater = {
             if (tBtn) {
                 tBtn.innerText = finalMC.label;
                 tBtn.disabled = finalMC.disabled || false;
+                // 証拠：シアター内ボタンを物理的に有効化し、メイン画面のパネルに隠されないようにする
+                tBtn.style.setProperty('display', 'inline-block', 'important');
             }
             const ctrl = document.getElementById('t_mc_ctrl');
             if (ctrl) {
