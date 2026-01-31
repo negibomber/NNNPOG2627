@@ -258,7 +258,7 @@ display: none;
     padding: 12px;
     box-sizing: border-box;
     box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
-    z-index: 6000; /* ボード(5000)より必ず上 */
+    z-index: 10000; /* シアター(9999)よりも上に配置 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -324,6 +324,13 @@ display: none;
     display: none !important;
     opacity: 0 !important; 
     visibility: hidden !important; 
+}
+/* 証拠：場所を維持（flex）しつつ、不可視・不可触にする封印クラス */
+.is-sealed {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    display: flex !important;
 }
 
 /* --- 8. 検索結果エリアの装飾 (追加) --- */
@@ -576,25 +583,22 @@ display: none;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh; /* 画面の高さ100% */
+    height: 100%; 
     background: rgba(0, 0, 0, 0.98); /* より重厚な黒 */
     z-index: 9999;
     display: none; /* JSでflexに切り替え */
     flex-direction: column;
-    justify-content: flex-start;
-    overflow-y: auto;
-    padding-top: 20px;
-    padding-bottom: 150px;
+    justify-content: center; /* 画面中央に配置 */
     align-items: center;
-    color: #f8fafc;
-    font-family: 'serif';
+    overflow-y: auto;
+    padding-bottom: 150px; /* MCパネルとの重なりを回避 */
 }
 
 /* 演出カード：画面の高さに合わせて要素を等間隔に配置 */
 .theater-card {
     width: 90%;
     max-width: 900px;
-    min-height: 80vh; /* 最小高さを確保し、内容は可変に */
+    min-height: auto;
     display: flex;
     flex-direction: column;
     justify-content: space-between; /* 要素を上下いっぱいに分散 */
@@ -919,11 +923,20 @@ display: none;
 }
 
 /* --- 抽選演出用 --- */
+/* 封筒配置エリアを横並びに */
+.envelope-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    padding: 20px;
+    width: 100%;
+}
 .envelope {
-    width: 100px;
-    height: 140px;
-    background: #e2e8f0;
-    border: 2px solid #94a3b8;
+    width: 110px;
+    height: 150px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid #94a3b8;
     border-radius: 4px;
     position: relative;
     cursor: default;
@@ -931,6 +944,18 @@ display: none;
     display: flex;
     justify-content: center;
     align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.5);
+}
+.envelope::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: rgba(255,255,255,0.2);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .envelope.is-selectable {
      cursor: pointer; 

@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.10
    ========================================================================== */
-const APP_VERSION = "0.10.1";
+const APP_VERSION = "0.10.2";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -118,7 +118,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}, force=${force}`);
 
         const isNewReveal = (data.phase === 'reveal' && data.reveal_data && window.AppState.lastPlayedIdx !== data.reveal_index);
-        const isNewLottery = (data.phase === 'lottery_reveal' && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
+        const isNewLottery = (['lottery_select', 'lottery_result'].includes(data.phase) && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
         const willStartTheater = isNewReveal || isNewLottery;
 
         if (willStartTheater) {
@@ -176,8 +176,8 @@ function syncAllUI(data, isManual = false) {
     POG_Log.d("syncAllUI: Executing IDLE draw");
     POG_UI.updateText('round_display', data.round);
     const phaseMap = {
-        'nomination': '指名受付中', 'reveal': '指名公開中', 
-        'summary': '重複確認', 'lottery_reveal': '抽選実施中', 'lottery': '抽選終了'
+        'nomination': '指名受付中', 'reveal': '指名公開中', 'summary': '重複確認',
+        'lottery_select': '抽選中', 'lottery_result': '抽選結果', 'result': '確定'
     };
     POG_UI.updatePhaseLabel(data.phase, phaseMap);
     POG_UI.renderStatusCounter(data);

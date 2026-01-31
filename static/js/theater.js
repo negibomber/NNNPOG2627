@@ -195,6 +195,19 @@ const POG_Theater = {
                     if (parseInt(idx) === winIdx) env.classList.add('is-winner');
                     else env.classList.add('is-loser');
                     if (msgEl) msgEl.innerText = "抽選結果確定";
+                    // 証拠：演出終了をMCに通知し、次のアクション（再指名等）を促す
+                    if (window.IS_MC) {
+                        const finalMC = window.AppState.latestData?.mc_action;
+                        const ctrl = document.getElementById('t_mc_ctrl');
+                        const tBtn = document.getElementById('t_next_btn');
+                        if (finalMC && ctrl && tBtn) {
+                            tBtn.innerText = finalMC.label;
+                            tBtn.disabled = finalMC.disabled || false;
+                            ctrl.style.setProperty('opacity', '1', 'important');
+                            ctrl.style.setProperty('visibility', 'visible', 'important');
+                            ctrl.style.setProperty('pointer-events', 'auto', 'important');
+                        }
+                    }
                 }, 1000);
             });
         }

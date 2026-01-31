@@ -111,13 +111,6 @@ const POG_UI = {
                 POG_Theater.playLotteryResult(data.lottery_data);
                 window.AppState.setMode('THEATER', 'lottery_result');
                 window.AppState.lastProcessedPhase = 'lottery_result_done';
-                
-                // 3秒後に自動で次へ進める
-                setTimeout(async () => {
-                    if (window.IS_MC) {
-                        await POG_API.postMCAction('/mc/confirm_lottery');
-                    }
-                }, 3000);
             }
         } else {
             // 他のフェーズに移ったらフラグをリセット
