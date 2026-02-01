@@ -193,38 +193,45 @@ const POG_Theater = {
         const horseDisplay = document.getElementById('tl_horse');
         if (horseDisplay) horseDisplay.innerText = hName;
         const msgEl = document.getElementById('tl_message');
-        if (msgEl) msgEl.innerText = "一斉開封！";
+        if (msgEl) msgEl.innerText = "一斉開封";
 
         const area = document.getElementById('tl_envelopes_area');
         if (area) {
-            area.innerHTML = '';
-            Object.keys(selections).forEach(idx => {
-                const env = document.createElement('div');
-                env.className = 'envelope';
-                const label = document.createElement('div');
-                label.className = 'envelope-name';
-                label.innerText = selections[idx];
-                env.appendChild(label);
-                area.appendChild(env);
+            // 土台がない場合のみ作成（全消去を回避）
+            if (area.children.length !== participants.length) {
+                area.innerHTML = '';
+                participants.forEach((_, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'envelope';
+                    div.id = `env-${i}`;
+                    area.appendChild(div);
+                });
+            }
+            // 各封筒の状態だけを更新
+            participants.forEach((_, i) => {
+                const env = document.getElementById(`env-${i}`);
+                if (!env) return;
+                const selector = selections[String(i)];
                 
-                setTimeout(() => {
-                    if (parseInt(idx) === winIdx) env.classList.add('is-winner');
-                    else env.classList.add('is-loser');
-                    if (msgEl) msgEl.innerText = "抽選結果確定";
-                    // 証拠：演出終了をMCに通知し、次のアクション（再指名等）を促す
-                    if (window.IS_MC) {
-                        const finalMC = window.AppState.latestData?.mc_action;
-                        const ctrl = document.getElementById('t_mc_ctrl');
-                        const tBtn = document.getElementById('t_next_btn');
-                        if (finalMC && ctrl && tBtn) {
-                            tBtn.innerText = finalMC.label;
-                            tBtn.disabled = finalMC.disabled || false;
-                            ctrl.style.setProperty('opacity', '1', 'important');
-                            ctrl.style.setProperty('visibility', 'visible', 'important');
-                            ctrl.style.setProperty('pointer-events', 'auto', 'important');
-                        }
+                // クラスの制御
+                env.classList.toggle('is-taken', !!selector);
+                env.classList.toggle('is-my-choice', selector === me);
+                env.classList.toggle('is-selectable', (!selector && currentPlayer === me));
+                
+                // 名前ラベルの更新（変化がある場合のみ）
+                let label = env.querySelector('.envelope-name');
+                if (selector) {
+                    if (!label) {
+                        label = document.createElement('div');
+                        label.className = 'envelope-name';
+                        env.appendChild(label);
                     }
-                }, 1000);
+                    if (label.innerText !== selector) label.innerText = selector;
+                } else if (label) {
+                    label.remove();
+                }
+                
+                env.onclick = (!selector && currentPlayer === me) ? () => this.selectEnvelope(i) : null;
             });
         }
     },

@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.10
    ========================================================================== */
-const APP_VERSION = "0.10.6";
+const APP_VERSION = "0.10.7";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -155,7 +155,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         const canUpdate = window.AppState.canUpdateUI();
 
         // 証拠：演出中であっても選択フェーズ(lottery_select)のみ描画許可を与え、リアタイ更新を可能にする
-        const isAllowedToDraw = (!isTheaterActive || data.phase === 'lottery_select') && (canUpdate || force);
+        const isAllowedToDraw = (!isTheaterActive || ['lottery_select', 'lottery_result'].includes(data.phase)) && (canUpdate || force);
 
         POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, allow=${isAllowedToDraw}`);
 

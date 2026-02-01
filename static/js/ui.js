@@ -113,10 +113,14 @@ const POG_UI = {
                 window.AppState.setMode('THEATER', 'lottery_result');
                 window.AppState.lastProcessedPhase = 'lottery_result_done';
             }
+            // 証拠：確定後は演出モードを解除し、MCパネル等の物理封印を解く
+            if (window.AppState.uiMode === 'THEATER') {
+                window.AppState.setMode('IDLE', 'lottery_result_complete');
+            }
         } else {
             // 他のフェーズに移ったらフラグをリセット
             window.AppState.lastProcessedPhase = null;
-        }   
+        }
 
         if (data.phase === 'summary' && summaryArea) {
             const listEl = document.getElementById('lottery_summary_list');
