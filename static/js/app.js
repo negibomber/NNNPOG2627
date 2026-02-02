@@ -1,7 +1,7 @@
 /* ==========================================================================
-   POG Main Application Module (app.js) - Ver.0.10
+   POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.10.7";
+const APP_VERSION = "0.11.0";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -28,6 +28,85 @@ window.AppState = {
 
     canUpdateUI() {
         return this.uiMode === 'IDLE';
+    },
+
+    setMode(newMode, caller) {
+        if (this.uiMode === 'THEATER' && newMode === 'BUSY') {
+            POG_Log.d(`STATE_LOCKED: Theater is running. Entry to BUSY allowed only for Action.`);
+        }
+        POG_Log.d(`STATE_CHANGE: ${this.uiMode} -> ${newMode} (by ${caller})`);
+        this.uiMode = newMode;
+    }
+};
+
+/* --- [UI Permission Matrix] 状態ごとの振る舞い定義 --- */
+const UI_MATRIX = {
+    1:  { name: 'nomination_editing',       board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '指名を送信', api: '/nominate' },
+    2:  { name: 'nomination_waiting',       board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '指名待ち...', api: null },
+    3:  { name: 'nomination_all_done',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '指名公開を開始 ≫', api: '/start_reveal' },
+    4:  { name: 'reveal_ongoing',           board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '次の指名公開 ≫', api: '/next_reveal' },
+    5:  { name: 'reveal_last_done',         board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '指名結果一覧 ≫', api: '/goto_summary' },
+    6:  { name: 'summary_no_conflict',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '次の巡目へ ≫', api: '/next_round' },
+    7:  { name: 'summary_has_conflict',     board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '抽選開始 ≫', api: '/start_lottery' },
+    8:  { name: 'lot_select_waiting',       board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選進行中...', api: null },
+    9:  { name: 'lot_select_all_done',      board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選結果を見る ≫', api: '/show_lottery_result' },
+    10: { name: 'lot_result_next_exists',   board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '次の抽選へ ≫', api: '/next_lottery' },
+    11: { name: 'lot_result_has_loser',     board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '再指名へ ≫', api: '/back_to_nomination' },
+    12: { name: 'lot_result_all_confirmed', board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '次の巡目へ ≫', api: '/next_round' }
+};
+
+/**
+ * 証拠：サーバーデータから現在のアプリ文脈（ID 1-12）を判定する一元的なロジック
+ */
+function resolveContextId(data) {
+    const me = decodeURIComponent((typeof getCookie === 'function' ? getCookie('pog_user') : "") || "").replace(/\+/g, ' ');
+    const phase = data.phase;
+    const round = data.round;
+    const allNoms = data.all_nominations || [];
+
+    if (phase === 'nomination') {
+        const myNom = allNoms.find(n => n.player_name === me && n.round === round && n.is_winner === 0);
+        if (!myNom) return 1;
+        const nominatedPlayers = new Set(allNoms.filter(n => n.round === round && n.is_winner === 0).map(n => n.player_name));
+        const allDone = data.all_players.every(p => nominatedPlayers.has(p));
+        return allDone ? 3 : 2;
+    }
+    if (phase === 'reveal') {
+        const pastWinners = new Set(allNoms.filter(n => n.round === round && n.is_winner === 1).map(n => n.player_name));
+        const activePlayersCount = data.all_players.filter(p => !pastWinners.has(p)).length;
+        return (data.reveal_index < activePlayersCount - 1) ? 4 : 5;
+    }
+    if (phase === 'summary') {
+        const hasConflict = allNoms.some(n => n.round === round && n.is_winner === 0);
+        return hasConflict ? 7 : 6;
+    }
+    if (phase === 'lottery_select') {
+        const lotData = data.lottery_data || {};
+        const participants = lotData.participants || [];
+        const choices = lotData.choices || {};
+        const allChosen = participants.length > 0 && participants.every(p => choices[p] !== undefined);
+        return allChosen ? 9 : 8;
+    }
+    if (phase === 'lottery_result') {
+        const hasMore = allNoms.some(n => n.round === round && n.is_winner === 0);
+        if (hasMore) return 10;
+        const hasLoser = allNoms.some(n => n.round === round && n.is_winner === -1);
+        return hasLoser ? 11 : 12;
+    }
+    return 1;
+}
+
+// --- [State Management] アプリケーションの状態を一括管理 ---
+window.AppState = {
+    uiMode: 'IDLE',      // 'IDLE', 'BUSY', 'THEATER'
+    latestData: null,
+    lastPlayedIdx: -1,
+    isUpdating: false,
+    currentContextId: 1,
+    uiConfig: UI_MATRIX[1],
+
+    canUpdateUI() {
+        return this.uiMode === 'IDLE' && (this.uiConfig?.board === 1);
     },
 
     setMode(newMode, caller) {
@@ -109,63 +188,56 @@ async function updateStatus(preFetchedData = null, force = false) {
     
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
-        if (!data) {
-            POG_Log.e("DATA_EMPTY: fetchStatus returned null");
-            return;
-        }
+        if (!data) return;
 
         window.AppState.latestData = data;
-        POG_Log.d(`DATA_RECEIVE: phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}, force=${force}`);
 
-        const isNewReveal = (data.phase === 'reveal' && data.reveal_data && window.AppState.lastPlayedIdx !== data.reveal_index);
-        const isNewLottery = (['lottery_select', 'lottery_result'].includes(data.phase) && data.lottery_data && window.AppState.lastPlayedIdx !== data.reveal_index);
-        const willStartTheater = isNewReveal || isNewLottery;
+        // [New Logic] マトリクスIDの解決と設定の適用
+        const contextId = resolveContextId(data);
+        const config = UI_MATRIX[contextId];
+        window.AppState.currentContextId = contextId;
+        window.AppState.uiConfig = config;
+
+        POG_Log.d(`DATA_RECEIVE: ID=${contextId}(${config.name}), phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}, force=${force}`);
+
+        // 演出遷移: マトリクスで theater:1 と定義され、かつインデックスが変わった場合に開始
+        const isNewIdx = (window.AppState.lastPlayedIdx !== data.reveal_index);
+        const willStartTheater = (config.theater === 1 && isNewIdx);
 
         if (willStartTheater) {
-            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: New Data for Idx ${data.reveal_index})`);
+            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index})`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
+            
+            // Router機能
+            if (data.phase === 'lottery_select') {
+                POG_Theater.playLotterySelect(data.lottery_data);
+            } else if (data.phase === 'lottery_result') {
+                POG_Theater.playLotteryResult(data.lottery_data);
+            } else {
+                POG_Theater.playReveal(data.reveal_data);
+            }
         } else {
+            // ゴースト演出の回収: マトリクスで theater:0 なのに演出画面が開いていたら閉じる
             const isTheaterOpen = document.getElementById('theater_layer').style.display === 'flex';
-            const isTheaterPhase = ['reveal', 'lottery_reveal', 'lottery_select', 'lottery_result'].includes(data.phase);
-            if (isTheaterOpen && !isTheaterPhase) {
-                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: Phase [${data.phase}] is not for Theater)`);
+            if (isTheaterOpen && config.theater === 0) {
+                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: ID=${contextId} does not allow Theater)`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
                 window.AppState.setMode('IDLE', 'updateStatus_close');
             }
         }
 
-        if (willStartTheater) {
-            POG_Log.i(`THEATER_LAUNCH: Dispatching Theater for phase: ${data.phase}`);
-            
-            // 修正：フェーズに応じて適切なメソッドへ振り分ける（Router機能）
-            if (data.phase === 'lottery_select') {
-                POG_Theater.playLotterySelect(data.lottery_data);
-            } else if (data.phase === 'lottery_result') {
-                POG_Theater.playLotteryResult(data.lottery_data);
-            } else {
-                // デフォルトは通常の指名公開
-                POG_Theater.playReveal(data.reveal_data);
-            }
-        }
-
-        // --- 統治権の厳格化: AND条件による許可制描画 ---
-        const isTheaterActive = (window.AppState.uiMode === 'THEATER');
-        const canUpdate = window.AppState.canUpdateUI();
-
-        // 証拠：演出中であっても選択フェーズ(lottery_select)のみ描画許可を与え、リアタイ更新を可能にする
-        const isAllowedToDraw = (!isTheaterActive || ['lottery_select', 'lottery_result'].includes(data.phase)) && (canUpdate || force);
-
-        POG_Log.d(`DRAW_GATE_CHECK: mode=${window.AppState.uiMode}, force=${force}, allow=${isAllowedToDraw}`);
+        // [New Logic] 描画許可判定: マトリクスの board フラグのみを信じる
+        const isAllowedToDraw = (config.board === 1) || force;
 
         if (!isAllowedToDraw) {
-            POG_Log.d(`UI_SYNC_HALT: 🛑 PROTECTION ACTIVE: (Theater=${isTheaterActive}, canUpdate=${canUpdate}, force=${force})`);
+            POG_Log.d(`UI_SYNC_HALT: 🛑 PROTECTION ACTIVE: (ID=${contextId}, Board=${config.board}, Force=${force})`);
             return;
         }
 
-        // --- 許可された場合のみ描画実行 ---
-        syncAllUI(data, force);
+        // 許可された場合のみ描画実行 (configを渡す)
+        syncAllUI(data, config);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             POG_Log.i(`PAGE_RELOAD: ${window.AppState.lastPhase} -> ${data.phase}`);
@@ -181,18 +253,21 @@ async function updateStatus(preFetchedData = null, force = false) {
         window.AppState.isUpdating = false;
     }
 }
-function syncAllUI(data, isManual = false) {
-    POG_Log.d("syncAllUI: Executing IDLE draw");
+
+function syncAllUI(data, config) {
+    POG_Log.d(`syncAllUI: Executing draw (ID=${window.AppState.currentContextId})`);
     POG_UI.updateText('round_display', data.round);
     const phaseMap = {
         'nomination': '指名受付中', 'reveal': '指名公開中', 'summary': '重複確認',
         'lottery_select': '抽選中', 'lottery_result': '抽選結果', 'result': '確定'
     };
     POG_UI.updatePhaseLabel(data.phase, phaseMap);
-    POG_UI.renderStatusCounter(data);
-    POG_UI.renderPhaseUI(data);
-    POG_UI.renderPlayerCards(data);
-    POG_UI.renderMCPanel(data, isManual);
+    
+    // Config(許可証)を各現場へ渡す
+    POG_UI.renderStatusCounter(data, config);
+    POG_UI.renderPhaseUI(data, config);
+    POG_UI.renderPlayerCards(data, config);
+    POG_UI.renderMCPanel(data, config);
 }
 
 /* ==========================================================================

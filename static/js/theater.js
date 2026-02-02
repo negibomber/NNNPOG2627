@@ -31,21 +31,11 @@ const POG_Theater = {
         POG_Log.i(`Theater PLAY_START: Round=${data.round}, Index=${window.AppState.lastPlayedIdx}`);
         POG_Log.d(`DEBUG_EVIDENCE: Theater START: [${getVisibleStatus()}]`);
 
-        // 1. 【核心】先行リセット：場所を確保しつつ透明化（ガタつき防止）
-        POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components with layout preservation...");
+        // 1. 先行リセット：要素の可視性クラスのみを外す（DOM操作をCSSクラス制御へ委譲）
+        POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             const el = document.getElementById(id);
-            if (!el) return;
-            el.classList.remove('is-visible');
-            
-            // ボタンエリア特有の制御：右寄せを維持したまま、物理的な場所（flex）は消さずに隠す
-            if (id === 't_mc_ctrl') {
-                el.style.setProperty('display', 'flex', 'important');
-                el.style.setProperty('align-items', 'flex-end', 'important'); // 右寄せ
-                el.style.setProperty('opacity', '0', 'important');           // 透明化
-                el.style.setProperty('visibility', 'hidden', 'important');    // 隠蔽
-                el.style.setProperty('pointer-events', 'none', 'important');  // 誤クリック防止
-            }
+            if (el) el.classList.remove('is-visible');
         });
         
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
@@ -101,27 +91,21 @@ const POG_Theater = {
         document.getElementById('t_stable_area').classList.add('is-visible');
         POG_Log.d("Theater Sequence: FINISHED");
 
-        // 6. MCパネル表示：場所を動かさず、透明度だけを戻す
+        // 6. MCパネル表示
         await wait(2000); 
-        const finalMC = window.AppState.latestData?.mc_action;
-        if (finalMC) {
-            const tBtn = document.getElementById('t_next_btn');
-            if (tBtn) {
-                tBtn.innerText = finalMC.label;
-                tBtn.disabled = finalMC.disabled || false;
-                // 証拠：シアター内ボタンを物理的に有効化し、メイン画面のパネルに隠されないようにする
-                tBtn.style.setProperty('display', 'inline-block', 'important');
-            }
-            const ctrl = document.getElementById('t_mc_ctrl');
-            if (ctrl) {
-                // 透明封印を解き、右寄せのまま表示
-                ctrl.style.setProperty('opacity', '1', 'important');
-                ctrl.style.setProperty('visibility', 'visible', 'important');
-                ctrl.style.setProperty('pointer-events', 'auto', 'important');
-                ctrl.classList.add('is-visible');
-            }
+        // 修正：ボタンの表示可否は app.js のマトリクスで既に判定されているため、ここでは単に visible クラスを付与するだけ
+        const tBtn = document.getElementById('t_next_btn');
+        const ctrl = document.getElementById('t_mc_ctrl');
+        
+        // window.AppState.uiConfig.mc_btn が有効な場合のみボタンを出す
+        if (window.AppState.uiConfig && window.AppState.uiConfig.mc_btn && ctrl) {
+             const finalMC = window.AppState.latestData?.mc_action;
+             if (finalMC && tBtn) {
+                 tBtn.innerText = finalMC.label;
+                 tBtn.disabled = finalMC.disabled || false;
+             }
+             ctrl.classList.add('is-visible');
         }
-        // --- [Ver.0.6.16 コピーここまで] ---
     },
 
     // --- [ここから抽選用に追加したメソッド] ---

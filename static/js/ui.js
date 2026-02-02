@@ -16,13 +16,13 @@ const POG_UI = {
     },
 
     // --- [UI Renderer] プレイヤーカード一覧の生成 ---
-    renderPlayerCards(data) {
+    renderPlayerCards(data, config) {
         const allStatusDiv = document.getElementById('all_status_list');
         if (!allStatusDiv || !data.all_players || !data.all_nominations) return;
 
-        // [あるべき姿] 描画可否は uiMode (AppState) が一括管理する
-        if (!window.AppState.canUpdateUI()) {
-            POG_Log.d("renderPlayerCards SKIP: UI is not IDLE");
+        // 修正：独自のガード句を削除し、マトリクス許可証(config.board)に従う
+        // これにより、抽選中(ID:8)でも裏側のカード更新が可能になる
+        if (!config || config.board !== 1) {
             return;
         }
 
@@ -75,14 +75,21 @@ const POG_UI = {
     },
 
     // --- [UI Renderer] フェーズ別表示エリアの制御 ---
-    renderPhaseUI(data) {
+    renderPhaseUI(data, config) {
         const summaryArea = document.getElementById('lottery_summary_area');
         const boardLayer = document.getElementById('board_layer');
-        // 公開(reveal)・確認(summary)・抽選演出(lottery_reveal)の間はボードを表示
-        const isEventPhase = ['reveal', 'summary', 'lottery_reveal'].includes(data.phase);
+        
+        // 修正：フェーズ名での分岐を廃止し、マトリクス(config.board)で表示を制御
+        const showBoard = (config && config.board === 1 && document.getElementById('theater_layer').style.display === 'flex'); 
+        // ※ 解説: boardレイヤーは「シアターの下地」として使われるため、
+        //   通常画面(IDLE)では非表示(none)、シアター起動中かつconfig.board=1なら表示(flex)とする運用に合わせて調整
 
         if (boardLayer) {
-            if (isEventPhase) {
+            // IDLE時はHTMLの構造上 .container 内の #all_status_list が表示されるため、
+            // 全画面オーバーレイの board_layer は「シアターモード」の時だけ出すのが正解
+            const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
+            
+            if (config && config.board === 1 && isTheaterActive) {
                 boardLayer.style.display = 'flex';
                 this.renderDraftPanel(data); // ボードの中身を更新
             } else {
@@ -177,7 +184,7 @@ const POG_UI = {
     },
 
     // --- [UI Renderer] 指名状況カウンターと待機リストの描画 ---
-    renderStatusCounter(data) {
+    renderStatusCounter(data, config) {
         const counterEl = document.getElementById('status_counter');
         const waitDiv = document.getElementById('waiting_list_bar');
         if (!counterEl) return;
@@ -247,40 +254,34 @@ const POG_UI = {
         }
     },
 
-    renderMCPanel(data, isManual = false) {
-        // 証拠：この関数が呼ばれた瞬間の「モード」と「強制フラグ」を記録する
-        const currentMode = window.AppState.uiMode;
-        const targetLabel = data?.mc_action?.label || "null";
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel CALLED. mode=[${currentMode}], isManual=[${isManual}], label=[${targetLabel}]`);
-
-        if (currentMode !== 'IDLE') {
-            POG_Log.e(`CRITICAL_EVIDENCE: Unexpected Render during ${currentMode}! tracing caller...`);
-            console.trace(); // 「誰が」呼んだかの証拠
-        }
-
-        // 【案Cの鉄則】BUSY（通信中）の間は、誰が何と言おうとボタンを上書きさせない
-        if (currentMode === 'BUSY' && !isManual) {
-            POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel SKIPPED (BUSY mode)`);
-            return;
-        }
-
+    renderMCPanel(data, config) {
+        // 修正：引数を config に変更し、マトリクス制御へ移行
         const btn = document.getElementById('mc_main_btn');
         if (!btn) return;
 
-        // 演出中(THEATER)、またはアクションデータがない場合はボタンを消す
-        if (currentMode === 'THEATER' || !data.mc_action) {
-            POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel HIDING BUTTON. (Reason: Theater or NoAction)`);
+        // 1. マトリクスによる表示許可チェック
+        // config.mc_btn が未定義または空文字なら非表示
+        if (!config || !config.mc_btn) {
             btn.style.display = 'none';
             return;
         }
 
-        // それ以外（IDLE、またはBUSYかつManual）なら最新データを反映
-        POG_Log.d(`DEBUG_EVIDENCE: renderMCPanel SHOWING BUTTON. Label=[${data.mc_action.label}]`);
-        
+        // 2. データチェック (Python側からのアクション指示)
+        if (!data.mc_action) {
+            btn.style.display = 'none';
+            return;
+        }
+
+        // 3. 表示実行
+        // マトリクスで許可され、データもあるなら無条件で表示
+        // (以前のような uiMode チェックは app.js の updateStatus で既に解決済み)
         btn.style.display = 'block';
         btn.innerText = data.mc_action.label;
         btn.disabled = data.mc_action.disabled || false;
         btn.className = 'mc_main_btn ' + (data.mc_action.class || '');
+
+        // ログ出力（デバッグ用）
+        POG_Log.d(`MC_BTN_RENDER: ID=${window.AppState.currentContextId}, Label=${data.mc_action.label}`);
 
         btn.onclick = () => {
             this.executeMCAction().catch(() => alert("操作に失敗しました。"));

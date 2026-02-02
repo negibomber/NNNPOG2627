@@ -438,8 +438,7 @@ async def next_round():
     import json
     round_now = int(get_setting("current_round") or 1)
     
-    # 修正：落選データの有無ではなく、「その巡の当選者数 == 参加人数」で判定する
-    # 修正：落選データの有無ではなく、「その巡の当選者数 < 参加人数」で判定する
+    # 修正：その巡の当選者数が参加人数と一致するかで「全員確定」を判定
     winners_res = supabase.table("draft_results").select("id", count="exact").eq("round", round_now).eq("is_winner", 1).execute()
     players_res = supabase.table("participants").select("id", count="exact").execute()
     is_incomplete = (winners_res.count or 0) < (players_res.count or 0)
