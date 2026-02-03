@@ -132,6 +132,7 @@ const POG_Theater = {
         const hName = data.horse_name;
         const participants = data.participants || [];
         const selections = data.selections || {};
+        const winningIndex = data.winning_index;
         const turnIdx = data.turn_index || 0;
         const currentPlayer = participants[turnIdx];
         const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\+/g, ' ');
@@ -221,6 +222,11 @@ const POG_Theater = {
                 env.classList.toggle('is-taken', !!selector);
                 env.classList.toggle('is-my-choice', selector === me);
                 env.classList.toggle('is-selectable', (!selector && currentPlayer === me));
+
+                // 当選封筒のハイライト
+                if (i === winningIndex) {
+                    env.classList.add('is-winner');
+                }
                 
                 // 名前ラベルの更新（変化がある場合のみ）
                 let label = env.querySelector('.envelope-name');
