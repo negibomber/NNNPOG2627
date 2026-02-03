@@ -85,13 +85,12 @@ const POG_UI = {
         //   通常画面(IDLE)では非表示(none)、シアター起動中かつconfig.board=1なら表示(flex)とする運用に合わせて調整
 
         if (boardLayer) {
-            // IDLE時はHTMLの構造上 .container 内の #all_status_list が表示されるため、
-            // 全画面オーバーレイの board_layer は「シアターモード」の時だけ出すのが正解
             const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
+            const isSummaryPhase = (data.phase === 'summary');
             
-            if (config && config.board === 1 && isTheaterActive) {
+            if (config && config.board === 1 && (isTheaterActive || isSummaryPhase)) {
                 boardLayer.style.display = 'flex';
-                this.renderDraftPanel(data); // ボードの中身を更新
+                this.renderDraftPanel(data);
             } else {
                 boardLayer.style.display = 'none';
             }

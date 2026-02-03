@@ -190,6 +190,7 @@ const POG_Theater = {
         this.resetTheaterUI('lottery');
         const hName = data.horse_name;
         const participants = data.participants || [];
+        const winningIndex = data.winning_index;
         const turnIdx = data.turn_index || 0;
         const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\s/g, ' ');
         const currentPlayer = participants[turnIdx];
@@ -253,13 +254,20 @@ const POG_Theater = {
             formData.append('envelope_index', idx);
             const res = await fetch('/select_envelope', { method: 'POST', body: formData });
             const json = await res.json();
-            if (json.status === 'error') alert(json.message);
+            if (json.status === 'error') {
+                alert(json.message);
+            } else {
+                // 成功したら即座に画面更新
+                if (typeof updateStatus === 'function') {
+                    await updateStatus(null, true);
+                }
+            }
         } catch(e) {
             alert("通信エラーが発生しました");
         }
     },
 
-    resetTheaterUI(mode) {
+        resetTheaterUI(mode) {
         const layer = document.getElementById('theater_layer');
         if (!layer) return;
         layer.style.display = 'flex';
