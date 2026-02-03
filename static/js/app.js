@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.0";
+const APP_VERSION = "0.11.1";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -83,8 +83,8 @@ function resolveContextId(data) {
     if (phase === 'lottery_select') {
         const lotData = data.lottery_data || {};
         const participants = lotData.participants || [];
-        const choices = lotData.choices || {};
-        const allChosen = participants.length > 0 && participants.every(p => choices[p] !== undefined);
+        const choices = lotData.selections || {};
+        const allChosen = participants.length > 0 && Object.keys(choices).length >= participants.length;
         return allChosen ? 9 : 8;
     }
     if (phase === 'lottery_result') {
@@ -95,28 +95,6 @@ function resolveContextId(data) {
     }
     return 1;
 }
-
-// --- [State Management] アプリケーションの状態を一括管理 ---
-window.AppState = {
-    uiMode: 'IDLE',      // 'IDLE', 'BUSY', 'THEATER'
-    latestData: null,
-    lastPlayedIdx: -1,
-    isUpdating: false,
-    currentContextId: 1,
-    uiConfig: UI_MATRIX[1],
-
-    canUpdateUI() {
-        return this.uiMode === 'IDLE' && (this.uiConfig?.board === 1);
-    },
-
-    setMode(newMode, caller) {
-        if (this.uiMode === 'THEATER' && newMode === 'BUSY') {
-            POG_Log.d(`STATE_LOCKED: Theater is running. Entry to BUSY allowed only for Action.`);
-        }
-        POG_Log.d(`STATE_CHANGE: ${this.uiMode} -> ${newMode} (by ${caller})`);
-        this.uiMode = newMode;
-    }
-};
 
 window.searchController = null;
 window.statusTimer = null;
@@ -202,12 +180,14 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // 演出遷移: マトリクスで theater:1 と定義され、かつインデックスが変わった場合に開始
         const isNewIdx = (window.AppState.lastPlayedIdx !== data.reveal_index);
-        const willStartTheater = (config.theater === 1 && isNewIdx);
+        const currentTurn = parseInt(data.lottery_data?.turn_index || 0);
+        const willStartTheater = (config.theater === 1 && (isNewIdx || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
 
         if (willStartTheater) {
-            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index})`);
+            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn})`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
+            window.AppState.lastTurnIdx = currentTurn;
             
             // Router機能
             if (data.phase === 'lottery_select') {

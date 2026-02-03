@@ -8,8 +8,10 @@ const POG_Theater = {
         this.currentPlayId = playId;
 
         // 証拠：ステータスに合わせて表示するコンテナを切り替え、不要な方の残像を防ぐ
-        if (document.getElementById('theater_lottery')) document.getElementById('theater_lottery').style.display = isLottery ? 'flex' : 'none';
-        if (document.getElementById('theater_card')) document.getElementById('theater_card').style.display = isLottery ? 'none' : 'flex';
+        const lotDiv = document.getElementById('theater_lottery');
+        const cardDiv = document.getElementById('theater_card');
+        if (lotDiv) { lotDiv.style.display = isLottery ? 'flex' : 'none'; lotDiv.style.visibility = isLottery ? 'visible' : 'hidden'; }
+        if (cardDiv) { cardDiv.style.display = isLottery ? 'none' : 'flex'; cardDiv.style.visibility = isLottery ? 'hidden' : 'visible'; }
 
         // 証拠：抽選モードの場合は抽選演出へ分岐し、公開画面の処理（第？巡〜）を通さない
         if (isLottery) {
@@ -35,7 +37,18 @@ const POG_Theater = {
         POG_Log.d("DEBUG_EVIDENCE: Resetting Theater UI components...");
         ['t_player_area', 't_father_area', 't_mother_area', 't_horse_area', 't_stable_area', 't_mc_ctrl'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.classList.remove('is-visible');
+            if (!el) return;
+            el.classList.remove('is-visible');
+
+            // 修正：ゴースト現象の防止（以前の約束を適用）。物理的に隠し、スタイル崩れを防ぐ。
+            // また、ボタン位置が左になる問題を解決するため、JS側で明示的に flex-end を指定する。
+            if (id === 't_mc_ctrl') {
+                el.style.setProperty('display', 'flex', 'important');
+                el.style.setProperty('justify-content', 'flex-end', 'important'); // 右寄せ
+                el.style.setProperty('align-items', 'flex-end', 'important');
+                el.style.setProperty('opacity', '0', 'important');            // 透明化
+                el.style.setProperty('visibility', 'hidden', 'important');     // 不可視
+            }
         });
         
         POG_Log.d(`DEBUG_EVIDENCE: AFTER_RESET:  [${getVisibleStatus()}]`);
@@ -104,6 +117,10 @@ const POG_Theater = {
                  tBtn.innerText = finalMC.label;
                  tBtn.disabled = finalMC.disabled || false;
              }
+             // 修正：封印解除。右寄せを維持しつつ可視化する。
+             ctrl.style.removeProperty('opacity');
+             ctrl.style.removeProperty('visibility');
+             // displayはflexのまま維持されるので触らない
              ctrl.classList.add('is-visible');
         }
     },
@@ -242,6 +259,13 @@ const POG_Theater = {
         const lotDiv = document.getElementById('theater_lottery');
         if (cardDiv) cardDiv.style.display = (mode === 'reveal' ? 'flex' : 'none');
         if (lotDiv) lotDiv.style.display = (mode === 'lottery' ? 'flex' : 'none');
+        const mcCtrl = document.getElementById('t_next_btn')?.parentElement;
+        if (mcCtrl) {
+            mcCtrl.style.setProperty('display', 'flex', 'important');
+            mcCtrl.style.setProperty('justify-content', 'flex-end', 'important');
+            mcCtrl.style.setProperty('opacity', '0', 'important');
+            mcCtrl.style.setProperty('visibility', 'hidden', 'important');
+        }
     },
 
     async triggerNext() {
