@@ -1,4 +1,4 @@
-/* theater.js (Ver.0.7.0) - 右寄せ・ガタつき防止完全維持 + 抽選機能追加版 */
+/* theater.js (Ver.0.11.0) - 右寄せ・ガタつき防止完全維持 + 抽選機能追加版 */
 const POG_Theater = {
     async playReveal(data) {
         // 証拠：現在の演出IDを生成し、同一ステータスでの重複再生（ループ）を防止する

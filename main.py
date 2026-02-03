@@ -10,7 +10,7 @@ import traceback
 
 app = FastAPI()
 
-# 【重要】staticフォルダをマウントする設定
+# staticフォルダをマウントする設定
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
