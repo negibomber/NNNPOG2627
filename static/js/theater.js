@@ -188,8 +188,11 @@ const POG_Theater = {
     async playLotteryResult(data) {
         this.resetTheaterUI('lottery');
         const hName = data.horse_name;
+        const participants = data.participants || [];
+        const turnIdx = data.turn_index || 0;
+        const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\s/g, ' ');
+        const currentPlayer = participants[turnIdx];
         const selections = data.selections || {};
-        const winIdx = data.winning_index;
         
         const horseDisplay = document.getElementById('tl_horse');
         if (horseDisplay) horseDisplay.innerText = hName;
