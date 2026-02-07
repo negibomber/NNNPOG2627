@@ -86,13 +86,22 @@ const POG_UI = {
 
         if (boardLayer) {
             const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
+            const isSummaryPhase = (data.phase === 'summary');
+            const hasTheaterClass = document.body.classList.contains('is-theater-active');
+            const shouldShow = (config && config.board === 1 && (isTheaterActive || isSummaryPhase));
             
-            if (config && config.board === 1 && isTheaterActive) {
+            POG_Log.d(`BOARD_DISPLAY: phase=${data.phase}, board=${config?.board}, theaterActive=${isTheaterActive}, hasClass=${hasTheaterClass}, summary=${isSummaryPhase}, shouldShow=${shouldShow}`);
+            
+            if (shouldShow) {
                 boardLayer.style.display = 'flex';
+                POG_Log.d(`BOARD_DISPLAY: Setting flex, calling renderDraftPanel`);
                 this.renderDraftPanel(data);
             } else {
                 boardLayer.style.display = 'none';
+                POG_Log.d(`BOARD_DISPLAY: Hiding board`);
             }
+        } else {
+            POG_Log.d(`BOARD_DISPLAY: boardLayer element not found!`);
         }
         const lotRevealArea = document.getElementById('lottery_reveal_area');
         const revealArea = document.getElementById('reveal_area');
@@ -273,9 +282,13 @@ const POG_UI = {
         };
     },
     renderDraftPanel(data) {
+        POG_Log.d(`RENDER_DRAFT_PANEL: Called with ${data.all_players?.length || 0} players`);
         const boardContainer = document.getElementById('board_grid_container');
         const roundLabel = document.getElementById('board_round_label');
-        if (!boardContainer || !data.all_players) return;
+        if (!boardContainer || !data.all_players) {
+            POG_Log.d(`RENDER_DRAFT_PANEL: Missing elements - container=${!!boardContainer}, players=${!!data.all_players}`);
+            return;
+        }
 
         if (roundLabel) roundLabel.innerText = `第 ${data.round} 巡`;
 

@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.5";
+const APP_VERSION = "0.11.6";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -185,24 +185,22 @@ async function updateStatus(preFetchedData = null, force = false) {
         const willStartTheater = (config.theater === 1 && (isNewIdx || isSummaryPhase || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
 
         if (willStartTheater) {
-            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn})`);
+            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn} & Phase=${data.phase})`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
             window.AppState.lastTurnIdx = currentTurn;
             
             // Router機能
             if (data.phase === 'lottery_select') {
+                POG_Log.d(`ROUTER: Calling playLotterySelect`);
                 POG_Theater.playLotterySelect(data.lottery_data);
             } else if (data.phase === 'lottery_result') {
+                POG_Log.d(`ROUTER: Calling playLotteryResult`);
                 POG_Theater.playLotteryResult(data.lottery_data);
             } else if (data.phase === 'summary') {
-                // summaryフェーズでボードを全画面表示
-                const boardLayer = document.getElementById('board_layer');
-                if (boardLayer) {
-                    boardLayer.style.display = 'flex';
-                    POG_UI.renderDraftPanel(data);
-                }
+                POG_Log.d(`ROUTER: Summary phase detected, board will be handled by renderPhaseUI`);
             } else {
+                POG_Log.d(`ROUTER: Calling playReveal`);
                 POG_Theater.playReveal(data.reveal_data);
             }
         } else {
