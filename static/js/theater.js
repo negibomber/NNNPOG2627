@@ -304,10 +304,14 @@ const POG_Theater = {
 
     close() {
         POG_Log.i("Theater CLOSE: Hiding layer.");
-        // 証拠：再生中IDをクリアし、次回の異なる演出を正しく受け入れ可能にする
         this.currentPlayId = null;
-        // 証拠：シーンを解除。これによりCSSの制約が解け、メインボタンが自動で復活する。
+        
+        const layer = document.getElementById('theater_layer');
+        const hadClass = document.body.classList.contains('is-theater-active');
+        
         document.body.classList.remove('is-theater-active');
-        document.getElementById('theater_layer').style.display = 'none';
+        if (layer) layer.style.display = 'none';
+        
+        POG_Log.d(`THEATER_CLOSE_COMPLETE: hadClass=${hadClass}, layerNowHidden=${layer?.style.display === 'none'}, bodyHasClass=${document.body.classList.contains('is-theater-active')}`);
     }
 };

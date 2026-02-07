@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.7";
+const APP_VERSION = "0.11.8";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -46,8 +46,8 @@ const UI_MATRIX = {
     3:  { name: 'nomination_all_done',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '指名公開を開始 ≫', api: '/start_reveal' },
     4:  { name: 'reveal_ongoing',           board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '次の指名公開 ≫', api: '/next_reveal' },
     5:  { name: 'reveal_last_done',         board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '指名結果一覧 ≫', api: '/goto_summary' },
-    6:  { name: 'summary_no_conflict',      board: 1, theater: 1, t_card: 0, t_lot: 0, mc_btn: '次の巡目へ ≫', api: '/next_round' },
-    7:  { name: 'summary_has_conflict',     board: 1, theater: 1, t_card: 0, t_lot: 0, mc_btn: '抽選開始 ≫', api: '/start_lottery' },
+    6:  { name: 'summary_no_conflict',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '次の巡目へ ≫', api: '/next_round' },
+    7:  { name: 'summary_has_conflict',     board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '抽選開始 ≫', api: '/start_lottery' },
     8:  { name: 'lot_select_waiting',       board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選進行中...', api: null },
     9:  { name: 'lot_select_all_done',      board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選結果を見る ≫', api: '/show_lottery_result' },
     10: { name: 'lot_result_next_exists',   board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '結果確認後、次の抽選へ ≫', api: '/next_lottery' },
@@ -181,8 +181,7 @@ async function updateStatus(preFetchedData = null, force = false) {
         // 演出遷移: マトリクスで theater:1 と定義され、かつインデックスが変わった場合に開始
         const isNewIdx = (window.AppState.lastPlayedIdx !== data.reveal_index);
         const currentTurn = parseInt(data.lottery_data?.turn_index || 0);
-        const isSummaryPhase = (data.phase === 'summary');
-        const willStartTheater = (config.theater === 1 && (isNewIdx || isSummaryPhase || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
+        const willStartTheater = (config.theater === 1 && (isNewIdx || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
 
         if (willStartTheater) {
             POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn} & Phase=${data.phase})`);
@@ -197,12 +196,8 @@ async function updateStatus(preFetchedData = null, force = false) {
             } else if (data.phase === 'lottery_result') {
                 POG_Log.d(`ROUTER: Calling playLotteryResult`);
                 POG_Theater.playLotteryResult(data.lottery_data);
-            } else if (data.phase === 'summary') {
-                POG_Log.d(`ROUTER: Summary phase - closing theater_layer, board will show`);
-                // シアターレイヤーを閉じてボードを見せる
-                const theaterLayer = document.getElementById('theater_layer');
-                if (theaterLayer) theaterLayer.style.display = 'none';
             } else {
+                POG_Log.d(`ROUTER: Calling playReveal`);
                 POG_Theater.playReveal(data.reveal_data);
             }
         } else {
@@ -226,6 +221,8 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // 許可された場合のみ描画実行 (configを渡す)
         syncAllUI(data, config);
+        // 遷移後の状態確認ログ
+        POG_Log.d(`PHASE_TRANSITION_COMPLETE: phase=${data.phase}, contextId=${contextId}, uiMode=${window.AppState.uiMode}, theaterLayerDisplay=${document.getElementById('theater_layer')?.style.display}, boardLayerDisplay=${document.getElementById('board_layer')?.style.display}, hasTheaterClass=${document.body.classList.contains('is-theater-active')}`);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             POG_Log.i(`PAGE_RELOAD: ${window.AppState.lastPhase} -> ${data.phase}`);

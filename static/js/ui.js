@@ -85,12 +85,11 @@ const POG_UI = {
         //   通常画面(IDLE)では非表示(none)、シアター起動中かつconfig.board=1なら表示(flex)とする運用に合わせて調整
 
         if (boardLayer) {
+            // ボード表示条件：シアター演出中 OR config.boardが1
             const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
-            const isSummaryPhase = (data.phase === 'summary');
-            const hasTheaterClass = document.body.classList.contains('is-theater-active');
-            const shouldShow = (config && config.board === 1 && (isTheaterActive || isSummaryPhase));
+            const shouldShow = (config && config.board === 1 && isTheaterActive);
             
-            POG_Log.d(`BOARD_DISPLAY: phase=${data.phase}, board=${config?.board}, theaterActive=${isTheaterActive}, hasClass=${hasTheaterClass}, summary=${isSummaryPhase}, shouldShow=${shouldShow}`);
+            POG_Log.d(`BOARD_DISPLAY: phase=${data.phase}, board=${config?.board}, theaterActive=${isTheaterActive}, shouldShow=${shouldShow}`);
             
             if (shouldShow) {
                 boardLayer.style.display = 'flex';
@@ -249,33 +248,41 @@ const POG_UI = {
     },
 
     renderMCPanel(data, config) {
-        // 修正：引数を config に変更し、マトリクス制御へ移行
         const btn = document.getElementById('mc_main_btn');
-        if (!btn) return;
-
-        // 1. マトリクスによる表示許可チェック
-        // config.mc_btn が未定義または空文字なら非表示
-        if (!config || !config.mc_btn) {
-            btn.style.display = 'none';
+        const panel = document.getElementById('mc_panel');
+        
+        POG_Log.d(`MC_BTN_RENDER_START: btnExists=${!!btn}, panelExists=${!!panel}, configExists=${!!config}, config.mc_btn=${config?.mc_btn}, hasAction=${!!data.mc_action}`);
+        
+        if (!btn) {
+            POG_Log.d(`MC_BTN_RENDER: Button element not found!`);
             return;
         }
 
-        // 2. データチェック (Python側からのアクション指示)
+        // 1. マトリクスによる表示許可チェック
+        if (!config || !config.mc_btn) {
+            btn.style.display = 'none';
+            POG_Log.d(`MC_BTN_RENDER: Hidden by config (no mc_btn)`);
+            return;
+        }
+
+        // 2. データチェック
         if (!data.mc_action) {
             btn.style.display = 'none';
+            POG_Log.d(`MC_BTN_RENDER: Hidden (no mc_action data)`);
             return;
         }
 
         // 3. 表示実行
-        // マトリクスで許可され、データもあるなら無条件で表示
-        // (以前のような uiMode チェックは app.js の updateStatus で既に解決済み)
         btn.style.display = 'block';
         btn.innerText = data.mc_action.label;
         btn.disabled = data.mc_action.disabled || false;
         btn.className = 'mc_main_btn ' + (data.mc_action.class || '');
 
-        // ログ出力（デバッグ用）
-        POG_Log.d(`MC_BTN_RENDER: ID=${window.AppState.currentContextId}, Label=${data.mc_action.label}`);
+        // パネルの状態も確認
+        const panelDisplay = panel ? window.getComputedStyle(panel).display : 'N/A';
+        const panelVisibility = panel ? window.getComputedStyle(panel).visibility : 'N/A';
+        
+        POG_Log.d(`MC_BTN_RENDER: ID=${window.AppState.currentContextId}, Label=${data.mc_action.label}, btn.display=${btn.style.display}, panel.computed.display=${panelDisplay}, panel.computed.visibility=${panelVisibility}`);
 
         btn.onclick = () => {
             this.executeMCAction().catch(() => alert("操作に失敗しました。"));
