@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.6";
+const APP_VERSION = "0.11.7";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -198,9 +198,11 @@ async function updateStatus(preFetchedData = null, force = false) {
                 POG_Log.d(`ROUTER: Calling playLotteryResult`);
                 POG_Theater.playLotteryResult(data.lottery_data);
             } else if (data.phase === 'summary') {
-                POG_Log.d(`ROUTER: Summary phase detected, board will be handled by renderPhaseUI`);
+                POG_Log.d(`ROUTER: Summary phase - closing theater_layer, board will show`);
+                // シアターレイヤーを閉じてボードを見せる
+                const theaterLayer = document.getElementById('theater_layer');
+                if (theaterLayer) theaterLayer.style.display = 'none';
             } else {
-                POG_Log.d(`ROUTER: Calling playReveal`);
                 POG_Theater.playReveal(data.reveal_data);
             }
         } else {
