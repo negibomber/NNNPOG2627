@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.4";
+const APP_VERSION = "0.11.5";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -181,7 +181,8 @@ async function updateStatus(preFetchedData = null, force = false) {
         // 演出遷移: マトリクスで theater:1 と定義され、かつインデックスが変わった場合に開始
         const isNewIdx = (window.AppState.lastPlayedIdx !== data.reveal_index);
         const currentTurn = parseInt(data.lottery_data?.turn_index || 0);
-        const willStartTheater = (config.theater === 1 && (isNewIdx || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
+        const isSummaryPhase = (data.phase === 'summary');
+        const willStartTheater = (config.theater === 1 && (isNewIdx || isSummaryPhase || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
 
         if (willStartTheater) {
             POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn})`);
@@ -197,8 +198,10 @@ async function updateStatus(preFetchedData = null, force = false) {
             } else if (data.phase === 'summary') {
                 // summaryフェーズでボードを全画面表示
                 const boardLayer = document.getElementById('board_layer');
-                if (boardLayer) boardLayer.style.display = 'flex';
-                POG_UI.renderDraftPanel(data);
+                if (boardLayer) {
+                    boardLayer.style.display = 'flex';
+                    POG_UI.renderDraftPanel(data);
+                }
             } else {
                 POG_Theater.playReveal(data.reveal_data);
             }
