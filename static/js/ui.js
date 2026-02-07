@@ -86,9 +86,8 @@ const POG_UI = {
 
         if (boardLayer) {
             const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
-            const isSummaryPhase = (data.phase === 'summary');
             
-            if (config && config.board === 1 && (isTheaterActive || isSummaryPhase)) {
+            if (config && config.board === 1 && isTheaterActive) {
                 boardLayer.style.display = 'flex';
                 this.renderDraftPanel(data);
             } else {
@@ -109,22 +108,9 @@ const POG_UI = {
         toggleArea(lotRevealArea, data.phase === 'lottery_reveal');
         toggleArea(revealArea, data.phase === 'reveal' && !!data.reveal_data);
 
-        // 抽選演出への委譲
-        if (data.phase === 'lottery_select') {
-            POG_Theater.playLotterySelect(data.lottery_data);
-            window.AppState.setMode('THEATER', 'lottery_select');
-        } else if (data.phase === 'lottery_result') {
-            if (window.AppState.lastProcessedPhase !== 'lottery_result_done') {
-                POG_Theater.playLotteryResult(data.lottery_data);
-                window.AppState.setMode('THEATER', 'lottery_result');
-                window.AppState.lastProcessedPhase = 'lottery_result_done';
-            }
-            // 証拠：確定後は演出モードを解除し、MCパネル等の物理封印を解く
-            if (window.AppState.uiMode === 'THEATER') {
-                window.AppState.setMode('IDLE', 'lottery_result_complete');
-            }
-        } else {
-            // 他のフェーズに移ったらフラグをリセット
+        // 抽選演出への委譲は app.js の Router に統合済みのため削除
+        // フラグのリセットのみ残す
+        if (data.phase !== 'lottery_result') {
             window.AppState.lastProcessedPhase = null;
         }
 

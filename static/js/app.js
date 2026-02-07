@@ -1,7 +1,7 @@
 /* ==========================================================================
    POG Main Application Module (app.js) - Ver.0.11
    ========================================================================== */
-const APP_VERSION = "0.11.3";
+const APP_VERSION = "0.11.4";
 
 // 証拠：アプリ全域の状態を自動付与する共通司令塔
 window.POG_Log = {
@@ -46,13 +46,13 @@ const UI_MATRIX = {
     3:  { name: 'nomination_all_done',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '指名公開を開始 ≫', api: '/start_reveal' },
     4:  { name: 'reveal_ongoing',           board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '次の指名公開 ≫', api: '/next_reveal' },
     5:  { name: 'reveal_last_done',         board: 1, theater: 1, t_card: 1, t_lot: 0, mc_btn: '指名結果一覧 ≫', api: '/goto_summary' },
-    6:  { name: 'summary_no_conflict',      board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '次の巡目へ ≫', api: '/next_round' },
-    7:  { name: 'summary_has_conflict',     board: 1, theater: 0, t_card: 0, t_lot: 0, mc_btn: '抽選開始 ≫', api: '/start_lottery' },
+    6:  { name: 'summary_no_conflict',      board: 1, theater: 1, t_card: 0, t_lot: 0, mc_btn: '次の巡目へ ≫', api: '/next_round' },
+    7:  { name: 'summary_has_conflict',     board: 1, theater: 1, t_card: 0, t_lot: 0, mc_btn: '抽選開始 ≫', api: '/start_lottery' },
     8:  { name: 'lot_select_waiting',       board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選進行中...', api: null },
     9:  { name: 'lot_select_all_done',      board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '抽選結果を見る ≫', api: '/show_lottery_result' },
-    10: { name: 'lot_result_next_exists',   board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '次の抽選へ ≫', api: '/next_lottery' },
-    11: { name: 'lot_result_has_loser',     board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '再指名へ ≫', api: '/back_to_nomination' },
-    12: { name: 'lot_result_all_confirmed', board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '次の巡目へ ≫', api: '/next_round' }
+    10: { name: 'lot_result_next_exists',   board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '結果確認後、次の抽選へ ≫', api: '/next_lottery' },
+    11: { name: 'lot_result_has_loser',     board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '結果確認後、再指名へ ≫', api: '/back_to_nomination' },
+    12: { name: 'lot_result_all_confirmed', board: 1, theater: 1, t_card: 0, t_lot: 1, mc_btn: '結果確認後、次の巡目へ ≫', api: '/next_round' }
 };
 
 /**
@@ -194,6 +194,11 @@ async function updateStatus(preFetchedData = null, force = false) {
                 POG_Theater.playLotterySelect(data.lottery_data);
             } else if (data.phase === 'lottery_result') {
                 POG_Theater.playLotteryResult(data.lottery_data);
+            } else if (data.phase === 'summary') {
+                // summaryフェーズでボードを全画面表示
+                const boardLayer = document.getElementById('board_layer');
+                if (boardLayer) boardLayer.style.display = 'flex';
+                POG_UI.renderDraftPanel(data);
             } else {
                 POG_Theater.playReveal(data.reveal_data);
             }
