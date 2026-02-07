@@ -271,6 +271,9 @@ const POG_Theater = {
         const layer = document.getElementById('theater_layer');
         if (!layer) return;
         layer.style.display = 'flex';
+
+        // シアター演出中であることを宣言（CSSでメインボタンを自動非表示）
+        document.body.classList.add('is-theater-active');
         
         const cardDiv = document.getElementById('theater_card');
         const lotDiv = document.getElementById('theater_lottery');

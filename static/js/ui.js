@@ -86,8 +86,9 @@ const POG_UI = {
 
         if (boardLayer) {
             // ボード表示条件：シアター演出中 OR config.boardが1
+            const isSummaryPhase = (data.phase === 'summary');
             const isTheaterActive = (document.body.classList.contains('is-theater-active') || window.AppState.uiMode === 'THEATER');
-            const shouldShow = (config && config.board === 1 && isTheaterActive);
+            const shouldShow = (config && config.board === 1 && (isSummaryPhase || isTheaterActive));
             
             POG_Log.d(`BOARD_DISPLAY: phase=${data.phase}, board=${config?.board}, theaterActive=${isTheaterActive}, shouldShow=${shouldShow}`);
             
@@ -248,6 +249,9 @@ const POG_UI = {
     },
 
     renderMCPanel(data, config) {
+        // MC専用機能: 参加者はスキップ
+        if (!window.IS_MC) return;
+
         const btn = document.getElementById('mc_main_btn');
         const panel = document.getElementById('mc_panel');
         
