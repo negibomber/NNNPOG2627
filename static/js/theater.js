@@ -128,6 +128,13 @@ const POG_Theater = {
     // --- [ここから抽選用に追加したメソッド] ---
 
     async playLotterySelect(data) {
+        POG_Log.i(`🎰 ═══ playLotterySelect START ═══`);
+        POG_Log.i(`   - horse_name: ${data.horse_name}`);
+        POG_Log.i(`   - turn_index: ${data.turn_index}`);
+        POG_Log.i(`   - participants: [${(data.participants || []).join(', ')}]`);
+        POG_Log.i(`   - selections: ${JSON.stringify(data.selections || {})}`);
+        POG_Log.i(`   - winning_index: ${data.winning_index}`);
+        
         this.resetTheaterUI('lottery');
         const hName = data.horse_name;
         const participants = data.participants || [];
@@ -137,6 +144,10 @@ const POG_Theater = {
         const currentPlayer = participants[turnIdx];
         const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\+/g, ' ');
 
+        POG_Log.i(`   - currentPlayer: ${currentPlayer} (index=${turnIdx})`);
+        POG_Log.i(`   - me: ${me}`);
+        POG_Log.i(`   - isMyTurn: ${currentPlayer === me}`);
+
         const horseDisplay = document.getElementById('tl_horse');
         if (horseDisplay) horseDisplay.innerText = hName;
         
@@ -145,15 +156,18 @@ const POG_Theater = {
             if (currentPlayer === me) {
                 msgEl.innerText = "あなたの番です。封筒を選んでください。";
                 msgEl.style.color = "#fbbf24";
+                POG_Log.i(`   ► Message: "あなたの番です" (yellow)`);
             } else {
                 msgEl.innerText = `${currentPlayer} さんが選択中...`;
                 msgEl.style.color = "#fff";
+                POG_Log.i(`   ► Message: "${currentPlayer} さんが選択中..." (white)`);
             }
         }
 
         const area = document.getElementById('tl_envelopes_area');
         if (area) {
             area.innerHTML = ''; 
+            POG_Log.i(`   - Creating ${participants.length} envelopes`);
             participants.forEach((_, i) => {
                 const env = document.createElement('div');
                 env.className = 'envelope';
@@ -165,9 +179,13 @@ const POG_Theater = {
                     label.innerText = selector;
                     env.appendChild(label);
                     if (selector === me) env.classList.add('is-my-choice');
+                    POG_Log.d(`     [${i}] TAKEN by ${selector}${selector === me ? ' (ME)' : ''}`);
                 } else if (currentPlayer === me) {
                     env.classList.add('is-selectable');
                     env.onclick = () => this.selectEnvelope(i);
+                    POG_Log.d(`     [${i}] SELECTABLE (my turn)`);
+                } else {
+                    POG_Log.d(`     [${i}] EMPTY (not my turn)`);
                 }
                 area.appendChild(env);
             });
@@ -183,10 +201,19 @@ const POG_Theater = {
                 if (target) target.classList.add('is-peek-winner');
                 peekBtn.style.display = 'none';
             };
+            POG_Log.i(`   - Peek button: ${!isParticipant ? 'VISIBLE' : 'HIDDEN'}`);
         }
+        
+        POG_Log.i(`🎰 ═══ playLotterySelect END ═══`);
     },
 
     async playLotteryResult(data) {
+        POG_Log.i(`🏆 ═══ playLotteryResult START ═══`);
+        POG_Log.i(`   - horse_name: ${data.horse_name}`);
+        POG_Log.i(`   - winning_index: ${data.winning_index}`);
+        POG_Log.i(`   - participants: [${(data.participants || []).join(', ')}]`);
+        POG_Log.i(`   - selections: ${JSON.stringify(data.selections || {})}`);
+        
         this.resetTheaterUI('lottery');
         const hName = data.horse_name;
         const participants = data.participants || [];
@@ -195,6 +222,11 @@ const POG_Theater = {
         const me = decodeURIComponent((document.cookie.match(/(?:^|;\s*)pog_user=([^;]*)/) || [])[1] || '').replace(/\s/g, ' ');
         const currentPlayer = participants[turnIdx];
         const selections = data.selections || {};
+        
+        const winner = participants[winningIndex];
+        POG_Log.i(`   - 🎉 WINNER: ${winner} (index=${winningIndex})`);
+        POG_Log.i(`   - me: ${me}`);
+        POG_Log.i(`   - I won: ${winner === me}`);
         
         const horseDisplay = document.getElementById('tl_horse');
         if (horseDisplay) horseDisplay.innerText = hName;
@@ -205,6 +237,7 @@ const POG_Theater = {
         if (area) {
             // 土台がない場合のみ作成（全消去を回避）
             if (area.children.length !== participants.length) {
+                POG_Log.i(`   - Creating envelope containers (${participants.length})`);
                 area.innerHTML = '';
                 participants.forEach((_, i) => {
                     const div = document.createElement('div');
@@ -214,6 +247,7 @@ const POG_Theater = {
                 });
             }
             // 各封筒の状態だけを更新
+            POG_Log.i(`   - Updating envelope states:`);
             participants.forEach((_, i) => {
                 const env = document.getElementById(`env-${i}`);
                 if (!env) return;
@@ -225,9 +259,12 @@ const POG_Theater = {
                 env.classList.toggle('is-selectable', (!selector && currentPlayer === me));
 
                 // 当選封筒のハイライト
-                if (i === winningIndex) {
+                const isWinner = (i === winningIndex);
+                if (isWinner) {
                     env.classList.add('is-winner');
                 }
+                
+                POG_Log.d(`     [${i}] ${selector || 'EMPTY'}${isWinner ? ' 🏆 WINNER' : ''}${selector === me ? ' (ME)' : ''}`);
                 
                 // 名前ラベルの更新（変化がある場合のみ）
                 let label = env.querySelector('.envelope-name');
@@ -245,46 +282,74 @@ const POG_Theater = {
                 env.onclick = (!selector && currentPlayer === me) ? () => this.selectEnvelope(i) : null;
             });
         }
+        
+        POG_Log.i(`🏆 ═══ playLotteryResult END ═══`);
     },
 
     async selectEnvelope(idx) {
-        if (!confirm("この封筒にしますか？")) return;
+        POG_Log.i(`📮 selectEnvelope: index=${idx}`);
+        if (!confirm("この封筒にしますか？")) {
+            POG_Log.i(`   ► User cancelled`);
+            return;
+        }
+        
         try {
+            POG_Log.i(`   ► Sending POST /select_envelope`);
             const formData = new URLSearchParams();
             formData.append('envelope_index', idx);
             const res = await fetch('/select_envelope', { method: 'POST', body: formData });
             const json = await res.json();
+            
+            POG_Log.i(`   ► Response: ${JSON.stringify(json)}`);
+            
             if (json.status === 'error') {
+                POG_Log.e(`   ✗ Error: ${json.message}`);
                 alert(json.message);
             } else {
+                POG_Log.i(`   ✓ Success! Forcing updateStatus()`);
                 // 成功したら即座に画面更新
                 if (typeof updateStatus === 'function') {
                     await updateStatus(null, true);
                 }
             }
         } catch(e) {
+            POG_Log.e(`   ✗ Exception: ${e.message}`);
             alert("通信エラーが発生しました");
         }
     },
 
-        resetTheaterUI(mode) {
+    resetTheaterUI(mode) {
+        POG_Log.i(`🎬 resetTheaterUI: mode=${mode}`);
         const layer = document.getElementById('theater_layer');
-        if (!layer) return;
+        if (!layer) {
+            POG_Log.e(`   ✗ theater_layer not found!`);
+            return;
+        }
         layer.style.display = 'flex';
 
         // シアター演出中であることを宣言（CSSでメインボタンを自動非表示）
+        const hadClass = document.body.classList.contains('is-theater-active');
         document.body.classList.add('is-theater-active');
+        POG_Log.i(`   - body.is-theater-active: ${hadClass} → true`);
         
         const cardDiv = document.getElementById('theater_card');
         const lotDiv = document.getElementById('theater_lottery');
-        if (cardDiv) cardDiv.style.display = (mode === 'reveal' ? 'flex' : 'none');
-        if (lotDiv) lotDiv.style.display = (mode === 'lottery' ? 'flex' : 'none');
+        if (cardDiv) {
+            cardDiv.style.display = (mode === 'reveal' ? 'flex' : 'none');
+            POG_Log.i(`   - theater_card.display: ${cardDiv.style.display}`);
+        }
+        if (lotDiv) {
+            lotDiv.style.display = (mode === 'lottery' ? 'flex' : 'none');
+            POG_Log.i(`   - theater_lottery.display: ${lotDiv.style.display}`);
+        }
+        
         const mcCtrl = document.getElementById('t_next_btn')?.parentElement;
         if (mcCtrl) {
             mcCtrl.style.setProperty('display', 'flex', 'important');
             mcCtrl.style.setProperty('justify-content', 'flex-end', 'important');
             mcCtrl.style.setProperty('opacity', '0', 'important');
             mcCtrl.style.setProperty('visibility', 'hidden', 'important');
+            POG_Log.i(`   - MC control: hidden (will show after animation)`);
         }
     },
 

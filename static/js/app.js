@@ -158,6 +158,8 @@ function shouldReloadPage(oldPhase, newPhase) {
    2. [Logic] Data Fetching & Core Logic
    ========================================================================== */
 async function updateStatus(preFetchedData = null, force = false) {
+    POG_Log.i(`═══ updateStatus START ═══ preFetched=${!!preFetchedData}, force=${force}`);
+    
     if (window.AppState.isUpdating && !force) {
         POG_Log.d(`UPDATE_LOCKED: isUpdating=${window.AppState.isUpdating}, force=${force}`);
         return; 
@@ -166,7 +168,13 @@ async function updateStatus(preFetchedData = null, force = false) {
     
     try {
         let data = preFetchedData || await POG_API.fetchStatus();
-        if (!data) return;
+        if (!data) {
+            POG_Log.e("updateStatus: No data received!");
+            return;
+        }
+
+        POG_Log.i(`📊 RAW_DATA: phase=${data.phase}, round=${data.round}, reveal_index=${data.reveal_index}`);
+        POG_Log.i(`📊 LOTTERY_RAW: ${JSON.stringify(data.lottery_data || {})}`);
 
         window.AppState.latestData = data;
 
@@ -176,35 +184,66 @@ async function updateStatus(preFetchedData = null, force = false) {
         window.AppState.currentContextId = contextId;
         window.AppState.uiConfig = config;
 
-        POG_Log.d(`DATA_RECEIVE: ID=${contextId}(${config.name}), phase=${data.phase}, idx=${data.reveal_index}, uiMode=${window.AppState.uiMode}, force=${force}`);
+        // === 超詳細ログ ===
+        const prevPhase = window.AppState.lastPhase || 'NONE';
+        const currentTurn = parseInt(data.lottery_data?.turn_index || 0);
+        const prevTurn = window.AppState.lastTurnIdx || 0;
+        const prevIdx = window.AppState.lastPlayedIdx;
+        
+        POG_Log.i(`🎯 CONTEXT: ID=${contextId} (${config.name})`);
+        POG_Log.i(`🎯 PHASE_TRANSITION: "${prevPhase}" → "${data.phase}" (changed=${prevPhase !== data.phase})`);
+        POG_Log.i(`🎯 INDEX_CHANGE: ${prevIdx} → ${data.reveal_index} (changed=${prevIdx !== data.reveal_index})`);
+        POG_Log.i(`🎯 TURN_CHANGE: ${prevTurn} → ${currentTurn} (changed=${prevTurn !== currentTurn})`);
+        POG_Log.i(`🎯 UI_MODE: ${window.AppState.uiMode}`);
+        
+        if (data.lottery_data) {
+            POG_Log.i(`🎰 LOTTERY_DETAILS:`);
+            POG_Log.i(`   - horse_name: ${data.lottery_data.horse_name}`);
+            POG_Log.i(`   - turn_index: ${data.lottery_data.turn_index}`);
+            POG_Log.i(`   - participants: [${(data.lottery_data.participants || []).join(', ')}]`);
+            POG_Log.i(`   - selections: ${JSON.stringify(data.lottery_data.selections || {})}`);
+            POG_Log.i(`   - winning_index: ${data.lottery_data.winning_index}`);
+        }
 
         // 演出遷移: マトリクスで theater:1 と定義され、かつインデックスが変わった場合に開始
-        const isNewIdx = (window.AppState.lastPlayedIdx !== data.reveal_index);
-        const currentTurn = parseInt(data.lottery_data?.turn_index || 0);
-        const willStartTheater = (config.theater === 1 && (isNewIdx || (data.phase === 'lottery_select' && currentTurn !== (window.AppState.lastTurnIdx || 0))));
+        const isNewIdx = (prevIdx !== data.reveal_index);
+        const isTurnChanged = (data.phase === 'lottery_select' && currentTurn !== prevTurn);
+        const isLotteryPhaseChanged = (prevPhase !== data.phase && (data.phase === 'lottery_select' || data.phase === 'lottery_result'));
+        const willStartTheater = (config.theater === 1 && (isNewIdx || isTurnChanged || isLotteryPhaseChanged));
+        
+        POG_Log.i(`🎬 THEATER_DECISION:`);
+        POG_Log.i(`   - config.theater = ${config.theater}`);
+        POG_Log.i(`   - isNewIdx = ${isNewIdx} (${prevIdx} !== ${data.reveal_index})`);
+        POG_Log.i(`   - isTurnChanged = ${isTurnChanged} (phase=${data.phase}, ${prevTurn} !== ${currentTurn})`);
+        POG_Log.i(`   - isLotteryPhaseChanged = ${isLotteryPhaseChanged} ("${prevPhase}" !== "${data.phase}" && lottery_phase=${data.phase === 'lottery_select' || data.phase === 'lottery_result'})`);
+        POG_Log.i(`   - ► willStartTheater = ${willStartTheater}`);
 
         if (willStartTheater) {
-            POG_Log.i(`TRANSITION_DECISION: To THEATER (Reason: ID=${contextId} & NewIdx=${data.reveal_index} & Turn=${currentTurn} & Phase=${data.phase})`);
+            POG_Log.i(`🎬 STARTING THEATER: ID=${contextId}, Phase=${data.phase}`);
             window.AppState.setMode('THEATER', 'updateStatus');
             window.AppState.lastPlayedIdx = data.reveal_index;
             window.AppState.lastTurnIdx = currentTurn;
             
             // Router機能
             if (data.phase === 'lottery_select') {
-                POG_Log.d(`ROUTER: Calling playLotterySelect`);
+                POG_Log.i(`🎰 ROUTER → playLotterySelect()`);
                 POG_Theater.playLotterySelect(data.lottery_data);
             } else if (data.phase === 'lottery_result') {
-                POG_Log.d(`ROUTER: Calling playLotteryResult`);
+                POG_Log.i(`🎰 ROUTER → playLotteryResult()`);
                 POG_Theater.playLotteryResult(data.lottery_data);
             } else {
-                POG_Log.d(`ROUTER: Calling playReveal`);
+                POG_Log.i(`🎭 ROUTER → playReveal()`);
                 POG_Theater.playReveal(data.reveal_data);
             }
         } else {
+            POG_Log.i(`⏸️  THEATER NOT STARTED (willStart=false)`);
             // ゴースト演出の回収: マトリクスで theater:0 なのに演出画面が開いていたら閉じる
             const isTheaterOpen = document.getElementById('theater_layer').style.display === 'flex';
+            POG_Log.d(`   - theater_layer.display = ${document.getElementById('theater_layer').style.display}`);
+            POG_Log.d(`   - isTheaterOpen = ${isTheaterOpen}, config.theater = ${config.theater}`);
+            
             if (isTheaterOpen && config.theater === 0) {
-                POG_Log.i(`TRANSITION_DECISION: To IDLE (Reason: ID=${contextId} does not allow Theater)`);
+                POG_Log.i(`🔴 CLOSING THEATER (config.theater=0 but layer is open)`);
                 POG_Theater.close();
                 window.AppState.lastPlayedIdx = -1;
                 window.AppState.setMode('IDLE', 'updateStatus_close');
@@ -221,8 +260,30 @@ async function updateStatus(preFetchedData = null, force = false) {
 
         // 許可された場合のみ描画実行 (configを渡す)
         syncAllUI(data, config);
+        
         // 遷移後の状態確認ログ
-        POG_Log.d(`PHASE_TRANSITION_COMPLETE: phase=${data.phase}, contextId=${contextId}, uiMode=${window.AppState.uiMode}, theaterLayerDisplay=${document.getElementById('theater_layer')?.style.display}, boardLayerDisplay=${document.getElementById('board_layer')?.style.display}, hasTheaterClass=${document.body.classList.contains('is-theater-active')}`);
+        const theaterLayer = document.getElementById('theater_layer');
+        const boardLayer = document.getElementById('board_layer');
+        const hasTheaterClass = document.body.classList.contains('is-theater-active');
+        
+        POG_Log.i(`📺 FINAL_STATE:`);
+        POG_Log.i(`   - phase: ${data.phase}`);
+        POG_Log.i(`   - contextId: ${contextId}`);
+        POG_Log.i(`   - uiMode: ${window.AppState.uiMode}`);
+        POG_Log.i(`   - theater_layer.display: ${theaterLayer?.style.display}`);
+        POG_Log.i(`   - board_layer.display: ${boardLayer?.style.display}`);
+        POG_Log.i(`   - body.is-theater-active: ${hasTheaterClass}`);
+        
+        const mcPanel = document.getElementById('mc_panel');
+        if (mcPanel) {
+            const mcPanelDisplay = window.getComputedStyle(mcPanel).display;
+            const mcBtn = document.getElementById('mc_main_btn');
+            POG_Log.i(`   - mc_panel.computed.display: ${mcPanelDisplay}`);
+            POG_Log.i(`   - mc_main_btn.display: ${mcBtn?.style.display}`);
+            POG_Log.i(`   - mc_main_btn.text: "${mcBtn?.innerText}"`);
+        }
+        
+        POG_Log.i(`═══ updateStatus END ═══`);
 
         if (shouldReloadPage(window.AppState.lastPhase, data.phase)) {
             POG_Log.i(`PAGE_RELOAD: ${window.AppState.lastPhase} -> ${data.phase}`);

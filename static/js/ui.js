@@ -255,24 +255,24 @@ const POG_UI = {
         const btn = document.getElementById('mc_main_btn');
         const panel = document.getElementById('mc_panel');
         
-        POG_Log.d(`MC_BTN_RENDER_START: btnExists=${!!btn}, panelExists=${!!panel}, configExists=${!!config}, config.mc_btn=${config?.mc_btn}, hasAction=${!!data.mc_action}`);
+        POG_Log.i(`🎮 MC_BTN_RENDER_START: btnExists=${!!btn}, panelExists=${!!panel}, configExists=${!!config}, config.mc_btn=${config?.mc_btn}, hasAction=${!!data.mc_action}`);
         
         if (!btn) {
-            POG_Log.d(`MC_BTN_RENDER: Button element not found!`);
+            POG_Log.e(`   ✗ MC_BTN_RENDER: Button element not found!`);
             return;
         }
 
         // 1. マトリクスによる表示許可チェック
         if (!config || !config.mc_btn) {
             btn.style.display = 'none';
-            POG_Log.d(`MC_BTN_RENDER: Hidden by config (no mc_btn)`);
+            POG_Log.i(`   ► MC_BTN_RENDER: Hidden by config (no mc_btn)`);
             return;
         }
 
         // 2. データチェック
         if (!data.mc_action) {
             btn.style.display = 'none';
-            POG_Log.d(`MC_BTN_RENDER: Hidden (no mc_action data)`);
+            POG_Log.i(`   ► MC_BTN_RENDER: Hidden (no mc_action data)`);
             return;
         }
 
@@ -286,7 +286,7 @@ const POG_UI = {
         const panelDisplay = panel ? window.getComputedStyle(panel).display : 'N/A';
         const panelVisibility = panel ? window.getComputedStyle(panel).visibility : 'N/A';
         
-        POG_Log.d(`MC_BTN_RENDER: ID=${window.AppState.currentContextId}, Label=${data.mc_action.label}, btn.display=${btn.style.display}, panel.computed.display=${panelDisplay}, panel.computed.visibility=${panelVisibility}`);
+        POG_Log.i(`   ✓ MC_BTN_RENDER: ID=${window.AppState.currentContextId}, Label=${data.mc_action.label}, btn.display=${btn.style.display}, panel.computed.display=${panelDisplay}, panel.computed.visibility=${panelVisibility}`);
 
         btn.onclick = () => {
             this.executeMCAction().catch(() => alert("操作に失敗しました。"));

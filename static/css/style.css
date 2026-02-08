@@ -11,7 +11,8 @@ body {
 }
 /* 証拠：シアター演出中、メイン画面の操作ボタンを自動で物理封印する */
 body.is-theater-active #mc_panel {
-    display: none !important;
+    /* display: none !important; */
+    /* 修正：抽選演出中もMCボタンを表示する必要があるため、この制限を解除 */
 }
 .container {
     padding: 0 15px 15px 15px;
