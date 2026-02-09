@@ -274,13 +274,32 @@ async function updateStatus(preFetchedData = null, force = false) {
         POG_Log.i(`   - board_layer.display: ${boardLayer?.style.display}`);
         POG_Log.i(`   - body.is-theater-active: ${hasTheaterClass}`);
         
+        // Theater内のボタン状態
+        const theaterBtn = document.getElementById('t_next_btn');
+        const theaterCtrl = theaterBtn?.parentElement;
+        if (theaterBtn && theaterLayer?.style.display === 'flex') {
+            const theaterBtnVisible = (theaterCtrl?.style.opacity !== '0' && theaterCtrl?.style.visibility !== 'hidden');
+            POG_Log.i(`   - theater_btn (#t_next_btn): visible=${theaterBtnVisible}, text="${theaterBtn.innerText}"`);
+        }
+        
+        // MCパネルの状態
         const mcPanel = document.getElementById('mc_panel');
         if (mcPanel) {
             const mcPanelDisplay = window.getComputedStyle(mcPanel).display;
             const mcBtn = document.getElementById('mc_main_btn');
             POG_Log.i(`   - mc_panel.computed.display: ${mcPanelDisplay}`);
-            POG_Log.i(`   - mc_main_btn.display: ${mcBtn?.style.display}`);
-            POG_Log.i(`   - mc_main_btn.text: "${mcBtn?.innerText}"`);
+            if (mcPanelDisplay !== 'none') {
+                POG_Log.i(`   - mc_main_btn.display: ${mcBtn?.style.display}`);
+                POG_Log.i(`   - mc_main_btn.text: "${mcBtn?.innerText}"`);
+            }
+            
+            // 警告: 両方表示されている場合
+            if (theaterBtn && theaterCtrl && mcPanelDisplay !== 'none') {
+                const theaterBtnVisible = (theaterCtrl.style.opacity !== '0' && theaterCtrl.style.visibility !== 'hidden');
+                if (theaterBtnVisible) {
+                    POG_Log.e(`   ⚠️  WARNING: Both theater_btn and mc_panel are visible! Double button bug!`);
+                }
+            }
         }
         
         POG_Log.i(`═══ updateStatus END ═══`);
